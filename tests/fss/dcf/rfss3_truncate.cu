@@ -56,6 +56,11 @@ int main(int argc, char *argv[]) {
     auto d_X_0 = randomGEOnGpu<T>(N, bin);
     auto d_X_1 = randomGEOnGpu<T>(N, bin);
     auto d_X = (T *)gpuMalloc(N * sizeof(T));
+    auto d_mask = (T *)gpuMalloc(N * sizeof(T));
+    cudaError_t err = cudaMemset(d_mask, 0, N * sizeof(T));
+    if (err != cudaSuccess) {
+        printf("CUDA error: %s\n", cudaGetErrorString(err));
+    }
     gpuLinearComb(64, N, d_X, T(1), d_X_0, T(1), d_X_1);
     h_X = (T *)moveToCPU((u8 *)d_X, N * sizeof(T), NULL);    
     int bw = 64;
@@ -67,7 +72,7 @@ int main(int argc, char *argv[]) {
     dcf::TruncateType t = dcf::TruncateType::StochasticTR;
 
     // generate TReKey
-    auto d_truncateMask = dcf::genGPUTReKey(&curPtr, party, bin, bin-shift, shift, N, d_X, &g, h_r);
+    auto d_truncateMask = dcf::genGPUTReKey(&curPtr, party, bin, bin-shift, shift, N, d_mask, &g, h_r);
     assert(curPtr - startPtr < keyBufSz);
     auto h_truncateMask = (T*) moveToCPU((u8*) d_truncateMask, N * sizeof(T), NULL);
 
