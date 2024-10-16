@@ -187,6 +187,8 @@ namespace dcf
         int i = blockIdx.x * blockDim.x + threadIdx.x;
         if (i < N)
         {   
+            x[i] = x[i] + (1ULL << (bin-2));
+            gpuMod(x[i], bin);
             auto msb_xhat = gpuMsb(x[i], bin);
             x[i] = x[i] - (1ULL << (bin-2));
             gpuMod(x[i], bout);
