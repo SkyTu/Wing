@@ -74,22 +74,19 @@ int main(int argc, char *argv[]) {
     }
     auto h_masked_X = (T *)moveToCPU((u8 *)d_masked_X, N * sizeof(T), NULL);
     std::cout << h_masked_X[0] << std::endl;
-    
+
     u8 *startPtr, *curPtr;
     size_t keyBufSz = 10 * OneGB;
     getKeyBuf(&startPtr, &curPtr, keyBufSz);
     T* h_r = (T*) cpuMalloc(N * sizeof(T));
-    dcf::TruncateType t = dcf::TruncateType::StochasticTruncate;
+    dcf::TruncateType t = dcf::TruncateType::StochasticTR;
 
     // generate TReKey
     auto d_truncateMask = dcf::genGPUTReKey(&curPtr, party, bin, bin-shift, shift, N, d_mask_X, &g, h_r);
     // generate ZeroExtKey
-    auto d_outputMask = dcf::genGPUZeroExtKey(&curPtr, party, bin-shift, bout, N, d_truncateMask, &g);
-    // auto d_truncateMask = dcf::genGPURFSS3StTRKey(&curPtr, party, bin, bout, shift, N, d_mask_X, &g, h_r);
+    // auto d_outputMask = dcf::genGPUZeroExtKey(&curPtr, party, bin-shift, bout, N, d_truncateMask, &g);
     assert(curPtr - startPtr < keyBufSz);
     auto h_truncateMask = (T*) moveToCPU((u8*) d_truncateMask, N * sizeof(T), NULL);
-    auto h_outputMask = (T*) moveToCPU((u8*) d_outputMask, N * sizeof(T), NULL);
-    gpuFree(d_outputMask);
 
     
     curPtr = startPtr;
@@ -98,27 +95,25 @@ int main(int argc, char *argv[]) {
 
     dcf::gpuTRe(k.TReKey, party, peer, d_masked_X, &g, (Stats*) NULL);
     auto h_TRe = (T*) moveToCPU((u8*) d_masked_X, N * sizeof(T), NULL);
-    dcf::gpuZeroExt(k.ZeroExtKey, party, peer, d_masked_X, &g, (Stats*) NULL);
-    auto h_ZeroExt = (T*) moveToCPU((u8*) d_masked_X, N * sizeof(T), NULL);
-    // dcf::gpuRFSS3StTR(k, party, peer, d_masked_X, &g, (Stats*) NULL);
+    // dcf::gpuZeroExt(k.ZeroExtKey, party, peer, d_masked_X, &g, (Stats*) NULL);
+    // auto h_ZeroExt = (T*) moveToCPU((u8*) d_masked_X, N * sizeof(T), NULL);
     // 计算结果是存在d_mask_X的
     destroyGPURandomness();
 
     for (int i = 0; i < N; i++)
     {
-        auto unmasked_TRe = (h_TRe[i] - h_truncateMask[i] - (1ULL << (bin-shift-2)));
-        cpuMod(unmasked_TRe, bin-shift);
+        auto unmasked_TRe = h_TRe[i];
         
         auto r_msb = cpuMsb(h_truncateMask[i], bin-shift);
         auto x_msb = cpuMsb(h_TRe[i], bin-shift);
         auto result = party * (h_TRe[i] - (1ULL << (bin-shift-2))) + k.ZeroExtKey.m[i] * (!x_msb) + k.ZeroExtKey.u[i]; 
         cpuMod(result, bout);
-        auto unmasked_O = (h_ZeroExt[i] - h_outputMask[i]);
-        cpuMod(unmasked_O, bout);
+        // auto unmasked_O = (h_ZeroExt[i] - h_outputMask[i]);
+        // cpuMod(unmasked_O, bout);
         auto o = cpuArs(h_X[i], bin, shift);
         cpuMod(o, bout);
-        if (o != unmasked_O)
-            printf("%d: h_x = %ld, real_truncate = %ld, stTR_res = %ld, TRe_res = %ld\n", i, h_X[i], o, unmasked_O, unmasked_TRe);
+        if (o != unmasked_TRe)
+            printf("%d: h_x = %ld, real_truncate = %ld, stTR_res = %ld, TRe_res = %ld\n", i, h_X[i], o, unmasked_TRe);
         // assert(o == unmasked_O || o + 1== unmasked_O);
     }
     std::cout << peer->peer->keyBuf->bytesSent << std::endl;
