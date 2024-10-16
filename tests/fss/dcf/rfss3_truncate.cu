@@ -19,6 +19,7 @@
 // OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 // SOFTWARE.
 
+#include <stdio.h>
 #include <cassert>
 #include <cstdint>
 
@@ -72,6 +73,7 @@ int main(int argc, char *argv[]) {
         gpuLinearComb(bw, N, d_masked_X, T(-1), d_mask_X);
     }
     auto h_masked_X = (T *)moveToCPU((u8 *)d_masked_X, N * sizeof(T), NULL);
+    std::cout << h_masked_X[0] << std::endl;
     
     u8 *startPtr, *curPtr;
     size_t keyBufSz = 10 * OneGB;
