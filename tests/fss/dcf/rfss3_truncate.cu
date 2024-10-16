@@ -65,7 +65,12 @@ int main(int argc, char *argv[]) {
 
     // calculate xhat
     auto d_masked_X = (T *)gpuMalloc(N * sizeof(T));
-    gpuLinearComb(bw, N, d_masked_X, T(1), d_X, T(1), d_mask_X);
+    if(party == 1){
+        gpuLinearComb(bw, N, d_masked_X, T(1), d_X, T(1), d_mask_X);
+    }
+    else{
+        gpuLinearComb(bw, N, d_masked_X, T(-1), d_mask_X);
+    }
     auto h_masked_X = (T *)moveToCPU((u8 *)d_masked_X, N * sizeof(T), NULL);
     
     u8 *startPtr, *curPtr;
