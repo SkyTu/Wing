@@ -52,28 +52,13 @@ int main(int argc, char *argv[]) {
     peer->connect(party, argv[2]);
 
     // generate rin
-    auto h_mask_X = new T[N];
-    auto d_mask_X = randomGEOnGpu<T>(N, bin);
-    h_mask_X = (T *)moveToCPU((u8 *)d_mask_X, N * sizeof(T), NULL);
-    
-    // generate x
     auto h_X = new T[N];
-    auto d_X = randomGEOnGpu<T>(N, (bin-2));
-    // gpuLinearComb(64, N, d_X, T(-1), d_X, T(1ULL<<bin));
-    h_X = (T *)moveToCPU((u8 *)d_X, N * sizeof(T), NULL);
-    
+    auto d_X_0 = randomGEOnGpu<T>(N, bin);
+    auto d_X_1 = randomGEOnGpu<T>(N, bin);
+    auto d_X = (T *)gpuMalloc(N * sizeof(T));
+    gpuLinearComb(64, N, d_X, T(1), d_X_0, T(1), d_X_1);
+    h_X = (T *)moveToCPU((u8 *)d_X, N * sizeof(T), NULL);    
     int bw = 64;
-
-    // calculate xhat
-    auto d_masked_X = (T *)gpuMalloc(N * sizeof(T));
-    if(party == 1){
-        gpuLinearComb(bw, N, d_masked_X, T(1), d_X, T(1), d_mask_X);
-    }
-    else{
-        gpuLinearComb(bw, N, d_masked_X, T(-1), d_mask_X);
-    }
-    auto h_masked_X = (T *)moveToCPU((u8 *)d_masked_X, N * sizeof(T), NULL);
-    std::cout << h_masked_X[0] << std::endl;
 
     u8 *startPtr, *curPtr;
     size_t keyBufSz = 10 * OneGB;
@@ -82,19 +67,23 @@ int main(int argc, char *argv[]) {
     dcf::TruncateType t = dcf::TruncateType::StochasticTR;
 
     // generate TReKey
-    auto d_truncateMask = dcf::genGPUTReKey(&curPtr, party, bin, bin-shift, shift, N, d_mask_X, &g, h_r);
-    // generate ZeroExtKey
-    // auto d_outputMask = dcf::genGPUZeroExtKey(&curPtr, party, bin-shift, bout, N, d_truncateMask, &g);
+    auto d_truncateMask = dcf::genGPUTReKey(&curPtr, party, bin, bin-shift, shift, N, d_X, &g, h_r);
     assert(curPtr - startPtr < keyBufSz);
     auto h_truncateMask = (T*) moveToCPU((u8*) d_truncateMask, N * sizeof(T), NULL);
 
     
     curPtr = startPtr;
     std::cout << "Reading key\n";
-    auto k = dcf::readGPUTrStochasticKey<T>(&curPtr);
-
-    dcf::gpuTRe(k.TReKey, party, peer, d_masked_X, &g, (Stats*) NULL);
-    auto h_TRe = (T*) moveToCPU((u8*) d_masked_X, N * sizeof(T), NULL);
+    auto k = dcf::readGPUStTRKey<T>(&curPtr);
+    auto h_TRe = new T[N];
+    if(party == 1){
+        dcf::gpuTRe(k, party, peer, d_X_1, &g, (Stats*) NULL);
+        h_TRe = (T*) moveToCPU((u8*) d_X_1, N * sizeof(T), NULL);
+    }
+    else{
+        dcf::gpuTRe(k, party, peer, d_X_0, &g, (Stats*) NULL);
+        h_TRe = (T*) moveToCPU((u8*) d_X_0, N * sizeof(T), NULL);
+    }
     // dcf::gpuZeroExt(k.ZeroExtKey, party, peer, d_masked_X, &g, (Stats*) NULL);
     // auto h_ZeroExt = (T*) moveToCPU((u8*) d_masked_X, N * sizeof(T), NULL);
     // 计算结果是存在d_mask_X的
@@ -106,8 +95,6 @@ int main(int argc, char *argv[]) {
         
         auto r_msb = cpuMsb(h_truncateMask[i], bin-shift);
         auto x_msb = cpuMsb(h_TRe[i], bin-shift);
-        auto result = party * (h_TRe[i] - (1ULL << (bin-shift-2))) + k.ZeroExtKey.m[i] * (!x_msb) + k.ZeroExtKey.u[i]; 
-        cpuMod(result, bout);
         // auto unmasked_O = (h_ZeroExt[i] - h_outputMask[i]);
         // cpuMod(unmasked_O, bout);
         auto o = cpuArs(h_X[i], bin, shift);

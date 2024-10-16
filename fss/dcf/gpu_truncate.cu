@@ -89,7 +89,9 @@ namespace dcf
         writeInt(key_as_bytes, bout);
         writeInt(key_as_bytes, shift);
         writeInt(key_as_bytes, N);
+        writeShares<T, T>(key_as_bytes, party, N, d_inputMask, bin);
         auto d_outMask = randomGEOnGpu<T>(N, bout);
+        writeShares<T, T>(key_as_bytes, party, N, h_r, bin);
         return d_outMask;
     }
 
@@ -172,12 +174,15 @@ namespace dcf
 
 
     template <typename T>
-    __global__ void TReKernel(int party, int bin, int bout, int shift, int N, T *x, bool gap)
+    __global__ void TReKernel(int party, int bin, int bout, int shift, int N, T *rin, T *rout, T *x, bool gap)
     {
         int i = blockIdx.x * blockDim.x + threadIdx.x;
         if (i < N)
         {   
-            x[i] = (x[i] >> shift);
+            auto x0 = x[i] - rin[i];
+            gpuMod(x0, bin);
+            x[i] = (x[i] >> shift) + rout[i];
+            gpuMod(x[i], bout);
         }
     }
 
@@ -220,7 +225,9 @@ namespace dcf
     template <typename T>
     void gpuTRe(GPUTReKey<T> k, int party, SigmaPeer *peer, T *d_I, AESGlobalContext *g, Stats *s, bool gap = true)
     {       
-        TReKernel<<<(k.N - 1) / 128 + 1, 128>>>(party, k.bin, k.bout, k.shift, k.N, d_I, gap);
+        auto d_r_in_share = (T *)moveToGPU((u8 *)k.r_in_share, k.N * sizeof(T), s);
+        auto d_r_out_share = (T *)moveToGPU((u8 *)k.r_out_share, k.N * sizeof(T), s);
+        TReKernel<<<(k.N - 1) / 128 + 1, 128>>>(party, k.bin, k.bout, k.shift, k.N, k.r_in_share, k.r_out_share, d_I, gap);
     }
 
     template <typename T>
