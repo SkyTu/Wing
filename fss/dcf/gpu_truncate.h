@@ -93,10 +93,6 @@ namespace dcf
         memcpy(&k, *key_as_bytes, 4 * sizeof(int));
         *key_as_bytes += 4 * sizeof(int);
         size_t memSz = k.N * sizeof(T);
-        k.r_in_share = (T *)*key_as_bytes;
-        *key_as_bytes += memSz;
-        k.r_out_share = (T *)*key_as_bytes;
-        *key_as_bytes += memSz;
         return k;
     }
     
