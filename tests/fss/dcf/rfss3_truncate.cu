@@ -72,7 +72,7 @@ int main(int argc, char *argv[]) {
     size_t keyBufSz = 10 * OneGB;
     getKeyBuf(&startPtr, &curPtr, keyBufSz);
     T* h_r = (T*) cpuMalloc(N * sizeof(T));
-    dcf::TruncateType t = dcf::TruncateType::RFSS3stTR;
+    dcf::TruncateType t = dcf::TruncateType::StochasticTruncate;
 
     // generate TReKey
     auto d_truncateMask = dcf::genGPUTReKey(&curPtr, party, bin, bin-shift, shift, N, d_mask_X, &g, h_r);
@@ -87,7 +87,7 @@ int main(int argc, char *argv[]) {
     
     curPtr = startPtr;
     std::cout << "Reading key\n";
-    auto k = dcf::readRFSS3GPUStTRKey<T>(&curPtr);
+    auto k = dcf::readGPUTrStochasticKey<T>(&curPtr);
 
     dcf::gpuTRe(k.TReKey, party, peer, d_masked_X, &g, (Stats*) NULL);
     auto h_TRe = (T*) moveToCPU((u8*) d_masked_X, N * sizeof(T), NULL);

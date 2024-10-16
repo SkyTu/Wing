@@ -251,7 +251,7 @@ namespace dcf
             if (d_Y)
                 gpuFree(d_Y);
 
-            peer->reconstructInPlace(d_Z, p.bw, p.size_C, &(this->s));
+            // peer->reconstructInPlace(d_Z, p.bw, p.size_C, &(this->s));
             dcf::gpuTruncate(p.bw, p.bw, tf, truncateKeyZ, global::scale, peer, party, p.size_C, d_Z, gaes, &(this->s));
 
             return d_Z;
@@ -278,7 +278,6 @@ namespace dcf
             }
 
             auto d_dW = gpuMatmulBeaver(pdW, mmKeydW, party, d_X, d_incomingGrad, d_mask_X, d_mask_grad, (T *)NULL, &(this->s));
-            // 从这里可以看出输入的d_dW是revealed masked value
             peer->reconstructInPlace(d_dW, p.bw, p.size_B, &(this->s));
 
             gpuFree(d_X);

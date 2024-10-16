@@ -46,7 +46,6 @@ namespace dcf
     struct GPUTReKey
     {
         int bin, bout, shift, N;
-        T * recVal;
     };
 
 
@@ -89,13 +88,10 @@ namespace dcf
     template <typename T>
     GPUTReKey<T> readGPUStTRKey(u8 **key_as_bytes)
     {
-        printf("Reading GPUTReKey\n");
         GPUTReKey<T> k;
         memcpy(&k, *key_as_bytes, 4 * sizeof(int));
         *key_as_bytes += 4 * sizeof(int);
         size_t memSz = k.N * sizeof(T);
-        k.recVal = (T *)*key_as_bytes;
-        *key_as_bytes += memSz;
         return k;
     }
     

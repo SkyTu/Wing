@@ -66,20 +66,7 @@ namespace dcf
             lsbCorr[2 * i + (lsbMask[i] ^ 1)] = corrM1;
         }
     }
-
-
-    // bin=n, bout=n-f, shift=f
-    template <typename T>
-    __global__ void keygenTReKernel(int party, int bin, int bout, int shift, int N, T *inputMask, T *recVal, T *outMask)
-    {
-        int i = blockIdx.x * blockDim.x + threadIdx.x;
-        if (i < N)
-        {
-            recVal[i] = outMask[i] - (inputMask[i] >> shift);
-            gpuMod(recVal[i], bout);
-        }
-    }
-    
+   
     // bin = n-f, bout = n, shift = f
     template <typename T>
     __global__ void keygenZeroExtKernel(int party, int bin, int bout, int N, T *inputMask, T *u, T *m, T *outMask)
@@ -94,7 +81,7 @@ namespace dcf
         }
     }
 
-    // 修改return
+    // TReKey现在是本地截断了
     template <typename T>
     T* genGPUTReKey(uint8_t **key_as_bytes, int party, int bin, int bout, int shift, int N, T *d_inputMask, AESGlobalContext *gaes, T *h_r = NULL)
     {
@@ -103,10 +90,6 @@ namespace dcf
         writeInt(key_as_bytes, shift);
         writeInt(key_as_bytes, N);
         auto d_outMask = randomGEOnGpu<T>(N, bout);
-        auto d_recVal = (T *)gpuMalloc(N * sizeof(T));
-        keygenTReKernel<<<(N - 1) / 128 + 1, 128>>>(party, bin, bout, shift, N, d_inputMask, d_recVal, d_outMask); 
-        writeReconstructed<T>(key_as_bytes, d_recVal, N);
-        gpuFree(d_recVal);
         return d_outMask;
     }
 
@@ -149,7 +132,7 @@ namespace dcf
             break;
         case TruncateType::StochasticTR:
             bout = bin - shift;
-            d_inMask, d_outMask = genGPUTReKey(key_as_bytes, party, bin, bout, shift, N, d_inMask, gaes, h_r);
+            d_outMask = genGPUTReKey(key_as_bytes, party, bin, bout, shift, N, d_inMask, gaes, h_r);
             break;
         case TruncateType::StochasticTruncate:
             d_outMask = genGPUStTRKey(key_as_bytes, party, bin - shift, bout, shift, N, d_inMask, gaes);
@@ -189,15 +172,12 @@ namespace dcf
 
 
     template <typename T>
-    __global__ void TReKernel(int party, int bin, int bout, int shift, int N, T *x, T *recVal, bool gap)
+    __global__ void TReKernel(int party, int bin, int bout, int shift, int N, T *x, bool gap)
     {
         int i = blockIdx.x * blockDim.x + threadIdx.x;
         if (i < N)
         {   
-            auto x1 = x[i] + int(gap) * (1ULL << (bin-2));
-            gpuMod(x1, bin);
-            x[i] = (x1 >> shift) + recVal[i];
-            gpuMod(x[i], bout);
+            x[i] = (x[i] >> shift);
         }
     }
 
@@ -229,6 +209,7 @@ namespace dcf
     template <typename T>
     void gpuZeroExt(GPUZeroExtKey<T> k, int party, SigmaPeer *peer, T *d_I, AESGlobalContext *g, Stats *s)
     {
+        peer->reconstructInPlace(d_I, k.bin, k.N, s);
         gpuZeroExtend(party, k.N, k.bin, k.bout, d_I, k.m, k.u, s);
         peer->reconstructInPlace(d_I, k.bout, k.N, s);
     }
@@ -237,9 +218,7 @@ namespace dcf
     template <typename T>
     void gpuTRe(GPUTReKey<T> k, int party, SigmaPeer *peer, T *d_I, AESGlobalContext *g, Stats *s, bool gap = true)
     {       
-        auto d_recVal = (T *)moveToGPU((u8 *)k.recVal, k.N * sizeof(T), s);
-        TReKernel<<<(k.N - 1) / 128 + 1, 128>>>(party, k.bin, k.bout, k.shift, k.N, d_I, d_recVal, gap);
-        gpuFree(d_recVal);
+        TReKernel<<<(k.N - 1) / 128 + 1, 128>>>(party, k.bin, k.bout, k.shift, k.N, d_I, gap);
     }
 
     template <typename T>
