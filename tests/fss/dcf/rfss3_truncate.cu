@@ -98,9 +98,12 @@ int main(int argc, char *argv[]) {
     {
         auto unmasked_TRe = h_TRe[i];
         auto o = cpuArs(h_X[i], bin, shift);
+        if(o < 0){
+            o = (1 << (bin - shift)) + o;
+        }
         cpuMod(o, bout);
         if (o != unmasked_TRe)
-            printf("%d: h_x = %ld, real_truncate = %ld, stTR_res = %ld, TRe_res = %ld\n", i, h_X[i], o, unmasked_TRe);
+            printf("%d: h_x = %ld, real_truncate = %ld, stTR_res = %ld\n", i, h_X[i], o, unmasked_TRe);
         // assert(o == unmasked_O || o + 1== unmasked_O);
     }
     std::cout << peer->peer->keyBuf->bytesSent << std::endl;
