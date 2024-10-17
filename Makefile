@@ -86,8 +86,11 @@ dcf_stochastic_truncate: tests/fss/dcf/stochastic_truncate.cu
 dcf_relu: tests/fss/dcf/relu.cu
 	$(CXX) $(FLAGS) $(INCLUDES) $^ $(UTIL_FILES) $(LIBS) -o tests/fss/dcf/relu
 
-rfss3_truncate: tests/fss/dcf/rfss3_truncate.cu
-	$(CXX) $(FLAGS) $(INCLUDES) $^ $(UTIL_FILES) $(LIBS) -o tests/fss/dcf/rfss3_truncate
+wing_truncate_reduce: tests/fss/dcf/wing_truncate_reduce.cu
+	$(CXX) $(FLAGS) $(INCLUDES) $^ $(UTIL_FILES) $(LIBS) -o tests/fss/dcf/wing_truncate_reduce
+
+wing_truncate: tests/fss/dcf/wing_truncate.cu
+	$(CXX) $(FLAGS) $(INCLUDES) $^ $(UTIL_FILES) $(LIBS) -o tests/fss/dcf/wing_truncate
 
 rfss3_relu_ext: tests/fss/dcf/rfss3_relu_ext.cu
 	$(CXX) $(FLAGS) $(INCLUDES) $^ $(UTIL_FILES) $(LIBS) -o tests/fss/dcf/rfss3_relu_ext
