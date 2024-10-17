@@ -59,7 +59,7 @@ int main(int argc, char *argv[]) {
     // generate rin
     auto d_mask = randomGEOnGpu<T>(N, bin);
     
-    gpuLinearComb(64, N, d_X, T(1), d_X_0, T(1), d_X_1);
+    gpuLinearComb(64, N, d_X, T(1), d_X_0, T(1), d_X_1, T(1), d_mask);
     h_X = (T *)moveToCPU((u8 *)d_X, N * sizeof(T), NULL);    
     int bw = 64;
 
@@ -94,7 +94,7 @@ int main(int argc, char *argv[]) {
     {
         auto unmasked_TRe = h_TRe[i];
         auto o = cpuArs(h_X[i], bin, shift);
-        cpuMod(o, bin-shift);
+        cpuMod(o, bout);
         if (o != unmasked_TRe)
             printf("%d: h_x = %ld, real_truncate = %ld, stTR_res = %ld\n", i, h_X[i], o, unmasked_TRe);
     }
