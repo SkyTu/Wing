@@ -57,8 +57,12 @@ int main(int argc, char *argv[]) {
     auto d_X_1 = randomGEOnGpu<T>(N, bin-3);
     auto d_X = (T *)gpuMalloc(N * sizeof(T));
     // generate rin
-    auto d_mask = randomGEOnGpu<T>(N, bin);
-    
+    // auto d_mask = randomGEOnGpu<T>(N, bin);
+    auto d_mask = (T *)gpuMalloc(N * sizeof(T));
+    cudaError_t err = cudaMemset(d_mask, 0, N * sizeof(T));
+    if (err != cudaSuccess) {
+        printf("CUDA error: %s\n", cudaGetErrorString(err));
+    }
     // generate x = x_0 + x_1 - rin
     gpuLinearComb(64, N, d_X, T(1), d_X_0, T(1), d_X_1, T(-1), d_mask);
     h_X = (T *)moveToCPU((u8 *)d_X, N * sizeof(T), NULL);    
