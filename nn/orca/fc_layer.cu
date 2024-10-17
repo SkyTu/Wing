@@ -273,12 +273,12 @@ namespace dcf
                 auto d_mask_W = (T *)moveToGPU((u8 *)mmKeydX.B, mmKeydX.mem_size_B, &(this->s));
                 d_dX = gpuMatmulBeaver(pdX, mmKeydX, party, d_incomingGrad, d_W, d_mask_grad, d_mask_W, (T *)NULL, &(this->s));
                 gpuFree(d_mask_W);
-                peer->reconstructInPlace(d_dX, p.bw, p.size_A, &(this->s));
+                // peer->reconstructInPlace(d_dX, p.bw, p.size_A, &(this->s));
                 dcf::gpuTruncate(p.bw, p.bw, tb, truncateKeydX, global::scale, peer, party, p.size_A, d_dX, gaes, &(this->s));
             }
 
             auto d_dW = gpuMatmulBeaver(pdW, mmKeydW, party, d_X, d_incomingGrad, d_mask_X, d_mask_grad, (T *)NULL, &(this->s));
-            peer->reconstructInPlace(d_dW, p.bw, p.size_B, &(this->s));
+            // peer->reconstructInPlace(d_dW, p.bw, p.size_B, &(this->s));
 
             gpuFree(d_X);
             gpuFree(d_mask_X);

@@ -89,8 +89,6 @@ int main(int argc, char *argv[]) {
         dcf::gpuTRe(k, party, peer, d_X_0, &g, (Stats*) NULL);
         h_TRe = (T*) moveToCPU((u8*) d_X_0, N * sizeof(T), NULL);
     }
-    // dcf::gpuZeroExt(k.ZeroExtKey, party, peer, d_masked_X, &g, (Stats*) NULL);
-    // auto h_ZeroExt = (T*) moveToCPU((u8*) d_masked_X, N * sizeof(T), NULL);
     // 计算结果是存在d_mask_X的
     destroyGPURandomness();
 
