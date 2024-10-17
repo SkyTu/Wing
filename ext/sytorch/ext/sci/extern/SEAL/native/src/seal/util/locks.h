@@ -7,7 +7,7 @@
 
 #ifdef SEAL_USE_SHARED_MUTEX
 #include <shared_mutex>
-
+#include <mutex>
 namespace seal
 {
     namespace util

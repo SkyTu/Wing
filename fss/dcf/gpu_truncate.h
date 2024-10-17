@@ -46,7 +46,6 @@ namespace dcf
     struct GPUTReKey
     {
         int bin, bout, shift, N;
-        T *r_in_share, *r_out_share;
     };
 
 
@@ -75,7 +74,6 @@ namespace dcf
         *key_as_bytes += sizeof(int);
         k.N = *((int *)*key_as_bytes);
         *key_as_bytes += sizeof(int);
-
         size_t memSz = k.N * sizeof(T);
         k.u = (T *)*key_as_bytes;
         *key_as_bytes += memSz;
@@ -92,7 +90,6 @@ namespace dcf
         GPUTReKey<T> k;
         memcpy(&k, *key_as_bytes, 4 * sizeof(int));
         *key_as_bytes += 4 * sizeof(int);
-        size_t memSz = k.N * sizeof(T);
         return k;
     }
     

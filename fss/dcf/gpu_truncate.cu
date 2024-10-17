@@ -68,11 +68,11 @@ namespace dcf
     }
     
     template <typename T>
-    __global__ void keygenTReKernel(int party, int shift, int N, T *inputMask, T *outputMask){
+    __global__ void keygenTReKernel(int party, int shift, int N, T *inputMask){
         int i = blockIdx.x * blockDim.x + threadIdx.x;
         if (i < N)
         {
-            outputMask[i] = (inputMask[i] >> shift);
+            inputMask[i] = (inputMask[i] >> shift);
         }
     }
 
@@ -98,9 +98,8 @@ namespace dcf
         writeInt(key_as_bytes, bout);
         writeInt(key_as_bytes, shift);
         writeInt(key_as_bytes, N);
-        auto d_outputMask = (T*)gpuMalloc(N * sizeof(T));
-        keygenTReKernel<<<(N - 1) / 128 + 1, 128>>>(party, shift, N, d_inputMask, d_outputMask);
-        return d_outputMask;
+        keygenTReKernel<<<(N - 1) / 128 + 1, 128>>>(party, shift, N, d_inputMask);
+        return d_inputMask;
     }
 
     template <typename T>
@@ -229,7 +228,7 @@ namespace dcf
 
     template <typename T>
     void gpuTRe(GPUTReKey<T> k, int party, SigmaPeer *peer, T *d_I, AESGlobalContext *g, Stats *s, bool gap = true)
-    {       
+    {    
         TReKernel<<<(k.N - 1) / 128 + 1, 128>>>(party, k.bin, k.bout, k.shift, k.N, d_I, gap);
     }
 
