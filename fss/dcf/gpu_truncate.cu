@@ -72,6 +72,7 @@ namespace dcf
         int i = blockIdx.x * blockDim.x + threadIdx.x;
         if (i < N)
         {
+            printf("inputMask is %lu", inputMask[i]);
             inputMask[i] = (inputMask[i] >> shift);
         }
     }
@@ -220,7 +221,6 @@ namespace dcf
     template <typename T>
     void gpuZeroExt(GPUZeroExtKey<T> k, int party, SigmaPeer *peer, T *d_I, AESGlobalContext *g, Stats *s)
     {
-        peer->reconstructInPlace(d_I, k.bin, k.N, s);
         gpuZeroExtend(party, k.N, k.bin, k.bout, d_I, k.m, k.u, s);
         peer->reconstructInPlace(d_I, k.bout, k.N, s);
     }
@@ -230,6 +230,7 @@ namespace dcf
     void gpuTRe(GPUTReKey<T> k, int party, SigmaPeer *peer, T *d_I, AESGlobalContext *g, Stats *s, bool gap = true)
     {    
         TReKernel<<<(k.N - 1) / 128 + 1, 128>>>(party, k.bin, k.bout, k.shift, k.N, d_I, gap);
+        peer->reconstructInPlace(d_I, k.bout, k.N, s);
     }
 
     template <typename T>

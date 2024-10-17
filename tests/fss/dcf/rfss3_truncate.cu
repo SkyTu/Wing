@@ -97,11 +97,6 @@ int main(int argc, char *argv[]) {
     for (int i = 0; i < N; i++)
     {
         auto unmasked_TRe = h_TRe[i];
-        
-        auto r_msb = cpuMsb(h_truncateMask[i], bin-shift);
-        auto x_msb = cpuMsb(h_TRe[i], bin-shift);
-        // auto unmasked_O = (h_ZeroExt[i] - h_outputMask[i]);
-        // cpuMod(unmasked_O, bout);
         auto o = cpuArs(h_X[i], bin, shift);
         cpuMod(o, bout);
         if (o != unmasked_TRe)
