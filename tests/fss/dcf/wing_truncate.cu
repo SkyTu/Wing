@@ -51,7 +51,7 @@ int main(int argc, char *argv[]) {
     auto peer = new GpuPeer(false);
     peer->connect(party, argv[2]);
 
-    // generate x
+    // generate the share of x + rin
     auto h_X = new T[N];
     auto d_X_0 = randomGEOnGpu<T>(N, bin-3);
     auto d_X_1 = randomGEOnGpu<T>(N, bin-3);
@@ -59,7 +59,8 @@ int main(int argc, char *argv[]) {
     // generate rin
     auto d_mask = randomGEOnGpu<T>(N, bin);
     
-    gpuLinearComb(64, N, d_X, T(1), d_X_0, T(1), d_X_1, T(1), d_mask);
+    // generate x = x_0 + x_1 - rin
+    gpuLinearComb(64, N, d_X, T(1), d_X_0, T(1), d_X_1, T(-1), d_mask);
     h_X = (T *)moveToCPU((u8 *)d_X, N * sizeof(T), NULL);    
     int bw = 64;
 
