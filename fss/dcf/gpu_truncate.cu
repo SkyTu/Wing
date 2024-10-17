@@ -199,7 +199,7 @@ namespace dcf
             x[i] = x[i] + (1ULL << (bin-2));
             gpuMod(x[i], bin);
             auto msb_xhat = gpuMsb(x[i], bin);
-            x[i] = x[i] - (1ULL << (bout-2));
+            x[i] = x[i] - (1ULL << (bin-2));
             gpuMod(x[i], bout);
             x[i] = (party == SERVER1) * x[i] + u[i] + m[i] * (!msb_xhat);
         }
