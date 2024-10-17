@@ -85,7 +85,7 @@ int main(int argc, char *argv[]) {
         h_TRe = (T*) moveToCPU((u8*) d_X_1, N * sizeof(T), NULL);
     }
     else{
-        dcf::gpuTruncate(bin, bout, t, k, shift, peer, party, N, d_X_1, &g, (Stats*) NULL);
+        dcf::gpuTruncate(bin, bout, t, k, shift, peer, party, N, d_X_0, &g, (Stats*) NULL);
         h_TRe = (T*) moveToCPU((u8*) d_X_0, N * sizeof(T), NULL);
     }
     // 计算结果是存在d_mask_X的
