@@ -33,8 +33,10 @@ namespace dcf
     {
         None,
         // LocalLRS,
+        RevealedStochasticTR,
         StochasticTR,
         LocalARS,
+        RevealedStochasticTruncate,
         StochasticTruncate,
     };
 

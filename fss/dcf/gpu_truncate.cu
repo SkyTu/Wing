@@ -244,24 +244,43 @@ namespace dcf
     }
 
     template <typename T>
+    void gpuRevealedTRe(GPUTReKey<T> k, int party, SigmaPeer *peer, T *d_I, AESGlobalContext *g, Stats *s, bool gap = true)
+    {   
+        TReKernel<<<(k.N - 1) / 128 + 1, 128>>>(party, k.bin, k.bout, k.shift, k.N, d_I, gap);
+    }
+
+    template <typename T>
     void gpuStTR(GPUTruncateKey<T> k, int party, SigmaPeer *peer, T *d_I, AESGlobalContext *g, Stats *s)
     {
         gpuTRe(k.TReKey, party, peer, d_I, g, s);
         gpuZeroExt(k.ZeroExtKey, party, peer, d_I, g, s);
     }
     
+    template <typename T>
+    void gpuRevealedStTR(GPUTruncateKey<T> k, int party, SigmaPeer *peer, T *d_I, AESGlobalContext *g, Stats *s)
+    {
+        gpuRevealedTRe(k.TReKey, party, peer, d_I, g, s);
+        gpuZeroExt(k.ZeroExtKey, party, peer, d_I, g, s);
+    }
 
     template <typename T>
     void gpuTruncate(int bin, int bout, TruncateType t, GPUTruncateKey<T> k, int shift, SigmaPeer *peer, int party, int N, T *d_I, AESGlobalContext *gaes, Stats *s)
     {
         switch (t)
         {
+        case TruncateType::RevealedStochasticTR:
+            bout = bin - shift;
+            gpuRevealedTRe(k.TReKey, party, peer, d_I, gaes, s);
+            break;
         case TruncateType::StochasticTR:
             bout = bin - shift;
             gpuTRe(k.TReKey, party, peer, d_I, gaes, s);
             break;
         case TruncateType::LocalARS:
             gpuLocalTr<T, T, ars>(party, bin, shift, N, d_I, true);
+            break;
+        case TruncateType::RevealedStochasticTruncate:
+            gpuRevealedStTR(k, party, peer, d_I, gaes, s);
             break;
         case TruncateType::StochasticTruncate:
             gpuStTR(k, party, peer, d_I, gaes, s);
