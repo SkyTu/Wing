@@ -202,7 +202,7 @@ namespace dcf
 
 
     template <typename T>
-    __global__ void zeroExtendKernel(T *x, T *m, T *u, int bin, int bout, int N, int party)
+    __global__ void  zeroExtendKernel(T *x, T *m, T *u, int bin, int bout, int N, int party)
     {
         int i = blockIdx.x * blockDim.x + threadIdx.x;
         if (i < N)
