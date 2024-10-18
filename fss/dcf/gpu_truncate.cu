@@ -257,7 +257,6 @@ namespace dcf
         switch (t)
         {
         case TruncateType::StochasticTR:
-            // assert(bout == bin - shift);
             bout = bin - shift;
             gpuTRe(k.TReKey, party, peer, d_I, gaes, s);
             break;
@@ -273,21 +272,6 @@ namespace dcf
         return;
     }
     
-    // template <typename T>
-    // void gpuTruncate(int bin, int bout, TruncateType t, GPURFSS3TruncateKey<T> k, int shift, SigmaPeer *peer, int party, int N, T *d_I, AESGlobalContext *gaes, Stats *s)
-    // {
-    //     switch (t)
-    //     {
-    //         case TruncateType::RFSS3TRe:
-    //             gpuTRe(k.TReKey, party, peer, d_I, gaes, s);
-    //             break;
-    //         case TruncateType::RFSS3stTR:
-    //             gpuStTR(k, party, peer, d_I, gaes, s);
-    //             break;
-    //     }
-    //     return;
-    // }   
-
     // check via tolerance bounds
     template <typename T>
     void checkTrStWithTol(int bin, int bout, int shift, int N, T *h_masked_A, T *h_mask_A, T *h_A_ct)
@@ -307,9 +291,9 @@ namespace dcf
             cpuMod(output, bout);
             if (i < 10)
                 printf("%lu %lu %lu\n", h_A_ct[i], u64(output), u64(truncated_A));
-            // if (output != truncated_A && output != truncated_A_plus1)
-            //     printf("%lu %lu %lu %lu\n", h_A_ct[i], u64(output), u64(truncated_A), u64(truncated_A_plus1));
-            // assert(output == truncated_A || output == truncated_A_plus1);
+            if (output != truncated_A && output != truncated_A_plus1)
+                printf("%lu %lu %lu %lu\n", h_A_ct[i], u64(output), u64(truncated_A), u64(truncated_A_plus1));
+            assert(output == truncated_A || output == truncated_A_plus1);
         }
     }
 }
