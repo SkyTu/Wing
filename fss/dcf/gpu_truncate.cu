@@ -144,7 +144,7 @@ namespace dcf
             d_outMask = genGPUTReKey(key_as_bytes, party, bin, bout, shift, N, d_inMask, gaes, h_r);
             break;
         case TruncateType::StochasticTruncate:
-            d_outMask = genGPUStTRKey(key_as_bytes, party, bin - shift, bout, shift, N, d_inMask, gaes);
+            d_outMask = genGPUStTRKey(key_as_bytes, party, bin, bout, shift, N, d_inMask, gaes);
             break;
         default:
             d_outMask = d_inMask;
@@ -241,8 +241,8 @@ namespace dcf
     void gpuTRe(GPUTReKey<T> k, int party, SigmaPeer *peer, T *d_I, AESGlobalContext *g, Stats *s, bool gap = true)
     {   
         // 按理来说不用reconstruct 
-        peer->reconstructInPlace(d_I, k.bout, k.N, s);
         PrintKernel<<<(k.N - 1) / 128 + 1, 128>>>(1, d_I);
+        printf("bin: %d, bout: %d, shift: %d\n", k.bin, k.bout, k.shift);
         TReKernel<<<(k.N - 1) / 128 + 1, 128>>>(party, k.bin, k.bout, k.shift, k.N, d_I, gap);
         peer->reconstructInPlace(d_I, k.bout, k.N, s);
         PrintKernel<<<(k.N - 1) / 128 + 1, 128>>>(1, d_I);
