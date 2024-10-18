@@ -92,6 +92,9 @@ wing_truncate_reduce: tests/fss/dcf/wing_truncate_reduce.cu
 wing_truncate: tests/fss/dcf/wing_truncate.cu
 	$(CXX) $(FLAGS) $(INCLUDES) $^ $(UTIL_FILES) $(LIBS) -o tests/fss/dcf/wing_truncate
 
+wing_truncate_reveal: tests/fss/dcf/wing_truncate_reveal.cu
+	$(CXX) $(FLAGS) $(INCLUDES) $^ $(UTIL_FILES) $(LIBS) -o tests/fss/dcf/wing_truncate_reveal
+
 rfss3_relu_ext: tests/fss/dcf/rfss3_relu_ext.cu
 	$(CXX) $(FLAGS) $(INCLUDES) $^ $(UTIL_FILES) $(LIBS) -o tests/fss/dcf/rfss3_relu_ext
 
