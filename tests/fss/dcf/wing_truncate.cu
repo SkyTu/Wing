@@ -53,8 +53,8 @@ int main(int argc, char *argv[]) {
 
     // generate the share of x + rin
     auto h_X = new T[N];
-    auto d_X_0 = randomGEOnGpu<T>(N, bin-3);
-    auto d_X_1 = randomGEOnGpu<T>(N, bin-3);
+    auto d_X_0 = randomGEOnGpu<T>(N, bin-2);
+    auto d_X_1 = randomGEOnGpu<T>(N, bin-2);
     auto d_X = (T *)gpuMalloc(N * sizeof(T));
     // generate rin
     // auto d_mask = randomGEOnGpu<T>(N, bin);
