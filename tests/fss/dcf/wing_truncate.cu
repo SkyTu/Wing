@@ -98,6 +98,7 @@ int main(int argc, char *argv[]) {
     for (int i = 0; i < N; i++)
     {
         auto unmasked_TRe = h_TRe[i] - h_truncateMask[i];
+        cpuMod(unmasked_TRe, bout);
         auto o = cpuArs(h_X[i], bin, shift);
         cpuMod(o, bout);
         if (o != unmasked_TRe)

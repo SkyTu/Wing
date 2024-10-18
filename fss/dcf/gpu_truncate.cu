@@ -191,16 +191,27 @@ namespace dcf
     }
 
     template <typename T>
+    __global__ void PrintKernel(int idx, T *x)
+    {
+        int i = blockIdx.x * blockDim.x + threadIdx.x;
+        if (i < idx)
+        {   
+            printf("%lu\n", x[i]);
+        }
+    }
+
+
+    template <typename T>
     __global__ void zeroExtendKernel(T *x, T *m, T *u, int bin, int bout, int N, int party)
     {
         int i = blockIdx.x * blockDim.x + threadIdx.x;
         if (i < N)
         {   
-            x[i] = x[i] + (1ULL << (bin-2));
-            gpuMod(x[i], bin);
+            // x[i] = x[i] + (1ULL << (bin-2));
+            // gpuMod(x[i], bin);
             auto msb_xhat = gpuMsb(x[i], bin);
-            x[i] = x[i] - (1ULL << (bin-2));
-            gpuMod(x[i], bout);
+            // x[i] = x[i] - (1ULL << (bin-2));
+            // gpuMod(x[i], bout);
             x[i] = (party == SERVER1) * x[i] + u[i] + m[i] * (!msb_xhat);
         }
     }
@@ -222,6 +233,7 @@ namespace dcf
     {
         gpuZeroExtend(party, k.N, k.bin, k.bout, d_I, k.m, k.u, s);
         peer->reconstructInPlace(d_I, k.bout, k.N, s);
+        PrintKernel<<<(k.N - 1) / 128 + 1, 128>>>(1, d_I);
     }
 
 
@@ -230,6 +242,7 @@ namespace dcf
     {    
         TReKernel<<<(k.N - 1) / 128 + 1, 128>>>(party, k.bin, k.bout, k.shift, k.N, d_I, gap);
         peer->reconstructInPlace(d_I, k.bout, k.N, s);
+        PrintKernel<<<(k.N - 1) / 128 + 1, 128>>>(1, d_I);
     }
 
     template <typename T>
