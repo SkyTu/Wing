@@ -110,14 +110,20 @@ namespace dcf
         GPUTruncateKey<T> k;
         switch (t)
         {
+        case TruncateType::RevealedStochasticTruncate:
+            k = readGPUTrStochasticKey<T>(key_as_bytes);
+            break;
         case TruncateType::StochasticTruncate:
             k = readGPUTrStochasticKey<T>(key_as_bytes);
             break;
         case TruncateType::StochasticTR:
             k.TReKey = readGPUStTRKey<T>(key_as_bytes);
             break;
+        case TruncateType::RevealedStochasticTR:
+            k.TReKey = readGPUStTRKey<T>(key_as_bytes);
+            break;
         default:
-            assert(t == TruncateType::None || t == TruncateType::LocalARS || t == TruncateType::StochasticTR);
+            assert(t == TruncateType::None || t == TruncateType::LocalARS || t == TruncateType::StochasticTR || t == TruncateType::RevealedStochasticTR);
         }
         return k;
     }
