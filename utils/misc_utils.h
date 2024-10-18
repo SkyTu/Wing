@@ -196,6 +196,19 @@ __global__ void modKernel(u64 N, T *d_data, int bw)
     }
 }
 
+template <typename T>
+__global__ void modwithGapKernel(u64 N, T *d_data, int bw, int gap)
+{
+    u64 i = blockIdx.x * (u64)blockDim.x + threadIdx.x;
+    if (i < N)
+    {
+        gpuMod(d_data[i], bw - gap);
+        if(i % 2){
+            d_data[i] = (1<<bw) - d_data[i];
+        }
+    }
+}
+
 template <typename TIn, typename TOut>
 __global__ void getPackedSharesKernel(u64 N, int party, TIn *d_A, TOut *d_A0, u32 *d_packed_A, int bw)
 {

@@ -74,6 +74,16 @@ T *randomGEOnGpu(const u64 n, int bw)
   return (T *)d_data;
 }
 
+template <typename T>
+T *randomGEOnGpuWithGap(const u64 n, int bw, int gap)
+{
+  u64 numUInts = (n * sizeof(T) - 1) / (sizeof(u32)) + 1;
+  auto d_data = (u32 *)gpuMalloc(numUInts * sizeof(u32));
+  randomUIntsOnGpu(/*2 * n*/ numUInts, /*(u32*)*/ d_data);
+  modwithGapKernel<<<(n - 1) / 256 + 1, 256>>>(n, (T *)d_data, bw, gap);
+  return (T *)d_data;
+}
+
 // extern "C" void randomGEOnGpu(const int n) {
 //   randomUIntsOnGpu(2 * n, (u32*) d_data);
 // }
