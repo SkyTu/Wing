@@ -193,7 +193,7 @@ namespace dcf
         int i = blockIdx.x * blockDim.x + threadIdx.x;
         if (i < N)
         {   
-            x[i] = (x[i] >> shift) + party;
+            x[i] = (x[i] >> shift);
         }
     }
 
