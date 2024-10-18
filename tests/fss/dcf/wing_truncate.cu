@@ -54,7 +54,7 @@ int main(int argc, char *argv[]) {
 
     // generate the share of x + rin
     auto h_X = new T[N];
-    auto d_X = randomGEOnGpuWithGap<T>(N, bin, 1);
+    auto d_X = randomGEOnGpuWithGap<T>(N, bin, 0);
     // generate rin
     auto d_mask = randomGEOnGpu<T>(N, bin);
     // generate x = x_0 + x_1 - rin
