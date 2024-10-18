@@ -58,19 +58,19 @@ int main(int argc, char *argv[])
     T *h_X, *h_W, *h_Y, *h_Z, *h_grad, *h_Vw, *h_Vy;
 
     // check: have you reconstructed the masked output in the protocol?
-    auto d_mask_X = randomGEOnGpuWithGap<T>(fc_layer.p.size_A, bin, 20);
+    auto d_mask_X = randomGEOnGpuWithGap<T>(fc_layer.p.size_A, bin, 30);
     auto d_masked_X = getMaskedInputOnGpu<T>(fc_layer.p.size_A, bin, d_mask_X, &h_X);
     auto d_mask_W = randomGEOnGpuWithGap<T>(fc_layer.p.size_B, bin, 30);
     auto h_masked_W = getMaskedInputOnCpu<T>(fc_layer.p.size_B, bin, d_mask_W, &h_W);
-    auto d_mask_Y = randomGEOnGpuWithGap<T>(N, bin, 20);
+    auto d_mask_Y = randomGEOnGpuWithGap<T>(N, bin, 30);
     auto h_masked_Y = getMaskedInputOnCpu<T>(N, bin, d_mask_Y, &h_Y);
 
-    auto d_mask_grad = randomGEOnGpuWithGap<T>(fc_layer.p.size_C, bin, 20);
+    auto d_mask_grad = randomGEOnGpuWithGap<T>(fc_layer.p.size_C, bin, 30);
     auto d_masked_grad = getMaskedInputOnGpu<T>(fc_layer.p.size_C, bin, d_mask_grad, &h_grad);
 
-    auto d_mask_Vw = randomGEOnGpuWithGap<T>(fc_layer.p.size_B, bin, 20);
+    auto d_mask_Vw = randomGEOnGpuWithGap<T>(fc_layer.p.size_B, bin, 30);
     auto h_masked_Vw = getMaskedInputOnCpu<T>(fc_layer.p.size_B, bin, d_mask_Vw, &h_Vw);
-    auto d_mask_Vy = randomGEOnGpuWithGap<T>(N, bin, 20);
+    auto d_mask_Vy = randomGEOnGpuWithGap<T>(N, bin, 30);
     auto h_masked_Vy = getMaskedInputOnCpu<T>(N, bin, d_mask_Vy, &h_Vy);
 
     moveIntoCPUMem((u8 *)fc_layer.mask_W, (u8 *)d_mask_W, fc_layer.p.size_B * sizeof(T), NULL);
