@@ -60,9 +60,6 @@ int main(int argc, char *argv[]) {
     // generate x = x_0 + x_1 - rin
     auto d_masked_X = (T*) gpuMalloc(N * sizeof(T));
     gpuLinearComb(64, N, d_masked_X, T(1), d_X, T(1), d_mask);
-    auto d_X_0 = randomGEOnGpu<T>(N, bin);
-    auto d_X_1 = (T*) gpuMalloc(N * sizeof(T));
-    gpuLinearComb(64, N, d_X_1, T(1), d_masked_X, T(-1), d_X_0);
     h_X = (T *)moveToCPU((u8 *)d_X, N * sizeof(T), NULL);    
     int bw = 64;
 
@@ -73,7 +70,9 @@ int main(int argc, char *argv[]) {
     dcf::TruncateType t = dcf::TruncateType::RevealedStochasticTruncate;
 
     // generate TReKey
+    printf("Generating key\n");
     auto d_truncateMask = dcf::genGPUTruncateKey(&curPtr, party, t, bin, bout, shift, N, d_mask, &g, h_r);
+    printf("Key generated\n");
     assert(curPtr - startPtr < keyBufSz);
     auto h_truncateMask = (T*) moveToCPU((u8*) d_truncateMask, N * sizeof(T), NULL);
 
@@ -83,7 +82,7 @@ int main(int argc, char *argv[]) {
     auto k = dcf::readGPUTruncateKey<T>(t, &curPtr);
     auto h_TRe = new T[N];
     dcf::gpuTruncate(bin, bout, t, k, shift, peer, party, N, d_masked_X, &g, (Stats*) NULL);
-    h_TRe = (T*) moveToCPU((u8*) d_X_0, N * sizeof(T), NULL);
+    h_TRe = (T*) moveToCPU((u8*) d_masked_X, N * sizeof(T), NULL);
     // 计算结果是存在d_mask_X的
     destroyGPURandomness();
 
