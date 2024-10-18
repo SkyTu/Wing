@@ -20,6 +20,7 @@
 // SOFTWARE.
 
 #include <stdio.h>
+#include <cmath>
 #include <cassert>
 #include <cstdint>
 
@@ -53,7 +54,7 @@ int main(int argc, char *argv[]) {
 
     // generate the share of x + rin
     auto h_X = new T[N];
-    auto d_X = randomGEOnGpuWithGap<T>(N, bin, 2);
+    auto d_X = randomGEOnGpuWithGap<T>(N, bin, 1);
     // generate rin
     auto d_mask = randomGEOnGpu<T>(N, bin);
     // generate x = x_0 + x_1 - rin
@@ -98,8 +99,11 @@ int main(int argc, char *argv[]) {
         cpuMod(unmasked_TRe, bout);
         auto o = cpuArs(h_X[i], bin, shift);
         cpuMod(o, bout);
-        if (o != unmasked_TRe)
-            printf("%d: h_x = %ld, real_truncate = %ld, stTR_res = %ld\n", i, h_X[i], o, unmasked_TRe);
+        if (o != unmasked_TRe){
+            if (int(o-unmasked_TRe) > 5){
+                printf("%d: h_x = %ld, real_truncate = %ld, stTR_res = %ld, diff = %ld\n", i, h_X[i], o, unmasked_TRe, o-unmasked_TRe);
+            }
+        }
     }
     std::cout << peer->peer->keyBuf->bytesSent << std::endl;
 }
