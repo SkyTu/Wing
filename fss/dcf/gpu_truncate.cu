@@ -207,11 +207,11 @@ namespace dcf
         int i = blockIdx.x * blockDim.x + threadIdx.x;
         if (i < N)
         {   
-            // x[i] = x[i] + (1ULL << (bin-2));
-            // gpuMod(x[i], bin);
+            x[i] = x[i] + (1ULL << (bin-2));
+            gpuMod(x[i], bin);
             auto msb_xhat = gpuMsb(x[i], bin);
-            // x[i] = x[i] - (1ULL << (bin-2));
-            // gpuMod(x[i], bout);
+            x[i] = x[i] - (1ULL << (bin-2));
+            gpuMod(x[i], bout);
             x[i] = (party == SERVER1) * x[i] + u[i] + m[i] * (!msb_xhat);
         }
     }
@@ -233,19 +233,14 @@ namespace dcf
     {
         gpuZeroExtend(party, k.N, k.bin, k.bout, d_I, k.m, k.u, s);
         peer->reconstructInPlace(d_I, k.bout, k.N, s);
-        PrintKernel<<<(k.N - 1) / 128 + 1, 128>>>(1, d_I);
     }
 
 
     template <typename T>
     void gpuTRe(GPUTReKey<T> k, int party, SigmaPeer *peer, T *d_I, AESGlobalContext *g, Stats *s, bool gap = true)
     {   
-        // 按理来说不用reconstruct 
-        PrintKernel<<<(k.N - 1) / 128 + 1, 128>>>(1, d_I);
-        printf("bin: %d, bout: %d, shift: %d\n", k.bin, k.bout, k.shift);
         TReKernel<<<(k.N - 1) / 128 + 1, 128>>>(party, k.bin, k.bout, k.shift, k.N, d_I, gap);
         peer->reconstructInPlace(d_I, k.bout, k.N, s);
-        PrintKernel<<<(k.N - 1) / 128 + 1, 128>>>(1, d_I);
     }
 
     template <typename T>

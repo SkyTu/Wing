@@ -101,8 +101,8 @@ int main(int argc, char *argv[]) {
         cpuMod(unmasked_TRe, bout);
         auto o = cpuArs(h_X[i], bin, shift);
         cpuMod(o, bout);
-        if (o != unmasked_TRe)
-            printf("%d: h_x = %ld, real_truncate = %ld, stTR_res = %ld\n", i, h_X[i], o, unmasked_TRe);
+        // if (o != unmasked_TRe)
+        printf("%d: h_x = %ld, real_truncate = %ld, stTR_res = %ld\n", i, h_X[i], o, unmasked_TRe);
     }
     std::cout << peer->peer->keyBuf->bytesSent << std::endl;
 }
