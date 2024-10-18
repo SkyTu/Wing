@@ -143,7 +143,14 @@ namespace dcf
             bout = bin - shift;
             d_outMask = genGPUTReKey(key_as_bytes, party, bin, bout, shift, N, d_inMask, gaes, h_r);
             break;
+        case TruncateType::RevealedStochasticTR:
+            bout = bin - shift;
+            d_outMask = genGPUTReKey(key_as_bytes, party, bin, bout, shift, N, d_inMask, gaes, h_r);
+            break;
         case TruncateType::StochasticTruncate:
+            d_outMask = genGPUStTRKey(key_as_bytes, party, bin, bout, shift, N, d_inMask, gaes);
+            break;
+        case TruncateType::RevealedStochasticTruncate:
             d_outMask = genGPUStTRKey(key_as_bytes, party, bin, bout, shift, N, d_inMask, gaes);
             break;
         default:
