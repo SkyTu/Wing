@@ -239,7 +239,10 @@ namespace dcf
 
     template <typename T>
     void gpuTRe(GPUTReKey<T> k, int party, SigmaPeer *peer, T *d_I, AESGlobalContext *g, Stats *s, bool gap = true)
-    {    
+    {   
+        // 按理来说不用reconstruct 
+        peer->reconstructInPlace(d_I, k.bout, k.N, s);
+        PrintKernel<<<(k.N - 1) / 128 + 1, 128>>>(1, d_I);
         TReKernel<<<(k.N - 1) / 128 + 1, 128>>>(party, k.bin, k.bout, k.shift, k.N, d_I, gap);
         peer->reconstructInPlace(d_I, k.bout, k.N, s);
         PrintKernel<<<(k.N - 1) / 128 + 1, 128>>>(1, d_I);
