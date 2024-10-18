@@ -35,6 +35,7 @@
 #include "fss/dcf/gpu_truncate.h"
 #include "fss/dcf/gpu_sgd.h"
 
+// 注意，原本是要区分backward和forward的truncation type，其实只需要考虑在sgd的时候已经reveal过了，所以不需要再reveal一次
 namespace dcf
 {
     namespace orca
@@ -163,7 +164,7 @@ namespace dcf
                 writeShares<T, T>(key_as_bytes, party, p.size_A, d_masked_dX, p.bw);
                 gpuFree(d_masked_dX);
                 // d_mask_dX gets freed inside keygen for truncate
-                d_mask_truncated_dX = genGPUTruncateKey(key_as_bytes, party, tb, p.bw, p.bw, global::scale, p.size_A, d_mask_dX, gaes);
+                d_mask_truncated_dX = genGPUTruncateKey(key_as_bytes, party, tf, p.bw, p.bw, global::scale, p.size_A, d_mask_dX, gaes);
             }
             genOptimizerKey(key_as_bytes, party, p.bw, p.bw, p.size_B, mask_W, d_mask_W, mask_Vw, d_mask_dW, global::scale, 2 * global::scale, 2 * global::scale, tb, this->useMomentum, gaes, epoch);
             if (useBias)
@@ -215,7 +216,7 @@ namespace dcf
                 mmKeydX.B = mmKey.B;
                 mmKeydX.C = mask_dX;
 
-                truncateKeydX = readGPUTruncateKey<T>(tb, key_as_bytes);
+                truncateKeydX = readGPUTruncateKey<T>(tf, key_as_bytes);
             }
 
             readOptimizerKey(tb, &truncateKeyVw, &truncateKeyW, key_as_bytes, global::scale, 2 * global::scale, 2 * global::scale, this->useMomentum, epoch);
@@ -274,7 +275,7 @@ namespace dcf
                 d_dX = gpuMatmulBeaver(pdX, mmKeydX, party, d_incomingGrad, d_W, d_mask_grad, d_mask_W, (T *)NULL, &(this->s));
                 gpuFree(d_mask_W);
                 // peer->reconstructInPlace(d_dX, p.bw, p.size_A, &(this->s));
-                dcf::gpuTruncate(p.bw, p.bw, tb, truncateKeydX, global::scale, peer, party, p.size_A, d_dX, gaes, &(this->s));
+                dcf::gpuTruncate(p.bw, p.bw, tf, truncateKeydX, global::scale, peer, party, p.size_A, d_dX, gaes, &(this->s));
             }
 
             auto d_dW = gpuMatmulBeaver(pdW, mmKeydW, party, d_X, d_incomingGrad, d_mask_X, d_mask_grad, (T *)NULL, &(this->s));
