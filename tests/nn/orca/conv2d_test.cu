@@ -71,20 +71,20 @@ int main(int argc, char *argv[])
 
     auto d_mask_I = randomGEOnGpu<T>(conv2d_layer.p.size_I, bin);
     // checkCudaErrors(cudaMemset(d_mask_I, 0, conv2d_layer.p.size_I * sizeof(T)));
-    auto d_masked_I = getMaskedInputOnGpu<T>(conv2d_layer.p.size_I, bin, d_mask_I, &h_I);
+    auto d_masked_I = getMaskedInputOnGpu<T>(conv2d_layer.p.size_I, bin, d_mask_I, &h_I, true, 20);
     auto d_mask_F = randomGEOnGpu<T>(conv2d_layer.p.size_F, bin);
     // checkCudaErrors(cudaMemset(d_mask_F, 0, conv2d_layer.p.size_F * sizeof(T)));
-    auto h_masked_F = getMaskedInputOnCpu<T>(conv2d_layer.p.size_F, bin, d_mask_F, &h_F);
+    auto h_masked_F = getMaskedInputOnCpu<T>(conv2d_layer.p.size_F, bin, d_mask_F, &h_F, true, 20);
     auto d_mask_b = randomGEOnGpu<T>(CO, bin);
     // checkCudaErrors(cudaMemset(d_mask_b, 0, conv2d_layer.p.CO * sizeof(T)));
-    auto h_masked_b = getMaskedInputOnCpu<T>(CO, bin, d_mask_b, &h_b);
+    auto h_masked_b = getMaskedInputOnCpu<T>(CO, bin, d_mask_b, &h_b, true, 20);
 
     auto d_mask_grad = randomGEOnGpu<T>(conv2d_layer.p.size_O, bin);
-    auto d_masked_grad = getMaskedInputOnGpu<T>(conv2d_layer.p.size_O, bin, d_mask_grad, &h_grad);
+    auto d_masked_grad = getMaskedInputOnGpu<T>(conv2d_layer.p.size_O, bin, d_mask_grad, &h_grad, true, 20);
     auto d_mask_Vf = randomGEOnGpu<T>(conv2d_layer.p.size_F, bin);
-    auto h_masked_Vf = getMaskedInputOnCpu<T>(conv2d_layer.p.size_F, bin, d_mask_Vf, &h_Vf);
+    auto h_masked_Vf = getMaskedInputOnCpu<T>(conv2d_layer.p.size_F, bin, d_mask_Vf, &h_Vf, true, 20);
     auto d_mask_Vb = randomGEOnGpu<T>(CO, bin);
-    auto h_masked_Vb = getMaskedInputOnCpu<T>(CO, bin, d_mask_Vb, &h_Vb);
+    auto h_masked_Vb = getMaskedInputOnCpu<T>(CO, bin, d_mask_Vb, &h_Vb, true, 20);
 
     moveIntoCPUMem((u8 *)conv2d_layer.mask_F, (u8 *)d_mask_F, conv2d_layer.p.size_F * sizeof(T), NULL);
     moveIntoCPUMem((u8 *)conv2d_layer.mask_Vf, (u8 *)d_mask_Vf, conv2d_layer.p.size_F * sizeof(T), NULL);

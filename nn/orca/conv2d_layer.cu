@@ -255,7 +255,6 @@ namespace dcf
             gpuFree(d_mask_I);
             gpuFree(d_mask_F);
 
-            // peer->reconstructInPlace(d_C, p.bout, p.size_O, &(this->s));
             dcf::gpuTruncate(p.bin, p.bout, tf, truncateKeyC, global::scale, peer, party, p.size_O, d_C, gaes, &(this->s));
 
             return d_C;
@@ -277,7 +276,6 @@ namespace dcf
                 auto d_mask_F = (T *)moveToGPU((u8 *)convKey.F, convKey.mem_size_F, &(this->s));
                 d_dI = gpuConv2DBeaver(convKeydI, party, d_incomingGrad, d_F, d_mask_incomingGrad, d_mask_F, (T *)NULL, &(this->s), 1);
                 gpuFree(d_mask_F);
-                // peer->reconstructInPlace(d_dI, p.bin, p.size_I, &(this->s));
                 dcf::gpuTruncate(p.bin, p.bout, tf, truncateKeydI, global::scale, peer, party, p.size_I, d_dI, gaes, &(this->s));
             }
 
@@ -290,7 +288,7 @@ namespace dcf
             {
                 auto d_db = getBiasGrad<T>(p.size_O / p.CO, p.CO, p.bout, d_incomingGrad);
                 optimize(p.bin, p.bout, p.CO, b, (T *)NULL, Vb, d_db, 2 * global::scale, 2 * global::scale - lr_scale[epoch], global::scale, tb, truncateKeyVb, truncateKeyb,
-                              party, peer, this->useMomentum, gaes, &(this->s), epoch);
+                            party, peer, this->useMomentum, gaes, &(this->s), epoch);
                 gpuFree(d_db);
             }
 
