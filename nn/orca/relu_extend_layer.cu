@@ -78,7 +78,7 @@ namespace dcf
         template <typename T>
         void ReluExtendLayer<T>::readForwardKey(u8 **key_as_bytes)
         {
-            reluExtendKey = readReluZeroExtKey<T>(key_as_bytes);
+            reluExtendKey = readGPUReluZeroExtKey<T>(key_as_bytes);
         }
         
         template <typename T>

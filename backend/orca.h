@@ -45,13 +45,9 @@ public:
     {
         if (mode == 2)
         {
-            // auto h_inp = (T*) moveToCPU((u8*) in.d_data, in.size() * sizeof(T), NULL);
-            // printf("Relu input=%ld, %ld, %ld\n", h_inp[0], h_inp[1], h_inp[2]);
-
             auto start = std::chrono::high_resolution_clock::now();
-
-            auto k = dcf::readGPUReluExtendKey<T>(&(this->keyBuf));
-            auto d_temp = dcf::gpuReluExtend(this->peer, this->party, k, in.d_data, &(this->g), &(this->s));
+            auto k = dcf::readGPUReluZeroExtKey<T>(&(this->keyBuf));
+            auto d_temp = dcf::gpuReluZeroExt(this->peer, this->party, k, in.d_data, &(this->g), &(this->s));
             auto d_drelu = d_temp.first;
             gpuFree(d_drelu);
             out.d_data = d_temp.second;

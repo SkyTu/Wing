@@ -91,7 +91,7 @@ namespace dcf
     };
 
     template <typename T>
-    GPUReluZeroExtKey<T> readReluZeroExtKey(u8 **key_as_bytes)
+    GPUReluZeroExtKey<T> readGPUReluZeroExtKey(u8 **key_as_bytes)
     {
         GPUReluZeroExtKey<T> k;
         k.bin = *((int *)*key_as_bytes);
