@@ -25,7 +25,7 @@
 namespace dcf
 {
     template <typename T>
-    __global__ void genRFSS3ReluExtSelectKernel(T* inputMask, T* outputMask, T* rm, u8* rd, T* rmd, T* rmu, T* m, T* ud, T* v, T* w, T* z, int bin, int bout, int N){
+    __global__ void genSelectExtKernel(T* inputMask, T* outputMask, T* rm, u8* rd, T* rmd, T* rmu, T* m, T* ud, T* v, T* w, T* z, int bin, int bout, int N){
         int i = blockIdx.x * blockDim.x + threadIdx.x;
         if(i < N){
             m[i] = (1ULL << bin)* (gpuMsb(inputMask[i], bin)) + rm[i];
@@ -40,7 +40,7 @@ namespace dcf
     }
 
     template <typename T>
-    T* gpuKeyGenRFSS3ReluExtSelect(uint8_t** key_as_bytes, int party, int bin, int bout, int N, u8* rd, T* inputMask){
+    T* gpuKeyGenSelectExt(uint8_t** key_as_bytes, int party, int bin, int bout, int N, u8* rd, T* inputMask){
         auto rm = randomGEOnGpu<T>(N, bout);
         auto outputMask = randomGEOnGpu<T>(N, bout);
         T* m = (T*)gpuMalloc(N * sizeof(T));
@@ -50,7 +50,7 @@ namespace dcf
         T* z = (T*)gpuMalloc(N * sizeof(T));
         T* rmd = (T*)gpuMalloc(N * sizeof(T));
         T* rmu = (T*)gpuMalloc(N * sizeof(T));
-        genRFSS3ReluExtSelectKernel<<<(N - 1) / 256 + 1, 256>>>(inputMask, outputMask, rm, rd, rmd, rmu, m, ud, v, w, z, bin, bout, N);
+        genSelectExtKernel<<<(N - 1) / 256 + 1, 256>>>(inputMask, outputMask, rm, rd, rmd, rmu, m, ud, v, w, z, bin, bout, N);
         writeShares<T, T>(key_as_bytes, party, N, rm, bout);
         writeShares<T, T>(key_as_bytes, party, N, rmd, bout);
         writeShares<T, T>(key_as_bytes, party, N, rmu, bout);
@@ -178,13 +178,13 @@ namespace dcf
     }
 
     template <typename T>
-    std::pair<u8*, T*> gpuKeyGenRFSS3ReluZeroExt(uint8_t **key_as_bytes, int party, int bin, int bout, int N, T *d_inputMask, AESGlobalContext* g)
+    std::pair<u8*, T*> gpuKeyGenReluZeroExt(uint8_t **key_as_bytes, int party, int bin, int bout, int N, T *d_inputMask, AESGlobalContext* g)
     {
         writeInt(key_as_bytes, bin);
         writeInt(key_as_bytes, bout);
         writeInt(key_as_bytes, N);
         auto d_dReluMask = dpf::gpuKeyGenDRelu(key_as_bytes, party, bin, N, d_inputMask, g);
-        auto d_outputMask = gpuKeyGenRFSS3ReluExtSelect(key_as_bytes, party, bin, bout, N, d_dReluMask, d_inputMask);
+        auto d_outputMask = gpuKeyGenSelectExt(key_as_bytes, party, bin, bout, N, d_dReluMask, d_inputMask);
         return std::make_pair(d_dReluMask, d_outputMask);
     }
 
@@ -222,7 +222,7 @@ namespace dcf
     }
     
     template <typename T>
-    __global__ void RFSS3ReluExtMuxKernel(int party, int bin, int bout, int N, T* d_I, u32* d_dcf, T* d_rm, T* d_rmd, T* d_rmu, T* d_ud, T* d_m, T* d_v, T* d_w, T* d_z, T* d_rin, T* res)
+    __global__ void ReluZeroExtMuxKernel(int party, int bin, int bout, int N, T* d_I, u32* d_dcf, T* d_rm, T* d_rmd, T* d_rmu, T* d_ud, T* d_m, T* d_v, T* d_w, T* d_z, T* d_rin, T* res)
     {
         int i = blockIdx.x * blockDim.x + threadIdx.x;
         if (i < N)
@@ -242,7 +242,7 @@ namespace dcf
     }
     // 有必要开d_relu这个空间吗？
     template <typename T>
-    T* gpuRFSS3ReluExtMux(int party, int bin, int bout, int N, GPURFSS3ReluExtSelectKey<T> k, T* d_I, u32* d_dcf, Stats *s){
+    T* gpuReluZeroExtMux(int party, int bin, int bout, int N, GPUSelectExtKey<T> k, T* d_I, u32* d_dcf, Stats *s){
         auto d_relu = (T*)gpuMalloc(N * sizeof(T));
         auto d_rm = (T *)moveToGPU((uint8_t *)k.rm, N * sizeof(T), s);
         auto d_rmd = (T *)moveToGPU((uint8_t *)k.rmd, N * sizeof(T), s);
@@ -253,7 +253,7 @@ namespace dcf
         auto d_w = (T *)moveToGPU((uint8_t *)k.w, N * sizeof(T), s);
         auto d_z = (T *)moveToGPU((uint8_t *)k.z, N * sizeof(T), s);
         auto d_rin = (T *)moveToGPU((uint8_t *)k.rin, N * sizeof(T), s);
-        RFSS3ReluExtMuxKernel<<<(N - 1) / 256 + 1, 256>>>(party, bin, bout, N, d_I, d_dcf, d_rm, d_rmd, d_rmu, d_ud, d_m, d_v, d_w, d_z, d_rin, d_relu);
+        ReluZeroExtMuxKernel<<<(N - 1) / 256 + 1, 256>>>(party, bin, bout, N, d_I, d_dcf, d_rm, d_rmd, d_rmu, d_ud, d_m, d_v, d_w, d_z, d_rin, d_relu);
         gpuFree(d_rm);
         gpuFree(d_rmd);
         gpuFree(d_rmu);
@@ -266,12 +266,12 @@ namespace dcf
     }
 
     template <typename T>
-    std::pair<u32 *, T *> gpuRFSS3ReluExtend(SigmaPeer *peer, int party, GPURFSS3ReluExtKey<T> k, T *d_I, AESGlobalContext *g, Stats *s)
+    std::pair<u32 *, T *> gpuReluZeroExt(SigmaPeer *peer, int party, GPUReluExtKey<T> k, T *d_I, AESGlobalContext *g, Stats *s)
     {
         std::vector<u32 *> h_mask({k.dReluKey.mask});
         auto d_dcf = dpf::gpuDcf<T, 1, dpf::dReluPrologue<0>, dpf::dReluEpilogue<0, false>>(k.dReluKey.dpfKey, party, d_I, g, s, &h_mask);
         peer->reconstructInPlace(d_dcf, 1, k.N, s); 
-        auto d_relu = gpuRFSS3ReluExtMux(party, k.bin, k.bout, k.N, k.selectKey, d_I, d_dcf, s);
+        auto d_relu = gpuReluZeroExtMux(party, k.bin, k.bout, k.N, k.selectKey, d_I, d_dcf, s);
         peer->reconstructInPlace(d_relu, k.bout, k.N, s);
         // 也许这里d_dcf返回的和我们想要的东西不一样，为什么要返回d_relu而不是直接用d_I呢？可能这个数要存起来？
         return std::make_pair(d_dcf, d_relu);

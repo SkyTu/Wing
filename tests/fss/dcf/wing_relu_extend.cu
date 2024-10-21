@@ -27,7 +27,6 @@
 #include "../../../utils/gpu_comms.h"
 
 #include "../../../fss/dcf/gpu_relu.h"
-#include "../../../fss/dcf/gpu_truncate.h"
 
 #include <cassert>
 #include <sytorch/tensor.h>
@@ -40,13 +39,12 @@ int main(int argc, char *argv[])
     initGPUMemPool();
     AESGlobalContext g;
     initAESContext(&g);
-    int bin = 64;
+    int bin = 40;
     int bout = 64;
-    int shift = 16;
     int N = atoi(argv[3]); //8;
     int party = atoi(argv[1]);
 
-    auto peer = new GpuPeer(true);
+    auto peer = new GpuPeer(false);
     peer->connect(party, argv[2]);
 
     u8 *startPtr, *curPtr;
@@ -57,32 +55,21 @@ int main(int argc, char *argv[])
     auto h_mask_X = (T *)moveToCPU((u8 *)d_mask_X, N * sizeof(T), NULL);
     T *h_X;
     auto d_masked_X = getMaskedInputOnGpu(N, bin, d_mask_X, &h_X);
-    T* h_r = (T*) cpuMalloc(N * sizeof(T));
-    auto d_truncateMask = dcf::genGPUTReKey(&curPtr, party, bin, bin-shift, shift, N, d_mask_X, &g, h_r);
-    auto d_reluExtMask = dcf::gpuKeyGenRFSS3ReluZeroExt(&curPtr, party, bin-shift, bout, N, d_truncateMask, &g);
-    gpuFree(d_truncateMask);
-    printf("Done with keygen\n");
-    auto d_dReluMask = d_reluExtMask.first;
-    auto d_outputMask = d_reluExtMask.second;
-    
-    // T* h_dReluMask = (T*)cpuMalloc(N * sizeof(T));
-    // h_dReluMask = (T *)moveToCPU((u8 *)d_dReluMask, N * sizeof(T), NULL);
-    // printf("finish copying\n");
-    T* h_reluOutMask = (T*)cpuMalloc(N * sizeof(T));
-    h_reluOutMask = (T *)moveToCPU((u8 *)d_outputMask, N * sizeof(T), NULL);
-    printf("finish copying\n");
-    // gpuFree(d_dReluMask);
-    gpuFree(d_outputMask);
-    curPtr = startPtr;
-    auto k_TRe = dcf::readGPUTReKey<T>(&curPtr);
-    auto k1 = dcf::readRFSS3ReluExtKey<T>(&curPtr);
+    auto d_tempMask = dcf::gpuKeyGenReluZeroExt(&curPtr, party, bin, bout, N, d_mask_X, &g);
+    auto d_dreluMask = d_tempMask.first;
+    gpuFree(d_dreluMask);
+    auto d_reluMask = d_tempMask.second;
+    printf("Key size=%lu\n", curPtr - startPtr);
+    auto h_mask_O = (T *)moveToCPU((u8 *)d_reluMask, N * sizeof(T), NULL);
+    // printf("here\n");
+    auto k1 = dcf::readReluZeroExtKey<T>(&startPtr);
     T *d_relu;
+    // printf("here\n");
     for (int i = 0; i < 1; i++)
     {
         peer->sync();
         auto start = std::chrono::high_resolution_clock::now();
-        dcf::gpuTRe(k_TRe, party, peer, d_masked_X, &g, (Stats*) NULL, false);
-        auto temp = dcf::gpuRFSS3ReluExtend(peer, party, k1, d_masked_X, &g, (Stats *)NULL);
+        auto temp = dcf::gpuReluZeroExt(peer, party, k1, d_masked_X, &g, (Stats *)NULL);
         auto d_drelu = temp.first;
         gpuFree(d_drelu);
         d_relu = temp.second;
@@ -90,17 +77,19 @@ int main(int argc, char *argv[])
         auto elapsed = end - start;
         printf("Time taken=%lu micros\n", std::chrono::duration_cast<std::chrono::microseconds>(elapsed).count());
     }
+
     auto h_relu = (T *)moveToCPU((u8 *)d_relu, N * sizeof(T), (Stats *)NULL);
     gpuFree(d_relu);
     destroyGPURandomness();
+
     for (int i = 0; i < N; i++)
     {
-        auto unmasked_O = (h_relu[i] - h_reluOutMask[i]);
+        auto unmasked_O = (h_relu[i] - h_mask_O[i]);
         cpuMod(unmasked_O, bout);
-        auto o = (h_X[i]>>shift) * (1 - (h_X[i] >> (bin - 1)));
+        auto o = h_X[i] * (1 - (h_X[i] >> (bin - 1)));
         if (i < 10)
-            printf("%d: %ld, %ld, %ld\n", i, h_X[i], o, unmasked_O);
-        assert(o == unmasked_O || o + 1 == unmasked_O);
+            printf("%d: %ld, %ld, %ld, %ld, %ld, %ld\n", i, h_X[i], o, unmasked_O, h_mask_X[i], h_relu[i], h_mask_O[i]);
+        assert(o == unmasked_O);
     }
 
     return 0;

@@ -28,16 +28,16 @@
 namespace dcf
 {
     template <typename T>
-    struct GPURFSS3ReluExtSelectKey{
+    struct GPUSelectExtKey{
         int N;
         T *rm, *rmd, *rmu, *ud, *m, *v, *w, *z, *rin;
     };
     template <typename T>
-    struct GPURFSS3ReluExtKey
+    struct GPUReluExtKey
     {
         int bin, bout, N;
         dpf::GPUDReluKey dReluKey;
-        GPURFSS3ReluExtSelectKey<T> selectKey;
+        GPUSelectExtKey<T> selectKey;
     };
 
     struct GPUDReluKey
@@ -65,10 +65,9 @@ namespace dcf
     };
 
     template <typename T>
-    GPURFSS3ReluExtSelectKey<T> readGPURFSS3ReluExtSelectKey(uint8_t** key_as_bytes, int N) {
-        GPURFSS3ReluExtSelectKey<T> k;
+    GPUSelectExtKey<T> readGPUSelectExtKey(uint8_t** key_as_bytes, int N) {
+        GPUSelectExtKey<T> k;
         k.N = N;
-        printf("N in select is : %d\n", N);
         size_t memSz = N * sizeof(T);
         k.rm = (T *) *key_as_bytes;
         *key_as_bytes += memSz;
@@ -92,18 +91,17 @@ namespace dcf
     };
 
     template <typename T>
-    GPURFSS3ReluExtKey<T> readRFSS3ReluExtKey(u8 **key_as_bytes)
+    GPUReluExtKey<T> readReluZeroExtKey(u8 **key_as_bytes)
     {
-        GPURFSS3ReluExtKey<T> k;
+        GPUReluExtKey<T> k;
         k.bin = *((int *)*key_as_bytes);
         *key_as_bytes += sizeof(int);
         k.bout = *((int *)*key_as_bytes);
         *key_as_bytes += sizeof(int);
         k.N = *((int *)*key_as_bytes);
         *key_as_bytes += sizeof(int);
-        printf("N: %d, bin: %d, bout %d\n", k.N, k.bin, k.bout);
         k.dReluKey = dpf::readGPUDReluKey(key_as_bytes);
-        k.selectKey = readGPURFSS3ReluExtSelectKey<T>(key_as_bytes, k.N);
+        k.selectKey = readGPUSelectExtKey<T>(key_as_bytes, k.N);
         return k;
     }
 
