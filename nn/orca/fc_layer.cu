@@ -170,7 +170,7 @@ namespace dcf
             if (useBias)
             {
                 auto d_mask_dY = getBiasGrad(p.M, p.N, p.bw, d_mask_grad);
-                genOptimizerKey(key_as_bytes, party, p.bw, p.bw, p.N, mask_Y, (T *)NULL, mask_Vy, d_mask_dY, 2 * global::scale, 2 * global::scale - lr_scale[epoch], global::scale, tb, this->useMomentum, gaes, epoch);
+                genOptimizerKey(key_as_bytes, party, p.bw, p.bw, p.N, mask_Y, (T *)NULL, mask_Vy, d_mask_dY, 2 * global::scale, 2 * global::scale - lr_scale[epoch], global::scale, tf, this->useMomentum, gaes, epoch);
                 gpuFree(d_mask_dY);
             }
             gpuFree(d_mask_W);
@@ -219,9 +219,9 @@ namespace dcf
                 truncateKeydX = readGPUTruncateKey<T>(tf, key_as_bytes);
             }
 
-            readOptimizerKey(tb, &truncateKeyVw, &truncateKeyW, key_as_bytes, global::scale, 2 * global::scale, 2 * global::scale, this->useMomentum, epoch);
+            readOptimizerKey(tf, &truncateKeyVw, &truncateKeyW, key_as_bytes, global::scale, 2 * global::scale, 2 * global::scale, this->useMomentum, epoch);
             if (useBias)
-                readOptimizerKey(tb, &truncateKeyVy, &truncateKeyY, key_as_bytes, 2 * global::scale, 2 * global::scale - lr_scale[epoch], global::scale, this->useMomentum, epoch);
+                readOptimizerKey(tf, &truncateKeyVy, &truncateKeyY, key_as_bytes, 2 * global::scale, 2 * global::scale - lr_scale[epoch], global::scale, this->useMomentum, epoch);
         }
 
         template <typename T>
@@ -277,19 +277,19 @@ namespace dcf
             }
 
             auto d_dW = gpuMatmulBeaver(pdW, mmKeydW, party, d_X, d_incomingGrad, d_mask_X, d_mask_grad, (T *)NULL, &(this->s));
-            peer->reconstructInPlace(d_dW, p.bw, p.size_B, &(this->s));
+            // peer->reconstructInPlace(d_dW, p.bw, p.size_B, &(this->s));
 
             gpuFree(d_X);
             gpuFree(d_mask_X);
 
-            optimize(p.bw, p.bw, p.size_B, W, d_W, Vw, d_dW, global::scale, 2 * global::scale, 2 * global::scale, tb, truncateKeyVw, truncateKeyW, party, peer, this->useMomentum, gaes, &(this->s), epoch);
+            optimize(p.bw, p.bw, p.size_B, W, d_W, Vw, d_dW, global::scale, 2 * global::scale, 2 * global::scale, tf, truncateKeyVw, truncateKeyW, party, peer, this->useMomentum, gaes, &(this->s), epoch);
 
             gpuFree(d_W);
             gpuFree(d_dW);
             if (useBias)
             {
                 auto d_dY = getBiasGrad(p.M, p.N, p.bw, d_incomingGrad);
-                optimize(p.bw, p.bw, p.N, Y, (T *)NULL, Vy, d_dY, 2 * global::scale, 2 * global::scale - lr_scale[epoch], global::scale, tb, truncateKeyVy, truncateKeyY,
+                optimize(p.bw, p.bw, p.N, Y, (T *)NULL, Vy, d_dY, 2 * global::scale, 2 * global::scale - lr_scale[epoch], global::scale, tf, truncateKeyVy, truncateKeyY,
                         party, peer, this->useMomentum, gaes, &(this->s), epoch);
                 gpuFree(d_dY);
             }

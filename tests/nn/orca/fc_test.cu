@@ -53,7 +53,7 @@ int main(int argc, char *argv[])
     auto peer = new GpuPeer(false);
     peer->connect(party, argv[2]);
 
-    auto fc_layer = FCLayer<T>(bin, bout, M, N, K, dcf::TruncateType::StochasticTruncate, dcf::TruncateType::RevealedStochasticTruncate, true, true, false);
+    auto fc_layer = FCLayer<T>(bin, bout, M, N, K, dcf::TruncateType::StochasticTruncate, dcf::TruncateType::StochasticTruncate, true, true, false);
     fc_layer.setTrain(useMomentum);
     T *h_X, *h_W, *h_Y, *h_Z, *h_grad, *h_Vw, *h_Vy;
 
