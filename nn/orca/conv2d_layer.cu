@@ -168,7 +168,7 @@ namespace dcf
                 auto d_masked_dI = gpuConv2DPlaintext<T>(convKeydI, d_mask_grad, d_mask_F, d_mask_dI, 1, false);
                 writeShares<T, T>(key_as_bytes, party, p.size_I, d_masked_dI, p.bout);
                 gpuFree(d_masked_dI);
-                d_mask_truncated_dI = genGPUTruncateKey<T>(key_as_bytes, party, tb, p.bin, p.bout, global::scale, p.size_I, d_mask_dI, gaes);
+                d_mask_truncated_dI = genGPUTruncateKey<T>(key_as_bytes, party, tf, p.bin, p.bout, global::scale, p.size_I, d_mask_dI, gaes);
             }
 
             genOptimizerKey<T>(key_as_bytes, party, p.bin, p.bout, p.size_F, mask_F, d_mask_F, mask_Vf, d_mask_dF, global::scale, 2 * global::scale, 2 * global::scale, tb, this->useMomentum, gaes, epoch);
@@ -224,7 +224,7 @@ namespace dcf
                 convKeydI.O = mask_dI;
 
                 // should refactor this later to look pretty
-                truncateKeydI = readGPUTruncateKey<T>(tb, key_as_bytes);
+                truncateKeydI = readGPUTruncateKey<T>(tf, key_as_bytes);
             }
             // readGpuSGDWithMomentumKey(tb, &truncateKeyVf, &truncateKeyF, &truncateKeyVb, key_as_bytes, useBias);
             readOptimizerKey(tb, &truncateKeyVf, &truncateKeyF, key_as_bytes, global::scale, 2 * global::scale, 2 * global::scale, this->useMomentum, epoch);
@@ -255,7 +255,7 @@ namespace dcf
             gpuFree(d_mask_I);
             gpuFree(d_mask_F);
 
-            peer->reconstructInPlace(d_C, p.bout, p.size_O, &(this->s));
+            // peer->reconstructInPlace(d_C, p.bout, p.size_O, &(this->s));
             dcf::gpuTruncate(p.bin, p.bout, tf, truncateKeyC, global::scale, peer, party, p.size_O, d_C, gaes, &(this->s));
 
             return d_C;
@@ -277,8 +277,8 @@ namespace dcf
                 auto d_mask_F = (T *)moveToGPU((u8 *)convKey.F, convKey.mem_size_F, &(this->s));
                 d_dI = gpuConv2DBeaver(convKeydI, party, d_incomingGrad, d_F, d_mask_incomingGrad, d_mask_F, (T *)NULL, &(this->s), 1);
                 gpuFree(d_mask_F);
-                peer->reconstructInPlace(d_dI, p.bin, p.size_I, &(this->s));
-                dcf::gpuTruncate(p.bin, p.bout, tb, truncateKeydI, global::scale, peer, party, p.size_I, d_dI, gaes, &(this->s));
+                // peer->reconstructInPlace(d_dI, p.bin, p.size_I, &(this->s));
+                dcf::gpuTruncate(p.bin, p.bout, tf, truncateKeydI, global::scale, peer, party, p.size_I, d_dI, gaes, &(this->s));
             }
 
             auto d_dF = gpuConv2DBeaver(convKeydF, party, d_incomingGrad, d_I, d_mask_incomingGrad, d_mask_I, (T *)NULL, &(this->s), 2);

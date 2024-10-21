@@ -64,7 +64,7 @@ int main(int argc, char *argv[])
     int party = atoi(argv[1]);
     auto peer = new GpuPeer(false);
     peer->connect(party, argv[2]);
-    auto conv2d_layer = Conv2DLayer<T>(bin, bout, N, H, W, CI, FH, FW, CO, zPadHLeft, zPadHRight, zPadWLeft, zPadWRight, strideH, strideW, true, dcf::TruncateType::StochasticTruncate, dcf::TruncateType::StochasticTruncate, true, false);
+    auto conv2d_layer = Conv2DLayer<T>(bin, bout, N, H, W, CI, FH, FW, CO, zPadHLeft, zPadHRight, zPadWLeft, zPadWRight, strideH, strideW, true, dcf::TruncateType::StochasticTruncate, dcf::TruncateType::RevealedStochasticTruncate, true, false);
     conv2d_layer.setTrain(useMomentum);
 
     T *h_I, *h_F, *h_b, *h_grad, *h_Vf, *h_Vb;
