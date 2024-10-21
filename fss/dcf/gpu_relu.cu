@@ -266,7 +266,7 @@ namespace dcf
     }
 
     template <typename T>
-    std::pair<u32 *, T *> gpuReluZeroExt(SigmaPeer *peer, int party, GPUReluExtKey<T> k, T *d_I, AESGlobalContext *g, Stats *s)
+    std::pair<u32 *, T *> gpuReluZeroExt(SigmaPeer *peer, int party, GPUReluZeroExtKey<T> k, T *d_I, AESGlobalContext *g, Stats *s)
     {
         std::vector<u32 *> h_mask({k.dReluKey.mask});
         auto d_dcf = dpf::gpuDcf<T, 1, dpf::dReluPrologue<0>, dpf::dReluEpilogue<0, false>>(k.dReluKey.dpfKey, party, d_I, g, s, &h_mask);

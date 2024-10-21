@@ -33,7 +33,7 @@ namespace dcf
         T *rm, *rmd, *rmu, *ud, *m, *v, *w, *z, *rin;
     };
     template <typename T>
-    struct GPUReluExtKey
+    struct GPUReluZeroExtKey
     {
         int bin, bout, N;
         dpf::GPUDReluKey dReluKey;
@@ -91,9 +91,9 @@ namespace dcf
     };
 
     template <typename T>
-    GPUReluExtKey<T> readReluZeroExtKey(u8 **key_as_bytes)
+    GPUReluZeroExtKey<T> readReluZeroExtKey(u8 **key_as_bytes)
     {
-        GPUReluExtKey<T> k;
+        GPUReluZeroExtKey<T> k;
         k.bin = *((int *)*key_as_bytes);
         *key_as_bytes += sizeof(int);
         k.bout = *((int *)*key_as_bytes);

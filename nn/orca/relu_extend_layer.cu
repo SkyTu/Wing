@@ -55,7 +55,7 @@ namespace dcf
         template <typename T>
         T *ReluExtendLayer<T>::genForwardKey(u8 **key_as_bytes, int party, T *d_inputMask, AESGlobalContext *gaes)
         {
-            auto res = dcf::gpuKeyGenRFSS3ReluZeroExt(key_as_bytes, party, bin, bout, numRelus, d_inputMask, gaes);
+            auto res = dcf::gpuKeyGenReluZeroExt(key_as_bytes, party, bin, bout, numRelus, d_inputMask, gaes);
             auto d_dreluMask = res.first;
             auto d_randomOutMask = res.second;
             if (this->train)
@@ -78,7 +78,7 @@ namespace dcf
         template <typename T>
         void ReluExtendLayer<T>::readForwardKey(u8 **key_as_bytes)
         {
-            reluExtendKey = readRFSS3ReluExtKey<T>(key_as_bytes);
+            reluExtendKey = readReluZeroExtKey<T>(key_as_bytes);
         }
         
         template <typename T>
@@ -91,7 +91,7 @@ namespace dcf
         template <typename T>
         T *ReluExtendLayer<T>::forward(SigmaPeer *peer, int party, T *d_I, AESGlobalContext *gaes)
         {
-            auto res = gpuRFSS3ReluExtend(peer, party, reluExtendKey, d_I, gaes, &(this->s));
+            auto res = gpuReluZeroExt(peer, party, reluExtendKey, d_I, gaes, &(this->s));
             auto d_dcf = res.first;
             auto d_xLTRin = d_dcf;
             // auto d_xLTRin = (u32 *)(((u8 *)d_dcf) + reluExtendKey.dReluKey.dcfKey.memSzOut);

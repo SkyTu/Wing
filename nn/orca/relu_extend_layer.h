@@ -35,7 +35,7 @@ namespace dcf
         {
         public:
             int bin, bout, /*f,*/ numRelus;
-            GPURFSS3ReluExtKey<T> reluExtendKey;
+            GPUReluZeroExtKey<T> reluExtendKey;
             u32 *drelu;
             u8 *dReluMask;
             GPUSelectKey<T> backpropSelectKey;

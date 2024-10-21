@@ -61,10 +61,8 @@ int main(int argc, char *argv[])
     auto d_reluMask = d_tempMask.second;
     printf("Key size=%lu\n", curPtr - startPtr);
     auto h_mask_O = (T *)moveToCPU((u8 *)d_reluMask, N * sizeof(T), NULL);
-    // printf("here\n");
     auto k1 = dcf::readReluZeroExtKey<T>(&startPtr);
     T *d_relu;
-    // printf("here\n");
     for (int i = 0; i < 1; i++)
     {
         peer->sync();
