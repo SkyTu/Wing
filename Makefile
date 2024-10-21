@@ -96,7 +96,10 @@ wing_truncate_reveal: tests/fss/dcf/wing_truncate_reveal.cu
 	$(CXX) $(FLAGS) $(INCLUDES) $^ $(UTIL_FILES) $(LIBS) -o tests/fss/dcf/wing_truncate_reveal
 
 wing_relu_ext: tests/fss/dcf/wing_relu_extend.cu
-	$(CXX) $(FLAGS) $(INCLUDES) $^ $(UTIL_FILES) $(LIBS) -o tests/fss/dcf/wing_relu_ext
+	$(CXX) $(FLAGS) $(INCLUDES) $^ $(UTIL_FILES) $(LIBS) -o tests/fss/dcf/wing_relu_extend
+
+wing_relu_extend_layer: tests/nn/orca/relu_extend_test.cu
+	$(CXX) $(FLAGS) $(INCLUDES) $^ $(UTIL_FILES) $(LIBS) -o tests/nn/orca/wing_relu_extend
 
 orca_conv2d: tests/nn/orca/conv2d_test.cu
 	$(CXX) $(FLAGS) $(INCLUDES) $^ $(UTIL_FILES) $(LIBS) -o tests/nn/orca/conv2d
