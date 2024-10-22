@@ -166,11 +166,11 @@ namespace dcf
                 // d_mask_dX gets freed inside keygen for truncate
                 d_mask_truncated_dX = genGPUTruncateKey(key_as_bytes, party, tf, p.bw, p.bw, global::scale, p.size_A, d_mask_dX, gaes);
             }
-            genOptimizerKey(key_as_bytes, party, p.bw, p.bw, p.size_B, mask_W, d_mask_W, mask_Vw, d_mask_dW, global::scale, 2 * global::scale, 2 * global::scale, tb, this->useMomentum, gaes, epoch);
+            genOptimizerKey(key_as_bytes, party, p.bw, p.bw, p.size_B, mask_W, d_mask_W, mask_Vw, d_mask_dW, global::scale, 2 * global::scale, 2 * global::scale, tf, this->useMomentum, gaes, epoch);
             if (useBias)
             {
                 auto d_mask_dY = getBiasGrad(p.M, p.N, p.bw, d_mask_grad);
-                genOptimizerKey(key_as_bytes, party, p.bw, p.bw, p.N, mask_Y, (T *)NULL, mask_Vy, d_mask_dY, 2 * global::scale, 2 * global::scale - lr_scale[epoch], global::scale, tf, this->useMomentum, gaes, epoch);
+                genOptimizerKey(key_as_bytes, party, p.bw, p.bw, p.N, mask_Y, (T *)NULL, mask_Vy, d_mask_dY, 2 * global::scale, 2 * global::scale - lr_scale[epoch], global::scale, tb, this->useMomentum, gaes, epoch);
                 gpuFree(d_mask_dY);
             }
             gpuFree(d_mask_W);
@@ -221,7 +221,7 @@ namespace dcf
 
             readOptimizerKey(tf, &truncateKeyVw, &truncateKeyW, key_as_bytes, global::scale, 2 * global::scale, 2 * global::scale, this->useMomentum, epoch);
             if (useBias)
-                readOptimizerKey(tf, &truncateKeyVy, &truncateKeyY, key_as_bytes, 2 * global::scale, 2 * global::scale - lr_scale[epoch], global::scale, this->useMomentum, epoch);
+                readOptimizerKey(tb, &truncateKeyVy, &truncateKeyY, key_as_bytes, 2 * global::scale, 2 * global::scale - lr_scale[epoch], global::scale, this->useMomentum, epoch);
         }
 
         template <typename T>
@@ -289,7 +289,7 @@ namespace dcf
             if (useBias)
             {
                 auto d_dY = getBiasGrad(p.M, p.N, p.bw, d_incomingGrad);
-                optimize(p.bw, p.bw, p.N, Y, (T *)NULL, Vy, d_dY, 2 * global::scale, 2 * global::scale - lr_scale[epoch], global::scale, tf, truncateKeyVy, truncateKeyY,
+                optimize(p.bw, p.bw, p.N, Y, (T *)NULL, Vy, d_dY, 2 * global::scale, 2 * global::scale - lr_scale[epoch], global::scale, tb, truncateKeyVy, truncateKeyY,
                         party, peer, this->useMomentum, gaes, &(this->s), epoch);
                 gpuFree(d_dY);
             }
