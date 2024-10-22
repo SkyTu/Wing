@@ -193,6 +193,7 @@ namespace dcf
         int i = blockIdx.x * blockDim.x + threadIdx.x;
         if (i < N)
         {   
+            if(i == 0)printf("x[i] is %u", x[i]);
             x[i] = (x[i] >> shift);
         }
     }

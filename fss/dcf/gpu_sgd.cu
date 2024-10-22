@@ -208,8 +208,6 @@ namespace dcf
         auto d_delta = gpuMultiplyByConstant(d_dW, -T(orca::lr_fp), N);
         int rightShift = orca::lr_scale[epoch] + scaledW - scaleW;
         bool dWWasNull = false;
-        moveIntoCPUMem((u8 *)h_W, (u8 *)d_delta, memSizeW, s);
-        printf("h_dW is %lu\n", h_W[0]);
         if (rightShift > 0)
         {
             assert(rightShift == orca::global::scale + orca::lr_scale[epoch]);
