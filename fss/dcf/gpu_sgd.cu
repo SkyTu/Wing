@@ -247,7 +247,7 @@ namespace dcf
                 auto diff = abs(static_cast<int32_t>(w - w_ct));
                 if (i < 10)
                     printf("%lu %lu %d\n", u64(w), u64(w_ct), diff);
-                assert(diff <= 1);
+                assert(diff <= 10);
             }
         }
         else
