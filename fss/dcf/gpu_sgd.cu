@@ -207,8 +207,7 @@ namespace dcf
         // the d_dW mask got moved to the left by shift
         printf("call gpuSgd\n");
         auto d_delta = gpuMultiplyByConstant(d_dW, -T(orca::lr_fp), N);
-        moveIntoCPUMem((u8 *)h_W, (u8 *)d_delta, memSizeW, s);
-        printf("h_W is %lu\n", h_W[0]);
+        printf("finish d_delta calculation\n");
         int rightShift = orca::lr_scale[epoch] + scaledW - scaleW;
         bool dWWasNull = false;
         if (rightShift > 0)
