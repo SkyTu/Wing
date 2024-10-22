@@ -154,10 +154,10 @@ namespace dcf
     template <typename T>
     T *gpuMultiplyByConstant(T *d_A, T x, int N)
     {
-        auto h_A = (T *)moveToCPU((u8 *)d_A, N * sizeof(T), NULL);
-        printf("h_A[0]=%ld\n", h_A[0]);
         auto d_B = (T *)gpuMalloc(N * sizeof(T));
         gpuLinearComb(sizeof(T) * 8, N, d_B, x, d_A);
+        auto h_B = (T *)moveToCPU((u8 *)d_B, N * sizeof(T), NULL);
+        printf("h_B[0]=%ld\n", h_B[0]);
         return d_B;
     }
 
