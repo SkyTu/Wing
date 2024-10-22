@@ -166,6 +166,7 @@ namespace dcf
                       T *d_dW, int scaleW, int scaledW, TruncateType t, AESGlobalContext *gaes, int epoch)
     {
         size_t memSizeW = N * sizeof(T);
+        printf("calling genGpuSGDKey 1\n");
         auto d_delta = gpuMultiplyByConstant(d_dW, -T(orca::lr_fp), N);
         int rightShift = scaledW + orca::lr_scale[epoch] - scaleW;
         bool dWWasNull = false;
@@ -207,6 +208,7 @@ namespace dcf
     {
         size_t memSizeW = N * sizeof(T);
         // the d_dW mask got moved to the left by shift
+        printf("calling gpuSgd 1\n");
         auto d_delta = gpuMultiplyByConstant(d_dW, -T(orca::lr_fp), N);
         int rightShift = orca::lr_scale[epoch] + scaledW - scaleW;
         bool dWWasNull = false;
