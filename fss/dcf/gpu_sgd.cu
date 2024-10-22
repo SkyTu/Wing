@@ -156,8 +156,6 @@ namespace dcf
     {
         auto d_B = (T *)gpuMalloc(N * sizeof(T));
         gpuLinearComb(sizeof(T) * 8, N, d_B, x, d_A);
-        auto h_B = (T *)moveToCPU((u8 *)d_B, N * sizeof(T), NULL);
-        printf("h_B[0]=%ld\n", h_B[0]);
         return d_B;
     }
 
@@ -166,7 +164,6 @@ namespace dcf
                       T *d_dW, int scaleW, int scaledW, TruncateType t, AESGlobalContext *gaes, int epoch)
     {
         size_t memSizeW = N * sizeof(T);
-        printf("calling genGpuSGDKey 1\n");
         auto d_delta = gpuMultiplyByConstant(d_dW, -T(orca::lr_fp), N);
         int rightShift = scaledW + orca::lr_scale[epoch] - scaleW;
         bool dWWasNull = false;
@@ -209,6 +206,8 @@ namespace dcf
         size_t memSizeW = N * sizeof(T);
         // the d_dW mask got moved to the left by shift
         printf("calling gpuSgd 1\n");
+        auto h_dW = (T *)moveToCPU((u8 *)d_dW, N * sizeof(T), NULL);
+        printf("h_dW[0]=%ld\n", h_dW[0]);
         auto d_delta = gpuMultiplyByConstant(d_dW, -T(orca::lr_fp), N);
         int rightShift = orca::lr_scale[epoch] + scaledW - scaleW;
         bool dWWasNull = false;
