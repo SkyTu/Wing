@@ -205,6 +205,7 @@ namespace dcf
     {
         size_t memSizeW = N * sizeof(T);
         // the d_dW mask got moved to the left by shift
+        printf("call gpuSgd\n");
         auto d_delta = gpuMultiplyByConstant(d_dW, -T(orca::lr_fp), N);
         int rightShift = orca::lr_scale[epoch] + scaledW - scaleW;
         bool dWWasNull = false;
