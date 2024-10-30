@@ -170,7 +170,7 @@ namespace dcf
             if (useBias)
             {
                 auto d_mask_dY = getBiasGrad(p.M, p.N, p.bw, d_mask_grad);
-                genOptimizerKey(key_as_bytes, party, p.bw, p.bw, p.N, mask_Y, (T *)NULL, mask_Vy, d_mask_dY, 2 * global::scale, 2 * global::scale - lr_scale[epoch], global::scale, tb, this->useMomentum, gaes, epoch);
+                genOptimizerKey(key_as_bytes, party, p.bw, p.bw, p.N, mask_Y, (T *)NULL, mask_Vy, d_mask_dY, 2 * global::scale, 2 * global::scale - lr_scale[epoch], global::scale, tf, this->useMomentum, gaes, epoch);
                 gpuFree(d_mask_dY);
             }
             gpuFree(d_mask_W);
