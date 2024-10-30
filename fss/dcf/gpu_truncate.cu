@@ -237,10 +237,11 @@ namespace dcf
     }
 
     template <typename T>
-    void gpuZeroExt(GPUZeroExtKey<T> k, int party, SigmaPeer *peer, T *d_I, AESGlobalContext *g, Stats *s)
+    void gpuZeroExt(GPUZeroExtKey<T> k, int party, SigmaPeer *peer, T *d_I, AESGlobalContext *g, Stats *s, bool reconstruct = true)
     {
         gpuZeroExtend(party, k.N, k.bin, k.bout, d_I, k.m, k.u, s);
-        peer->reconstructInPlace(d_I, k.bout, k.N, s);
+        if (reconstruct)
+            peer->reconstructInPlace(d_I, k.bout, k.N, s);
     }
 
 
@@ -258,10 +259,10 @@ namespace dcf
     }
 
     template <typename T>
-    void gpuStTR(GPUTruncateKey<T> k, int party, SigmaPeer *peer, T *d_I, AESGlobalContext *g, Stats *s)
+    void gpuStTR(GPUTruncateKey<T> k, int party, SigmaPeer *peer, T *d_I, AESGlobalContext *g, Stats *s, bool reconstruct = true)
     {
         gpuTRe(k.TReKey, party, peer, d_I, g, s);
-        gpuZeroExt(k.ZeroExtKey, party, peer, d_I, g, s);
+        gpuZeroExt(k.ZeroExtKey, party, peer, d_I, g, s, reconstruct);
     }
     
     template <typename T>
@@ -272,7 +273,7 @@ namespace dcf
     }
 
     template <typename T>
-    void gpuTruncate(int bin, int bout, TruncateType t, GPUTruncateKey<T> k, int shift, SigmaPeer *peer, int party, int N, T *d_I, AESGlobalContext *gaes, Stats *s)
+    void gpuTruncate(int bin, int bout, TruncateType t, GPUTruncateKey<T> k, int shift, SigmaPeer *peer, int party, int N, T *d_I, AESGlobalContext *gaes, Stats *s, bool reconstruct = true)
     {
         switch (t)
         {
@@ -291,7 +292,7 @@ namespace dcf
             gpuRevealedStTR(k, party, peer, d_I, gaes, s);
             break;
         case TruncateType::StochasticTruncate:
-            gpuStTR(k, party, peer, d_I, gaes, s);
+            gpuStTR(k, party, peer, d_I, gaes, s, reconstruct);
             break;
         default:
             assert(t == TruncateType::None);
