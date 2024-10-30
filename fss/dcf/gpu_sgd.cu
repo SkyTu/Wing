@@ -105,8 +105,9 @@ namespace dcf
         // printf("h_Vw=%ld\n", h_Vw[0]);
         // the d_dW mask got moved to the left by shift
         gpuLeftShiftAndAdd(N, d_dW, d_Vw, d_Vw, shift, T(orca::mom_fp));
-        dcf::gpuTruncate(bin, bout, t, truncateKeyVw, orca::mom_scale, peer, party, N, d_Vw, gaes, s, false);
+        dcf::gpuTruncate(bin, bout, t, truncateKeyVw, orca::mom_scale, peer, party, N, d_Vw, gaes, s);
         moveIntoCPUMem((u8 *)h_Vw, (u8 *)d_Vw /*d_dW*/, memSizeW, s);
+        printf("h_Vw=%ld\n", h_Vw[0]);
 
         bool dWWasNull = false;
         if (d_W == NULL)
@@ -120,6 +121,7 @@ namespace dcf
         if (shift > 0)
             dcf::gpuTruncate(bin, bout, t, truncateKeyW, shift, peer, party, N, d_W, gaes, s);
         moveIntoCPUMem((u8 *)h_W, (u8 *)d_W, memSizeW, s);
+        printf("h_W=%ld\n", h_W[0]);
         if (dWWasNull)
             gpuFree(d_W);
         gpuFree(d_Vw);
