@@ -99,6 +99,7 @@ namespace dcf
                             dcf::GPUTruncateKey<T> truncateKeyVw, GPUTruncateKey<T> truncateKeyW, int party, SigmaPeer *peer, AESGlobalContext *gaes, Stats *s, int epoch)
     {
         size_t memSizeW = N * sizeof(T);
+        printf("h_Vw=%ld\n", h_Vw[0]);
         auto d_Vw = (T *)moveToGPU((u8 *)h_Vw, memSizeW, s);
         int shift = orca::mom_scale + scaleVw - scaledW;
         // printf("h_Vw=%ld\n", h_Vw[0]);
