@@ -225,7 +225,7 @@ namespace dcf
             printf("rightShift <= 0\n");
             dWWasNull = true;
             gpuLeftShiftAndAdd(N, d_delta, d_W, d_W, leftShift, T(1));
-            peer->reconstructInPlace(d_W, bout, N, s);
+            // peer->reconstructInPlace(d_W, bout, N, s);
         }
         gpuFree(d_delta);
         moveIntoCPUMem((u8 *)h_W, (u8 *)d_W, memSizeW, s);
