@@ -36,7 +36,7 @@ namespace dcf
         if (i < N)
         {
             C[i] = (A[i] << shift) + alpha * B[i];
-            // if(i == 1) printf("%u %u %u %u %d\n", A[i], B[i], alpha, C[i], shift);
+            if(i == 1) printf("%u %u %u %u %d\n", A[i], B[i], alpha, C[i], shift);
         }
     }
 
