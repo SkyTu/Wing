@@ -52,6 +52,7 @@ namespace dcf
     void genGpuSGDWithMomentumKey(u8 **key_as_bytes, int party, int bin, int bout, int N, T *h_W, T *d_W,
                                   T *h_Vw, T *d_dW, int scaleW, int scaleVw, int scaledW, TruncateType t, AESGlobalContext *gaes, int epoch)
     {
+        printf("Enter genGpuSGDWithMomentumKey\n");
         size_t memSizeW = N * sizeof(T);
         auto d_Vw = (T *)moveToGPU((u8 *)h_Vw, memSizeW, NULL);
         int shift = orca::mom_scale + scaleVw - scaledW;
@@ -59,7 +60,7 @@ namespace dcf
         gpuLeftShiftAndAdd(N, d_dW, d_Vw, d_Vw, shift, T(orca::mom_fp));
         d_Vw = genGPUTruncateKey(key_as_bytes, party, t, bin, bout, orca::mom_scale, N, d_Vw, gaes);
         moveIntoCPUMem((u8 *)h_Vw, (u8 *)d_Vw /*d_dW*/, memSizeW, NULL);
-
+        printf("h_Vw=%ld\n", h_Vw[0]);
         bool dWWasNull = false;
         if (d_W == NULL)
         {
@@ -99,6 +100,7 @@ namespace dcf
                             dcf::GPUTruncateKey<T> truncateKeyVw, GPUTruncateKey<T> truncateKeyW, int party, SigmaPeer *peer, AESGlobalContext *gaes, Stats *s, int epoch)
     {
         size_t memSizeW = N * sizeof(T);
+        printf("Enter gpuSgdWithMomentum\n");
         printf("h_Vw=%ld\n", h_Vw[0]);
         auto d_Vw = (T *)moveToGPU((u8 *)h_Vw, memSizeW, s);
         int shift = orca::mom_scale + scaleVw - scaledW;
