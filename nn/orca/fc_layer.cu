@@ -221,7 +221,7 @@ namespace dcf
 
             readOptimizerKey(tf, &truncateKeyVw, &truncateKeyW, key_as_bytes, global::scale, 2 * global::scale, 2 * global::scale, this->useMomentum, epoch);
             if (useBias)
-                readOptimizerKey(tb, &truncateKeyVy, &truncateKeyY, key_as_bytes, 2 * global::scale, 2 * global::scale - lr_scale[epoch], global::scale, this->useMomentum, epoch);
+                readOptimizerKey(tf, &truncateKeyVy, &truncateKeyY, key_as_bytes, 2 * global::scale, 2 * global::scale - lr_scale[epoch], global::scale, this->useMomentum, epoch);
         }
 
         template <typename T>
@@ -289,7 +289,7 @@ namespace dcf
             if (useBias)
             {
                 auto d_dY = getBiasGrad(p.M, p.N, p.bw, d_incomingGrad);
-                optimize(p.bw, p.bw, p.N, Y, (T *)NULL, Vy, d_dY, 2 * global::scale, 2 * global::scale - lr_scale[epoch], global::scale, tb, truncateKeyVy, truncateKeyY,
+                optimize(p.bw, p.bw, p.N, Y, (T *)NULL, Vy, d_dY, 2 * global::scale, 2 * global::scale - lr_scale[epoch], global::scale, tf, truncateKeyVy, truncateKeyY,
                         party, peer, this->useMomentum, gaes, &(this->s), epoch);
                 gpuFree(d_dY);
             }
