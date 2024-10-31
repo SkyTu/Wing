@@ -210,7 +210,6 @@ TOut *gpuSelectExtend(SigmaPeer *peer, int party, int bw, GPUSelectExtendKey<TOu
 {
     assert(bw <= 8 * sizeof(TOut));
     size_t memSz = k.N * sizeof(TOut);
-    printf("gpuSelectExtend\n");
     TOut *d_rb = (TOut *)moveToGPU((uint8_t *)k.rb, memSz, s);
     TOut *d_rin = (TOut *)moveToGPU((uint8_t *)k.rin, memSz, s);
     TOut *d_rin_msb = (TOut *)moveToGPU((uint8_t *)k.rin_msb, memSz, s);
