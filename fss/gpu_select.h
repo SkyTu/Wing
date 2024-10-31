@@ -70,8 +70,8 @@ GPUSelectExtendKey<T> readGPUSelectExtendKey(uint8_t** key_as_bytes, int N) {
 }
 
 template <typename T>
-GPUSelectExtendKey<T> readGPUSelectKey(uint8_t** key_as_bytes, int N) {
-    GPUSelectExtendKey<T> k;
+GPUSelectKey<T> readGPUSelectKey(uint8_t** key_as_bytes, int N) {
+    GPUSelectKey<T> k;
     k.N = N;
 
     size_t size_in_bytes = N * sizeof(T);
