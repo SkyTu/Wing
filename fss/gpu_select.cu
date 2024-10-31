@@ -200,7 +200,7 @@ __global__ void selectExtendKernel(u32 *X,
             v[i] = (party - rb[i]) * y + mx * d_q[i] - v[i] + rout[i];
         }
         else{
-            v[i] = rb[i] * y + mx * d_p[i] + v[i] - rin[i];
+            v[i] = rb[i] * y + mx * d_p[i] + v[i] - rin[i] + rout[i];
         }
     }
 }
@@ -210,7 +210,7 @@ TOut *gpuSelectExtend(SigmaPeer *peer, int party, int bw, GPUSelectExtendKey<TOu
 {
     assert(bw <= 8 * sizeof(TOut));
     size_t memSz = k.N * sizeof(TOut);
-
+    printf("gpuSelectExtend\n");
     TOut *d_rb = (TOut *)moveToGPU((uint8_t *)k.rb, memSz, s);
     TOut *d_rin = (TOut *)moveToGPU((uint8_t *)k.rin, memSz, s);
     TOut *d_rin_msb = (TOut *)moveToGPU((uint8_t *)k.rin_msb, memSz, s);
@@ -224,14 +224,11 @@ TOut *gpuSelectExtend(SigmaPeer *peer, int party, int bw, GPUSelectExtendKey<TOu
     // printf("finished kernel\n");
     if (opMasked)
         peer->reconstructInPlace(d_v, bw, k.N, s);
-
-    
     gpuFree(d_rb);
     gpuFree(d_rin);
     gpuFree(d_rin_msb);
     gpuFree(d_rout);
     gpuFree(d_p);
     gpuFree(d_q);
-
     return d_v;
 }
