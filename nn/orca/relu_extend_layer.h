@@ -38,7 +38,7 @@ namespace dcf
             GPUReluZeroExtKey<T> reluExtendKey;
             u32 *drelu;
             u8 *dReluMask;
-            GPUSelectKey<T> backpropSelectKey;
+            GPUSelectExtendKey<T> backpropSelectKey;
             // AESGlobalContext* gaes;
             // Stats s;
 

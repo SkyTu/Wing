@@ -31,8 +31,47 @@ struct GPUSelectKey
 };
 
 template <typename T>
-GPUSelectKey<T> readGPUSelectKey(uint8_t** key_as_bytes, int N) {
-    GPUSelectKey<T> k;
+struct GPUSelectExtendKey
+{
+    int N;
+    T *v, *p, *q, *rb, *rin, *rin_msb, *rout;
+};
+
+
+template <typename T>
+GPUSelectExtendKey<T> readGPUSelectExtendKey(uint8_t** key_as_bytes, int N) {
+    GPUSelectExtendKey<T> k;
+    k.N = N;
+
+    size_t size_in_bytes = N * sizeof(T);
+
+    k.rb = (T *) *key_as_bytes;
+    *key_as_bytes += size_in_bytes;
+
+    k.rin = (T *) *key_as_bytes;
+    *key_as_bytes += size_in_bytes;
+
+    k.rin_msb = (T *) *key_as_bytes;
+    *key_as_bytes += size_in_bytes;
+
+    k.rout = (T *) *key_as_bytes;
+    *key_as_bytes += size_in_bytes;
+
+    k.v = (T *) *key_as_bytes;
+    *key_as_bytes += size_in_bytes;
+
+    k.p = (T *) *key_as_bytes;
+    *key_as_bytes += size_in_bytes;
+
+    k.q = (T *) *key_as_bytes;
+    *key_as_bytes += size_in_bytes;
+
+    return k;
+}
+
+template <typename T>
+GPUSelectExtendKey<T> readGPUSelectKey(uint8_t** key_as_bytes, int N) {
+    GPUSelectExtendKey<T> k;
     k.N = N;
 
     size_t size_in_bytes = N * sizeof(T);
@@ -54,9 +93,5 @@ GPUSelectKey<T> readGPUSelectKey(uint8_t** key_as_bytes, int N) {
 
     return k;
 }
-
-
-// template <typename T>
-// GPUSelectKey<T> readGPUSelectKey(uint8_t **key_as_bytes, int N);
 
 #include "gpu_select.cu"

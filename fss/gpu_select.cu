@@ -133,3 +133,105 @@ TOut *gpuKeyGenSelect(uint8_t **key_as_bytes, int party, int N, TIn *d_maskX, TM
     gpuFree(d_oneBitK2);
     return d_randomMaskOut;
 }
+
+template <typename TIn, typename TOut, typename TMaskB>
+__global__ void keyGenSelectExtendKernel(int N, TMaskB *maskB, TIn *maskX, TOut *randomMaskOut, TOut *d_v, TOut *d_p, TOut *d_q, TOut *d_rmsb, int bw)
+{
+    int i = blockIdx.x * blockDim.x + threadIdx.x;
+    if (i < N)
+    {
+        d_v[i] = (1 - maskB[i]) * maskX[i];
+        d_rmsb[i] = gpuMsb(maskX[i], bw);
+        d_p[i] = maskB[i] * d_rmsb[i];
+        d_q[i] = (1 - maskB[i]) * d_rmsb[i];
+    }
+}
+
+// if you don't have a random mask then the function returns one else it returns null
+template <typename TIn, typename TOut, typename TMaskB>
+TOut *gpuKeyGenSelectExtend(uint8_t **key_as_bytes, int party, int N, TIn *d_maskX, TMaskB *d_maskB, int bw, bool opMasked = true)
+{
+    // printf("bw=%d, Tout=%d\n", bw, sizeof(TOut));
+    assert(bw <= 8 * sizeof(TOut));
+    if (!d_maskX)
+        d_maskX = randomGEOnGpu<TIn>(N, bw);
+    TOut *d_randomMaskOut = opMasked ? randomGEOnGpu<TOut>(N, bw) : NULL;
+    auto d_v = (TOut *)gpuMalloc(N * sizeof(TOut));
+    auto d_p = (TOut *)gpuMalloc(N * sizeof(TOut));
+    auto d_q = (TOut *)gpuMalloc(N * sizeof(TOut));
+    auto d_rmsb = (TOut *)gpuMalloc(N * sizeof(TOut));
+    // printf("Bw=%d\n", bw);
+    keyGenSelectExtendKernel<<<(N - 1) / 256 + 1, 256>>>(N, d_maskB, d_maskX, d_randomMaskOut, d_v, d_p, d_q, d_rmsb, bw);
+    checkCudaErrors(cudaDeviceSynchronize());
+    writeShares<TMaskB, TOut>(key_as_bytes, party, N, d_maskB, bw);
+    writeShares<TIn, TOut>(key_as_bytes, party, N, d_maskX, bw);
+    writeShares<TOut, TOut>(key_as_bytes, party, N, d_rmsb, bw);
+    writeShares<TOut, TOut>(key_as_bytes, party, N, d_randomMaskOut, bw);
+    writeShares<TOut, TOut>(key_as_bytes, party, N, d_v, bw);
+    writeShares<TOut, TOut>(key_as_bytes, party, N, d_p, bw);
+    writeShares<TOut, TOut>(key_as_bytes, party, N, d_q, bw);
+    gpuFree(d_v);
+    gpuFree(d_p);
+    gpuFree(d_q);
+    gpuFree(d_rmsb);
+    return d_randomMaskOut;
+}
+
+
+// select(b, x-p, 0) + q
+template <typename TIn, typename TOut, u64 p, u64 q>
+__global__ void selectExtendKernel(u32 *X,
+                             TIn *Y,
+                             TOut *rb, TOut *rin,
+                             TOut *rin_msb, TOut *rout,
+                             TOut *v, TOut *d_p, TOut *d_q, int party, int N, int bw)
+{
+    // 思考一下这个p和q究竟做什么作用？
+    int i = blockIdx.x * blockDim.x + threadIdx.x;
+    if (i < N)
+    {
+        int laneId = threadIdx.x & 0x1f;
+        TOut x = ((X[i / 32] >> laneId) & 1ULL);
+        TOut is_zero_x = (x == 0);
+        auto y = TOut(Y[i] - p + (1ULL << (bw - 2)));
+        auto mx = gpuMsb(y, bw);
+        y = TOut(y - (1ULL << (bw - 2)));
+        if(is_zero_x){
+            v[i] = (party - rb[i]) * y + mx * d_q[i] - v[i] + rout[i];
+        }
+        else{
+            v[i] = rb[i] * y + mx * d_p[i] + v[i] - rin[i];
+        }
+    }
+}
+
+template <typename TIn, typename TOut, u64 p, u64 q>
+TOut *gpuSelectExtend(SigmaPeer *peer, int party, int bw, GPUSelectExtendKey<TOut> k, u32 *d_x, TIn *d_Y, Stats *s, bool opMasked = true)
+{
+    assert(bw <= 8 * sizeof(TOut));
+    size_t memSz = k.N * sizeof(TOut);
+
+    TOut *d_rb = (TOut *)moveToGPU((uint8_t *)k.rb, memSz, s);
+    TOut *d_rin = (TOut *)moveToGPU((uint8_t *)k.rin, memSz, s);
+    TOut *d_rin_msb = (TOut *)moveToGPU((uint8_t *)k.rin_msb, memSz, s);
+    TOut *d_rout = (TOut *)moveToGPU((uint8_t *)k.rout, memSz, s);
+    TOut *d_v = (TOut *)moveToGPU((uint8_t *)k.v, memSz, s);
+    TOut *d_p = (TOut *)moveToGPU((uint8_t *)k.p, memSz, s);
+    TOut *d_q = (TOut *)moveToGPU((uint8_t *)k.q, memSz, s);
+    // printf("Doing select\n");
+    selectExtendKernel<TIn, TOut, p, q><<<(k.N - 1) / 256 + 1, 256>>>(d_x, d_Y, d_rb, d_rin, d_rin_msb, d_rout, d_v, d_p, d_q, party, k.N, bw);
+    checkCudaErrors(cudaDeviceSynchronize());
+    // printf("finished kernel\n");
+    if (opMasked)
+        peer->reconstructInPlace(d_v, bw, k.N, s);
+
+    
+    gpuFree(d_rb);
+    gpuFree(d_rin);
+    gpuFree(d_rin_msb);
+    gpuFree(d_rout);
+    gpuFree(d_p);
+    gpuFree(d_q);
+
+    return d_v;
+}
