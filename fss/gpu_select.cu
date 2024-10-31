@@ -197,10 +197,10 @@ __global__ void selectExtendKernel(u32 *X,
         auto mx = gpuMsb(y, bw);
         y = TOut(y - (1ULL << (bw - 2)));
         if(is_zero_x){
-            v[i] = (party - rb[i]) * y + mx * d_q[i] - v[i] + rout[i];
+            v[i] = rb[i] * y + mx * d_p[i] + v[i] - rin[i] + rout[i];
         }
         else{
-            v[i] = rb[i] * y + mx * d_p[i] + v[i] - rin[i] + rout[i];
+            v[i] = (party - rb[i]) * y + mx * d_q[i] - v[i] + rout[i];
         }
     }
 }
