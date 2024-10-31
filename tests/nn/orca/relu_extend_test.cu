@@ -43,7 +43,7 @@ int main(int argc, char *argv[]) {
     int bin = 40;
     int bout = 64;
     int N = atoi(argv[3]);//1638400;
-    bool useMomentum = true;
+    bool useMomentum = false;
     int epoch = 0;
 
     int party = atoi(argv[1]);
