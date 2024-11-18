@@ -705,7 +705,7 @@ void ARS(int32_t size, MASK_PAIR(GroupElement *inArr), MASK_PAIR(GroupElement *o
         auto mid = std::chrono::high_resolution_clock::now();
 
         uint64_t onlineComm0 = peer->bytesReceived() + peer->bytesSent();
-        reconstruct(size, outArr, bitlength);
+        // reconstruct(size, outArr, bitlength);
         uint64_t onlineComm1 = peer->bytesReceived() + peer->bytesSent();
         arsOnlineComm += (onlineComm1 - onlineComm0);
 
@@ -4828,14 +4828,15 @@ void PiranhaSoftmax(int32_t s1, int32_t s2, MASK_PAIR(GroupElement *inArr), MASK
 
     always_assert((s1 & (s1-1)) == 0);
     auto logs1 = osuCrypto::log2ceil(s1);
-    for(int i = 0; i < s1 * s2; ++i) {
-        if (party == DEALER) {
-            outArr_mask[i] = outArr_mask[i] >> (sf + logs1);
-        }
-        else {
-            outArr[i] = outArr[i] >> (sf + logs1);
-        }
-    }
+    ScaleDown(s1 * s2, MASK_PAIR(outArr), sf+logs1);
+    // for(int i = 0; i < s1 * s2; ++i) {
+    //     if (party == DEALER) {
+    //         outArr_mask[i] = outArr_mask[i] >> (sf + logs1);
+    //     }
+    //     else {
+    //         outArr[i] = outArr[i] >> (sf + logs1);
+    //     }
+    // }
     std::cerr << ">> Softmax - end" << std::endl;
 
     delete[] expandedDenominator;

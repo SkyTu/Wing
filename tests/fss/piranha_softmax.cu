@@ -55,7 +55,7 @@ int main(int argc, char *argv[])
     {
         LlamaConfig::party = party;
         auto llama = new LlamaBase<u64>();
-        llama->init("0.0.0.0");
+        llama->init("10.176.34.171");
         Tensor4D<u64> inp(s1, 10, 1, 1);
         memcpy(inp.data, in.data, s1 * 10 * sizeof(u64));
         Tensor4D<u64> out2(s1, 10, 1, 1);
