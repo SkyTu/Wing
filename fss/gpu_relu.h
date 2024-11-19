@@ -50,8 +50,6 @@ namespace dpf{
         k.dpfKey = readGPUDPFKey(key_as_bytes);
         int N = k.dpfKey.M;
         k.mask = (uint32_t *)*key_as_bytes;
-        // number of 32-bit integers * sizeof(int)
-        // only works for bout = 1
         *key_as_bytes += ((N - 1) / PACKING_SIZE + 1) * sizeof(PACK_TYPE);
         return k;
     }

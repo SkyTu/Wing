@@ -90,6 +90,16 @@ namespace dcf
         return k;
     };
 
+    GPUDReluKey readGPUDReluKey(u8 **key_as_bytes)
+    {
+        GPUDReluKey k;
+        k.dcfKey = readGPUDCFKey(key_as_bytes);
+        k.dReluMask = (u32 *)*key_as_bytes;
+        // number of 32-bit integers * sizeof(int)
+        *key_as_bytes += ((k.dcfKey.bout * k.dcfKey.M - 1) / PACKING_SIZE + 1) * sizeof(PACK_TYPE);
+        return k;
+    }
+
     template <typename T>
     GPUReluZeroExtKey<T> readGPUReluZeroExtKey(u8 **key_as_bytes)
     {
@@ -105,15 +115,6 @@ namespace dcf
         return k;
     }
 
-    GPUDReluKey readGPUDReluKey(u8 **key_as_bytes)
-    {
-        GPUDReluKey k;
-        k.dcfKey = readGPUDCFKey(key_as_bytes);
-        k.dReluMask = (u32 *)*key_as_bytes;
-        // number of 32-bit integers * sizeof(int)
-        *key_as_bytes += ((k.dcfKey.bout * k.dcfKey.M - 1) / PACKING_SIZE + 1) * sizeof(PACK_TYPE);
-        return k;
-    }
 
     template <typename T>
     GPU2RoundReLUKey<T> readTwoRoundReluKey(u8 **key_as_bytes)

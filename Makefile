@@ -17,9 +17,6 @@ UTIL_FILES := ./utils/gpu_mem.cu ./utils/gpu_file_utils.cpp ./utils/sigma_comms.
 OBJ_INCLUDES := -I '$(CUTLASS_PATH)/include' -I '$(CUTLASS_PATH)/tools/util/include' -I '$(SYTORCH_PATH)/include' -I '$(LLAMA_PATH)/include' -I '$(SYTORCH_PATH)/ext/cryptoTools' -I '.'
 INCLUDES := $(OBJ_INCLUDES) -L$(CUTLASS_PATH)/build/tools/library -L$(SYTORCH_BUILD_PATH) -L$(SYTORCH_BUILD_PATH)/ext/cryptoTools -L$(SYTORCH_BUILD_PATH)/ext/llama -L$(SYTORCH_BUILD_PATH)/ext/bitpack -L$(SYTORCH_BUILD_PATH)/lib
 
-rss: tests/fss/test_rss.cu
-	$(CXX) $(FLAGS) $(INCLUDES) $^ $(UTIL_FILES) $(LIBS) -o tests/fss/test_rss
-
 dpf: tests/fss/dpf.cu
 	$(CXX) $(FLAGS) $(INCLUDES) $^ $(UTIL_FILES) $(LIBS) -o tests/fss/dpf
 
@@ -59,6 +56,9 @@ truncate: tests/fss/truncate.cu
 mha: tests/fss/mha.cu
 	$(CXX) $(FLAGS) $(INCLUDES) $^ $(UTIL_FILES) $(LIBS) -o tests/fss/mha
 
+rotary_embedding: tests/fss/rotary_embedding.cu
+	$(CXX) $(FLAGS) $(INCLUDES) $^ $(UTIL_FILES) $(LIBS) -o tests/fss/rotary_embedding
+
 secfloat_softmax: tests/fss/secfloat_softmax.cu
 	$(CXX) $(FLAGS) $(INCLUDES) $^ $(UTIL_FILES) $(LIBS) $(SECFLOAT_LIBS) -o tests/fss/secfloat_softmax
 
@@ -70,6 +70,12 @@ orca_dealer: experiments/orca/orca_dealer.cu
 
 orca_evaluator: experiments/orca/orca_evaluator.cu experiments/orca/datasets/mnist.cpp
 	$(CXX) $(FLAGS) $(INCLUDES) $^ $(UTIL_FILES) $(LIBS) $(SECFLOAT_LIBS) -o experiments/orca/orca_evaluator
+
+wing_dealer: experiments/orca/wing_dealer.cu
+	$(CXX) $(FLAGS) $(INCLUDES) $^ $(UTIL_FILES) $(LIBS) $(SECFLOAT_LIBS) -o experiments/orca/wing_dealer
+
+wing_evaluator: experiments/orca/wing_evaluator.cu experiments/orca/datasets/mnist.cpp
+	$(CXX) $(FLAGS) $(INCLUDES) $^ $(UTIL_FILES) $(LIBS) $(SECFLOAT_LIBS) -o experiments/orca/wing_evaluator
 
 dcf: tests/fss/dcf/dcf.cu
 	$(CXX) $(FLAGS) $(INCLUDES) $^ $(UTIL_FILES) $(LIBS) -o tests/fss/dcf/dcf
@@ -85,27 +91,6 @@ dcf_stochastic_truncate: tests/fss/dcf/stochastic_truncate.cu
 
 dcf_relu: tests/fss/dcf/relu.cu
 	$(CXX) $(FLAGS) $(INCLUDES) $^ $(UTIL_FILES) $(LIBS) -o tests/fss/dcf/relu
-
-wing_truncate_reduce: tests/fss/dcf/wing_truncate_reduce.cu
-	$(CXX) $(FLAGS) $(INCLUDES) $^ $(UTIL_FILES) $(LIBS) -o tests/fss/dcf/wing_truncate_reduce
-
-wing_truncate: tests/fss/dcf/wing_truncate.cu
-	$(CXX) $(FLAGS) $(INCLUDES) $^ $(UTIL_FILES) $(LIBS) -o tests/fss/dcf/wing_truncate
-
-wing_truncate_reveal: tests/fss/dcf/wing_truncate_reveal.cu
-	$(CXX) $(FLAGS) $(INCLUDES) $^ $(UTIL_FILES) $(LIBS) -o tests/fss/dcf/wing_truncate_reveal
-
-wing_relu_ext: tests/fss/dcf/wing_relu_extend.cu
-	$(CXX) $(FLAGS) $(INCLUDES) $^ $(UTIL_FILES) $(LIBS) -o tests/fss/dcf/wing_relu_extend
-
-wing_relu_extend_layer: tests/nn/orca/relu_extend_test.cu
-	$(CXX) $(FLAGS) $(INCLUDES) $^ $(UTIL_FILES) $(LIBS) -o tests/nn/orca/wing_relu_extend
-
-wing_conv2d_layer: tests/nn/orca/conv2d_test.cu
-	$(CXX) $(FLAGS) $(INCLUDES) $^ $(UTIL_FILES) $(LIBS) -o tests/nn/orca/conv2d
-
-wing_fc: tests/nn/orca/fc_test.cu
-	$(CXX) $(FLAGS) $(INCLUDES) $^ $(UTIL_FILES) $(LIBS) -o tests/nn/orca/fc
 
 orca_conv2d: tests/nn/orca/conv2d_test.cu
 	$(CXX) $(FLAGS) $(INCLUDES) $^ $(UTIL_FILES) $(LIBS) -o tests/nn/orca/conv2d
@@ -131,6 +116,9 @@ orca_inference_u32: experiments/orca/orca_inference.cu
 sigma: experiments/sigma/sigma.cu 
 	$(CXX) $(FLAGS) $(INCLUDES) $^ $(UTIL_FILES) $(LIBS) -o experiments/sigma/sigma
 
+sigma_correctness: experiments/sigma/sigma.cu 
+	$(CXX) $(FLAGS) -DCORRECTNESS=1 $(INCLUDES) $^ $(UTIL_FILES) $(LIBS) -o experiments/sigma/sigma
+
 piranha: experiments/orca/piranha.cu 
 	$(CXX) $(FLAGS) $(INCLUDES) $^ $(UTIL_FILES) $(LIBS) -o experiments/orca/piranha
 
@@ -143,8 +131,8 @@ model_accuracy: experiments/orca/model_accuracy.cu experiments/orca/datasets/mni
 orca: orca_dealer orca_evaluator orca_inference orca_inference_u32 piranha
 
 clean:
-	rm -rf ext/cutlass/build
-	rm -rf ext/sytorch/build
+	# rm -rf ext/cutlass/build
+	# rm -rf ext/sytorch/build
 	rm -rf orca/experiments/output
 	rm -rf sigma/experiments/output
 	rm experiments/orca/orca_dealer
