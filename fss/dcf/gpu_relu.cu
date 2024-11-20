@@ -28,7 +28,7 @@ namespace dcf
     __global__ void genSelectExtKernel(T* inputMask, T* outputMask, T* rm, u8* rd, T* rmd, T* rmu, T* m, T* ud, T* v, T* w, T* z, int bin, int bout, int N){
         int i = blockIdx.x * blockDim.x + threadIdx.x;
         if(i < N){
-            m[i] = (1ULL << bin)* (gpuMsb(inputMask[i], bin)) + rm[i];
+            m[i] = (1ULL << bin) * (gpuMsb(inputMask[i], bin)) + rm[i];
             ud[i] = rd[i] ^ 1;
             assert(ud[i] == 0 || ud[i] == 1);
             v[i] = ud[i] * inputMask[i] + outputMask[i];
@@ -273,7 +273,6 @@ namespace dcf
         peer->reconstructInPlace(d_dcf, 1, k.N, s); 
         auto d_relu = gpuReluZeroExtMux(party, k.bin, k.bout, k.N, k.selectKey, d_I, d_dcf, s);
         peer->reconstructInPlace(d_relu, k.bout, k.N, s);
-        // 也许这里d_dcf返回的和我们想要的东西不一样，为什么要返回d_relu而不是直接用d_I呢？可能这个数要存起来？
         return std::make_pair(d_dcf, d_relu);
     }
 }

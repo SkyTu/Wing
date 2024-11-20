@@ -140,6 +140,7 @@ __global__ void keyGenSelectExtendKernel(int N, TMaskB *maskB, T *maskX, T *d_v,
     int i = blockIdx.x * blockDim.x + threadIdx.x;
     if (i < N)
     {
+        assert(maskB[i] == 0 || maskB[i] == 1);
         d_v[i] = (1 - maskB[i]) * maskX[i];
         auto d_rmsb = gpuMsb(maskX[i], bin);
         d_p[i] = maskB[i] * d_rmsb;
@@ -190,6 +191,7 @@ __global__ void selectExtendKernel(u32 *X,
     {
         int laneId = threadIdx.x & 0x1f;
         T x = ((X[i / 32] >> laneId) & 1ULL);
+        assert (x == 0 || x == 1);
         T is_zero_x = (x == 0);
         auto y = T(Y[i] - p + (1ULL << (bin - 2)));
         // 之前这里没有乘以 2 的 m次方
