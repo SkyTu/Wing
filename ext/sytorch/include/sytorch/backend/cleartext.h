@@ -105,7 +105,6 @@ public:
     void avgPool2D(u64 ks, u64 padding, u64 stride, const Tensor4D<T> &in, Tensor4D<T> &out, u64 scale);
     void maxPool2D(u64 ks, u64 padding, u64 stride, const Tensor4D<T> &in, Tensor4D<T> &out, Tensor4D<u64> &maxIdx, u64 scale, u8 mode);
     void maxPool2D(u64 fh, u64 fw, u64 padding, u64 stride, const Tensor4D<T> &in, Tensor4D<T> &out, Tensor<u8> &maxIdx, u64 scale, u8 mode);
-
     void batchNormInference(const Tensor1D<T> &A, const Tensor1D<T> &B, const Tensor<T> &x, Tensor<T> &y, u64 scale);
     void add(const std::vector<Tensor<T> *> &in, Tensor<T> &out);
     void gelu(const Tensor<T> &in, Tensor<T> &out, u64 scale, u64 mode = 0);

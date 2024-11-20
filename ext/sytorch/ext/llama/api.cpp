@@ -714,8 +714,6 @@ void ARS(int32_t size, MASK_PAIR(GroupElement *inArr), MASK_PAIR(GroupElement *o
         std::cerr << "   Compute Time = " << compute_time / 1000.0 << " milliseconds\n";
         std::cerr << "   Reconstruct Time = " << reconstruct_time / 1000.0 << " milliseconds\n";
         std::cerr << "   Online Time = " << (reconstruct_time + compute_time) / 1000.0 << " milliseconds\n";
-
-
         std::cerr << "   Online Comm = " << (onlineComm1 - onlineComm0) << " bytes\n";
 
         evalMicroseconds += (reconstruct_time + compute_time);
@@ -4349,7 +4347,6 @@ void InsecureInverse(int32_t size, GroupElement *A, GroupElement *invA, int32_t 
     // KG: make sure this is inplace secure (i.e can accept invA = A)
     uint64_t logk = osuCrypto::log2ceil(upper);
     uint64_t m = logk + 1;
-    std::cout << "logk = " << logk << std::endl;
     std::cerr << ">> InsecureInverse - start" << std::endl;
 
     if (party == DEALER)
@@ -4383,9 +4380,6 @@ void InsecureInverse(int32_t size, GroupElement *A, GroupElement *invA, int32_t 
             tmp[i + size] = tup.second;
         }
         reconstruct(2 * size, tmp, bitlength);
-
-        std::cout << "before round 2" << std::endl;
-        std::cout << "logk = " << logk << std::endl;
         for (int i = 0; i < size; ++i)
         {
             auto tup = evalTaylor_round2(party - SERVER, bitlength, bitlength, 2.630, -5.857, 4.245, A[i], keys[i], sf, logk, tmp[i], tmp[i + size]);
@@ -4393,8 +4387,6 @@ void InsecureInverse(int32_t size, GroupElement *A, GroupElement *invA, int32_t 
         }
         reconstruct(size, tmp + size, bitlength);
 
-        std::cout << "before round 3" << std::endl;
-        std::cout << "logk = " << logk << std::endl;
         for (int i = 0; i < size; ++i)
         {
             auto tup = evalTaylor_round3(party - SERVER, bitlength, bitlength, 2.630, -5.857, 4.245, A[i], keys[i], sf, logk, tmp[i], tmp[i + size], tmp[i + size]);
