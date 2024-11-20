@@ -34,7 +34,7 @@ template <typename T>
 struct GPUSelectExtendKey
 {
     int N;
-    T *v, *p, *q, *rb, *rin, *rin_msb, *rout;
+    T *v, *p, *q, *rb, *rin, *rout;
 };
 
 
@@ -49,9 +49,6 @@ GPUSelectExtendKey<T> readGPUSelectExtendKey(uint8_t** key_as_bytes, int N) {
     *key_as_bytes += size_in_bytes;
 
     k.rin = (T *) *key_as_bytes;
-    *key_as_bytes += size_in_bytes;
-
-    k.rin_msb = (T *) *key_as_bytes;
     *key_as_bytes += size_in_bytes;
 
     k.rout = (T *) *key_as_bytes;
