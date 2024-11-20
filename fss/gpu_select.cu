@@ -140,7 +140,7 @@ __global__ void keyGenSelectExtendKernel(int N, TMaskB *maskB, TIn *maskX, TOut 
     int i = blockIdx.x * blockDim.x + threadIdx.x;
     if (i < N)
     {
-        d_v[i] = (1 - maskB[i]) * maskX[i];
+        d_v[i] = (1 - maskB[i]) * maskX[i] + randomMaskOut[i];
         d_rmsb[i] = gpuMsb(maskX[i], bw);
         d_p[i] = maskB[i] * d_rmsb[i];
         d_q[i] = (1 - maskB[i]) * d_rmsb[i];
