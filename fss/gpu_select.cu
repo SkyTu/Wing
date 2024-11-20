@@ -182,7 +182,7 @@ __global__ void selectExtendKernel(u32 *X,
                              T *Y,
                              T *rb, T *rin,
                              T *rout,
-                             T *v, T *d_p, T *d_q, int party, int N, int bin)
+                             T *v, T *d_p, T *d_q, int party, int N, int bin, int bout)
 {
     // 思考一下这个p和q究竟做什么作用？
     int i = blockIdx.x * blockDim.x + threadIdx.x;
@@ -200,6 +200,7 @@ __global__ void selectExtendKernel(u32 *X,
         else{
             v[i] = (party - rb[i]) * Y[i] + mx * d_q[i] - v[i] + rout[i];
         }
+        gpuMod(v[i], bout);
     }
 }
 
@@ -217,7 +218,7 @@ T *gpuSelectExtend(SigmaPeer *peer, int bin, int bout, int party, GPUSelectExten
     T *d_p = (T *)moveToGPU((uint8_t *)k.p, memSz, s);
     T *d_q = (T *)moveToGPU((uint8_t *)k.q, memSz, s);
     // printf("Doing select\n");
-    selectExtendKernel<T, p, q><<<(k.N - 1) / 256 + 1, 256>>>(d_x, d_Y, d_rb, d_rin, d_rout, d_v, d_p, d_q, party, k.N, bin);
+    selectExtendKernel<T, p, q><<<(k.N - 1) / 256 + 1, 256>>>(d_x, d_Y, d_rb, d_rin, d_rout, d_v, d_p, d_q, party, k.N, bin, bout);
     checkCudaErrors(cudaDeviceSynchronize());
     // printf("finished kernel\n");
     if (opMasked)
