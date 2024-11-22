@@ -40,6 +40,7 @@ namespace dcf
             bool train = false;
             bool useMomentum = true;
             bool loadedWeights = false;
+            bool backwardReconstruct = true;
             Stats s;
             virtual void setTrain(bool useMomentum)
             {
@@ -59,6 +60,7 @@ namespace dcf
             virtual T *backward(SigmaPeer *peer, int party, T *d_incomingGrad, AESGlobalContext *g, int epoch) = 0;
             virtual void initWeights(u8 **weights, bool floatWeights) {}
             virtual void dumpWeights(std::ofstream &f) {}
+            virtual void printWeights() {}
         };
 
     }

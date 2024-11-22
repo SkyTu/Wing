@@ -70,7 +70,7 @@ namespace dcf
         {
             this->checkIfTrain();
             auto d_dreluMask = (u8 *)moveToGPU((u8 *)dReluMask, numRelus, NULL);
-            auto d_outgoingGradMask = gpuKeyGenSelectExtend<T, u8>(key_as_bytes, bout, bout, party, numRelus, d_incomingGradMask, d_dreluMask);
+            auto d_outgoingGradMask = gpuKeyGenSelectExtend<T, u8>(key_as_bytes, bin, bout, party, numRelus, d_incomingGradMask, d_dreluMask);
             // auto d_outgoingGradMask = gpuKeyGenSelect<T, T, u8>(key_as_bytes, party, numRelus, d_incomingGradMask, d_dreluMask, bout);
             gpuFree(d_incomingGradMask);
             gpuFree(d_dreluMask);
@@ -116,7 +116,7 @@ namespace dcf
         {
             this->checkIfTrain();
             auto d_drelu = (u32 *)moveToGPU((u8 *)drelu, ((numRelus - 1) / PACKING_SIZE + 1) * sizeof(PACK_TYPE), &(this->s));
-            auto d_selectOutput = gpuSelectExtend<T, 0, 0>(peer, bout, bout, party, backpropSelectKey, d_drelu, d_incomingGrad, &(this->s));
+            auto d_selectOutput = gpuSelectExtend<T, 0, 0>(peer, bin, bout, party, backpropSelectKey, d_drelu, d_incomingGrad, &(this->s));
             // auto d_selectOutput = gpuSelect<T, T, 0, 0>(peer, party, bout, backpropSelectKey, d_drelu, d_incomingGrad, &(this->s));
             gpuFree(d_drelu);
             gpuFree(d_incomingGrad);

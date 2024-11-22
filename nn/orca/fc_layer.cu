@@ -42,7 +42,7 @@ namespace dcf
     {
 
         template <typename T>
-        FCLayer<T>::FCLayer(int bin, int bout, int M, int N, int K, dcf::TruncateType tf, dcf::TruncateType tb, bool useBias, bool computedX, bool inputIsShares)
+        FCLayer<T>::FCLayer(int bin, int bout, int M, int N, int K, dcf::TruncateType tf, dcf::TruncateType tb, bool useBias, bool computedX, bool inputIsShares, bool backwardReconstruct)
         {
             assert(bin == bout && bin <= sizeof(T) * 8);
             assert(useBias);
@@ -78,6 +78,7 @@ namespace dcf
             this->useBias = useBias;
             this->computedX = computedX;
             this->inputIsShares = inputIsShares;
+            this->backwardReconstruct = backwardReconstruct;
             if (useBias)
             {
                 size_t memSzY = p.N * sizeof(T);
@@ -164,7 +165,10 @@ namespace dcf
                 writeShares<T, T>(key_as_bytes, party, p.size_A, d_masked_dX, p.bw);
                 gpuFree(d_masked_dX);
                 // d_mask_dX gets freed inside keygen for truncate
-                d_mask_truncated_dX = genGPUTruncateKey(key_as_bytes, party, tf, p.bw, p.bw, global::scale, p.size_A, d_mask_dX, gaes);
+                if (this->backwardReconstruct)
+                    d_mask_truncated_dX = genGPUTruncateKey(key_as_bytes, party, tf, p.bw, p.bw, global::scale, p.size_A, d_mask_dX, gaes);
+                else
+                    d_mask_truncated_dX = genGPUTruncateKey(key_as_bytes, party, tb, p.bw, p.bw - global::scale, global::scale, p.size_A, d_mask_dX, gaes);
             }
             genOptimizerKey(key_as_bytes, party, p.bw, p.bw, p.size_B, mask_W, d_mask_W, mask_Vw, d_mask_dW, global::scale, 2 * global::scale, 2 * global::scale, tf, this->useMomentum, gaes, epoch);
             if (useBias)
@@ -216,7 +220,7 @@ namespace dcf
                 mmKeydX.B = mmKey.B;
                 mmKeydX.C = mask_dX;
 
-                truncateKeydX = readGPUTruncateKey<T>(tf, key_as_bytes);
+                truncateKeydX = readGPUTruncateKey<T>(tb, key_as_bytes);
             }
 
             readOptimizerKey(tf, &truncateKeyVw, &truncateKeyW, key_as_bytes, global::scale, 2 * global::scale, 2 * global::scale, this->useMomentum, epoch);
@@ -273,7 +277,11 @@ namespace dcf
                 auto d_mask_W = (T *)moveToGPU((u8 *)mmKeydX.B, mmKeydX.mem_size_B, &(this->s));
                 d_dX = gpuMatmulBeaver(pdX, mmKeydX, party, d_incomingGrad, d_W, d_mask_grad, d_mask_W, (T *)NULL, &(this->s));
                 gpuFree(d_mask_W);
-                dcf::gpuTruncate(p.bw, p.bw, tf, truncateKeydX, global::scale, peer, party, p.size_A, d_dX, gaes, &(this->s));
+                // 如果是反传，当不需要backwardReconstruct时，我们调用tb，此时是stochasticTR，不需要Reveal
+                if (this->backwardReconstruct)
+                    dcf::gpuTruncate(p.bw, p.bw, tf, truncateKeydX, global::scale, peer, party, p.size_A, d_dX, gaes, &(this->s));
+                else
+                    dcf::gpuTruncate(p.bw, p.bw, tb, truncateKeydX, global::scale, peer, party, p.size_A, d_dX, gaes, &(this->s), this->backwardReconstruct);
             }
 
             auto d_dW = gpuMatmulBeaver(pdW, mmKeydW, party, d_X, d_incomingGrad, d_mask_X, d_mask_grad, (T *)NULL, &(this->s));
@@ -333,6 +341,14 @@ namespace dcf
             f.write((char *)W, p.size_B * sizeof(T));
             if (useBias)
                 f.write((char *)Y, p.N * sizeof(T));
+        }
+
+        template <typename T>
+        void FCLayer<T>::printWeights()
+        {
+            printf("Print weights in fc_layer.cu\n");
+            for(int i = 0; i < 100; i++)
+                printf("W[%d] is %lu\n", i, ((T*)W)[i]);
         }
 
     }

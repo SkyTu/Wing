@@ -59,6 +59,7 @@ public:
     bool doTruncationForward = false;
     bool doPreSignExtension = false;
     bool doPostSignExtension = false;
+    bool backwardReconstruct = true;
     bool isFirst = false;
     u64 scale = 0;
     int mode = 0; // only used in ReLU in llama improved to decide between relu and reluext, might need something cleaner?

@@ -211,9 +211,7 @@ namespace dcf
     {
         size_t memSizeW = N * sizeof(T);
         // the d_dW mask got moved to the left by shift
-        printf("call gpuSgd\n");
         auto d_delta = gpuMultiplyByConstant(d_dW, -T(orca::lr_fp), N);
-        printf("finish d_delta calculation\n");
         int rightShift = orca::lr_scale[epoch] + scaledW - scaleW;
         bool dWWasNull = false;
         if (rightShift > 0)
@@ -228,14 +226,12 @@ namespace dcf
             assert(leftShift == orca::global::scale - orca::lr_scale[epoch]);
             assert(d_W == NULL);
             d_W = (T *)moveToGPU((u8 *)h_W, memSizeW, NULL);
-            printf("rightShift <= 0\n");
             dWWasNull = true;
             gpuLeftShiftAndAdd(N, d_delta, d_W, d_W, leftShift, T(1));
             // peer->reconstructInPlace(d_W, bout, N, s);
         }
         gpuFree(d_delta);
         moveIntoCPUMem((u8 *)h_W, (u8 *)d_W, memSizeW, s);
-        printf("h_W is %lu\n", h_W[0]);
         if (dWWasNull)
             gpuFree(d_W);
     }

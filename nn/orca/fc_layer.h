@@ -62,8 +62,9 @@ namespace dcf
             bool useBias;
             bool computedX;
             bool inputIsShares;
+            bool backwardReconstruct;
 
-            FCLayer(int bin, int bout, int M, int N, int K, dcf::TruncateType tf, dcf::TruncateType tb, bool useBias, bool computedX, bool inputIsShares);
+            FCLayer(int bin, int bout, int M, int N, int K, dcf::TruncateType tf, dcf::TruncateType tb, bool useBias, bool computedX, bool inputIsShares, bool backwardReconstruct = true);
             T *genForwardKey(uint8_t **key_as_bytes, int party, T *d_mask_X, AESGlobalContext *gaes);
             T *genBackwardKey(uint8_t **key_as_bytes, int party, T *d_mask_grad, AESGlobalContext *gaes, int epoch);
             void readForwardKey(uint8_t **key_as_bytes);
@@ -72,6 +73,7 @@ namespace dcf
             T *backward(SigmaPeer *peer, int party, T *d_incomingGrad, AESGlobalContext *gaes, int epoch);
             void initWeights(uint8_t **weights, bool floatWeights);
             void dumpWeights(std::ofstream &f);
+            void printWeights();
         };
     }
 }

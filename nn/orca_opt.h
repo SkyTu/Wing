@@ -169,6 +169,7 @@ void orcaOpt(LayerGraphNode<T> *node, LayerGraphNode<T> *root)
                 if (child->layer->name == "Conv2D" || child->layer->name == "FC" || child->layer->name == "BatchNorm2dInference" || child->layer->name == "GlobalAvgPool2D" || child->layer->name == "AvgPool2D" || child->layer->name == "Flatten")
                 {
                     oneChildLinear = true;
+                    child->layer->backwardReconstruct = false;
                     break;
                 }
             }
