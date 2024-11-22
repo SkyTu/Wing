@@ -245,11 +245,10 @@ namespace dcf
 
 
     template <typename T>
-    void gpuTRe(GPUTReKey<T> k, int party, SigmaPeer *peer, T *d_I, AESGlobalContext *g, Stats *s, bool gap = true, bool reconstruct = true)
+    void gpuTRe(GPUTReKey<T> k, int party, SigmaPeer *peer, T *d_I, AESGlobalContext *g, Stats *s, bool gap = true)
     {   
         TReKernel<<<(k.N - 1) / 128 + 1, 128>>>(party, k.bin, k.bout, k.shift, k.N, d_I, gap);
-        if (reconstruct)
-            peer->reconstructInPlace(d_I, k.bout, k.N, s);
+        peer->reconstructInPlace(d_I, k.bout, k.N, s);
     }
 
     template <typename T>
@@ -283,7 +282,7 @@ namespace dcf
             break;
         case TruncateType::StochasticTR:
             bout = bin - shift;
-            gpuTRe(k.TReKey, party, peer, d_I, gaes, s, reconstruct);
+            gpuTRe(k.TReKey, party, peer, d_I, gaes, s);
             break;
         case TruncateType::LocalARS:
             gpuLocalTr<T, T, ars>(party, bin, shift, N, d_I, true);
