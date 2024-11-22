@@ -281,7 +281,7 @@ namespace dcf
                 if (this->backwardReconstruct)
                     dcf::gpuTruncate(p.bw, p.bw, tf, truncateKeydX, global::scale, peer, party, p.size_A, d_dX, gaes, &(this->s));
                 else
-                    dcf::gpuTruncate(p.bw, p.bw, tb, truncateKeydX, global::scale, peer, party, p.size_A, d_dX, gaes, &(this->s), this->backwardReconstruct);
+                    dcf::gpuTruncate(p.bw, p.bw - global::sclae, tb, truncateKeydX, global::scale, peer, party, p.size_A, d_dX, gaes, &(this->s), this->backwardReconstruct);
             }
 
             auto d_dW = gpuMatmulBeaver(pdW, mmKeydW, party, d_X, d_incomingGrad, d_mask_X, d_mask_grad, (T *)NULL, &(this->s));
