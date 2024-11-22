@@ -40,7 +40,6 @@ namespace dcf
             bool train = false;
             bool useMomentum = true;
             bool loadedWeights = false;
-            bool backwardReconstruct = true;
             Stats s;
             virtual void setTrain(bool useMomentum)
             {
