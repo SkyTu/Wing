@@ -194,7 +194,7 @@ namespace dcf
 
             mmKey.C = (T *)*key_as_bytes;
             *key_as_bytes += mmKey.mem_size_C;
-
+        
             truncateKeyZ = readGPUTruncateKey<T>(tf, key_as_bytes);
         }
 
@@ -219,8 +219,10 @@ namespace dcf
                 mmKeydX.A = mask_grad;
                 mmKeydX.B = mmKey.B;
                 mmKeydX.C = mask_dX;
-
-                truncateKeydX = readGPUTruncateKey<T>(tb, key_as_bytes);
+                if (this->backwardReconstruct)
+                    truncateKeydX = readGPUTruncateKey<T>(tf, key_as_bytes);
+                else
+                    truncateKeydX = readGPUTruncateKey<T>(tb, key_as_bytes);
             }
 
             readOptimizerKey(tf, &truncateKeyVw, &truncateKeyW, key_as_bytes, global::scale, 2 * global::scale, 2 * global::scale, this->useMomentum, epoch);
