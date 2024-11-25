@@ -143,8 +143,9 @@ __global__ void keyGenSelectExtendKernel(int N, TMaskB *maskB, T *maskX, T *d_v,
         assert(maskB[i] == 0 || maskB[i] == 1);
         d_v[i] = (1 - maskB[i]) * maskX[i];
         auto d_rmsb = gpuMsb(maskX[i], bin);
-        d_p[i] = maskB[i] * d_rmsb;
-        d_q[i] = (1 - maskB[i]) * d_rmsb;
+        assert(d_rmsb == 0 || d_rmsb == 1);
+        d_p[i] = maskB[i] * d_rmsb * (1ULL << bin);
+        d_q[i] = (1 - maskB[i]) * d_rmsb * (1ULL << bin);
     }
 }
 
@@ -165,7 +166,7 @@ T *gpuKeyGenSelectExtend(uint8_t **key_as_bytes, int bin, int bout, int party, i
     keyGenSelectExtendKernel<<<(N - 1) / 256 + 1, 256>>>(N, d_maskB, d_maskX, d_v, d_p, d_q, bin);
     checkCudaErrors(cudaDeviceSynchronize());
     writeShares<TMaskB, T>(key_as_bytes, party, N, d_maskB, bout);
-    writeShares<T, T>(key_as_bytes, party, N, d_maskX, bin);
+    writeShares<T, T>(key_as_bytes, party, N, d_maskX, bout);
     writeShares<T, T>(key_as_bytes, party, N, d_randomMaskOut, bout);
     writeShares<T, T>(key_as_bytes, party, N, d_v, bout);
     writeShares<T, T>(key_as_bytes, party, N, d_p, bout);
@@ -193,16 +194,19 @@ __global__ void selectExtendKernel(u32 *X,
         T x = ((X[i / 32] >> laneId) & 1ULL);
         assert (x == 0 || x == 1);
         T is_zero_x = (x == 0);
-        auto y = T(Y[i] - p + (1ULL << (bin - 2)));
-        // 之前这里没有乘以 2 的 m次方
-        auto mx = (1 - gpuMsb(y, bin)) * (1ULL << bin);
+        auto y = T(Y[i] - p) + (1ULL << (bin - 2));
+        gpuMod(y, bin);
+        // 之前这里没有乘以 2 的 m次方  
+        auto mx = (1 - gpuMsb(y, bin));
+        y = y - (1ULL << (bin - 2));
+        gpuMod(y, bout);
+        assert(mx == 0 || mx == 1);
         if(is_zero_x){
-            v[i] = rb[i] * Y[i] + mx * d_p[i] + v[i] - rin[i] + rout[i];
+            v[i] = rb[i] * y + mx * d_p[i] + v[i] - rin[i] + rout[i];
         }
         else{
-            v[i] = (party - rb[i]) * Y[i] + mx * d_q[i] - v[i] + rout[i];
+            v[i] = (party - rb[i]) * y + mx * d_q[i] - v[i] + rout[i];
         }
-        gpuMod(v[i], bout);
     }
 }
 

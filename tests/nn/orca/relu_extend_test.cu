@@ -42,8 +42,14 @@ int main(int argc, char *argv[]) {
     auto h_outputMask = (T*) moveToCPU((u8*) d_outputMask, N * sizeof(T), NULL);
     
     
-    auto d_incomingGradMask = randomGEOnGpu<T>(N, bout);
-    auto d_maskedIncomingGrad = getMaskedInputOnGpu(N, bout, d_incomingGradMask, &h_incomingGrad);
+    // auto d_incomingGradMask = randomGEOnGpu<T>(N, bout);
+    // auto d_maskedIncomingGrad = getMaskedInputOnGpu(N, bout, d_incomingGradMask, &h_incomingGrad);
+    // auto h_incomingGradMask = (T*) moveToCPU((u8*) d_incomingGradMask, N * sizeof(T), NULL);
+    // auto d_outgoingGradMask = relu_extend_layer.genBackwardKey(&curPtr, party, d_incomingGradMask, &g, epoch);
+    // auto h_outgoingGradMask = (T*) moveToCPU((u8*) d_outgoingGradMask, N * sizeof(T), NULL);
+
+    auto d_incomingGradMask = randomGEOnGpu<T>(N, bin);
+    auto d_maskedIncomingGrad = getMaskedInputOnGpu(N, bin, d_incomingGradMask, &h_incomingGrad, true, bin - 1);
     auto h_incomingGradMask = (T*) moveToCPU((u8*) d_incomingGradMask, N * sizeof(T), NULL);
     auto d_outgoingGradMask = relu_extend_layer.genBackwardKey(&curPtr, party, d_incomingGradMask, &g, epoch);
     auto h_outgoingGradMask = (T*) moveToCPU((u8*) d_outgoingGradMask, N * sizeof(T), NULL);
@@ -67,7 +73,6 @@ int main(int argc, char *argv[]) {
         auto outgoingGradCt = (h_I[i] < (T(1) << (bin - 1)) ? h_incomingGrad[i] : 0);
         auto outgoingGrad = h_maskedOutgoingGrad[i] - h_outgoingGradMask[i];
         cpuMod(outgoingGrad, bout);
-        if(i < 10) printf("%lu %lu\n", u64(outgoingGrad), u64(outgoingGradCt));
         assert(outgoingGrad == outgoingGradCt);
     }
     return 0;
