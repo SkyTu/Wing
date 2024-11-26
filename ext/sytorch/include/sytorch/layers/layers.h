@@ -606,7 +606,6 @@ public:
     {
         always_assert(shapes.size() == 1);
         auto &shape = shapes[0];
-        std::cout << "FC: " << " " << shape.size() << std::endl;
         always_assert(shape.size() == 2);
         always_assert(shape[1] == in);
         inp.resize(shape);

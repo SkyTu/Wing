@@ -166,9 +166,9 @@ namespace dcf
                 gpuFree(d_masked_dX);
                 // d_mask_dX gets freed inside keygen for truncate
                 if (this->behindReLUExt)
-                    d_mask_truncated_dX = genGPUTruncateKey(key_as_bytes, party, tb, p.bw, p.bw - global::scale, global::scale, p.size_A, d_mask_dX, gaes);
+                    d_mask_truncated_dX = genGPUTruncateKey(key_as_bytes, party, tf, p.bw, p.bw - global::scale, global::scale, p.size_A, d_mask_dX, gaes);
                 else
-                    d_mask_truncated_dX = genGPUTruncateKey(key_as_bytes, party, tf, p.bw, p.bw, global::scale, p.size_A, d_mask_dX, gaes);
+                    d_mask_truncated_dX = genGPUTruncateKey(key_as_bytes, party, tb, p.bw, p.bw, global::scale, p.size_A, d_mask_dX, gaes);
             }
             genOptimizerKey(key_as_bytes, party, p.bw, p.bw, p.size_B, mask_W, d_mask_W, mask_Vw, d_mask_dW, global::scale, 2 * global::scale, 2 * global::scale, tf, this->useMomentum, gaes, epoch);
             if (useBias)
@@ -220,9 +220,9 @@ namespace dcf
                 mmKeydX.B = mmKey.B;
                 mmKeydX.C = mask_dX;
                 if (this->behindReLUExt)
-                    truncateKeydX = readGPUTruncateKey<T>(tb, key_as_bytes);
-                else
                     truncateKeydX = readGPUTruncateKey<T>(tf, key_as_bytes);
+                else
+                    truncateKeydX = readGPUTruncateKey<T>(tb, key_as_bytes);
             }
 
             readOptimizerKey(tf, &truncateKeyVw, &truncateKeyW, key_as_bytes, global::scale, 2 * global::scale, 2 * global::scale, this->useMomentum, epoch);
