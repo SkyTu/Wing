@@ -17,3 +17,8 @@ SEAL
 *.dot
 *.csv
 *.out
+experiments/orca/datasets/
+experiments/orca/keys/
+experiments/orca/output/
+experiments/orca/weights/
+experiments/orca/figure/
