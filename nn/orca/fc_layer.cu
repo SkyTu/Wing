@@ -279,11 +279,11 @@ namespace dcf
                 auto d_mask_W = (T *)moveToGPU((u8 *)mmKeydX.B, mmKeydX.mem_size_B, &(this->s));
                 d_dX = gpuMatmulBeaver(pdX, mmKeydX, party, d_incomingGrad, d_W, d_mask_grad, d_mask_W, (T *)NULL, &(this->s));
                 gpuFree(d_mask_W);
-                // 如果是反传，当behindReLUExt时，我们调用tb，此时是stochasticTR，只Reveal一部分
+                // 如果是反传，当behindReLUExt时，我们调用tf，此时是stochasticTR，只Reveal一部分
                 if (this->behindReLUExt)
-                    dcf::gpuTruncate(p.bw, p.bw - global::scale, tb, truncateKeydX, global::scale, peer, party, p.size_A, d_dX, gaes, &(this->s), this->behindReLUExt);
+                    dcf::gpuTruncate(p.bw, p.bw - global::scale, tf, truncateKeydX, global::scale, peer, party, p.size_A, d_dX, gaes, &(this->s), this->behindReLUExt);
                 else
-                    dcf::gpuTruncate(p.bw, p.bw, tf, truncateKeydX, global::scale, peer, party, p.size_A, d_dX, gaes, &(this->s));
+                    dcf::gpuTruncate(p.bw, p.bw, tb, truncateKeydX, global::scale, peer, party, p.size_A, d_dX, gaes, &(this->s));
             }
 
             auto d_dW = gpuMatmulBeaver(pdW, mmKeydW, party, d_X, d_incomingGrad, d_mask_X, d_mask_grad, (T *)NULL, &(this->s));
