@@ -133,7 +133,7 @@ int main(int argc, char *argv[])
     auto d_masked_I = getMaskedInputOnGpu(inSz, bin, d_inputMask, &h_I);
 
     auto d_incomingGradMask = randomGEOnGpu<T>(outSz, bin);
-    auto d_maskedIncomingGrad = getMaskedInputOnGpu(outSz, bin, d_incomingGradMask, &h_incomingGrad, true, bwBackprop-1);
+    auto d_maskedIncomingGrad = getMaskedInputOnGpu(outSz, bin, d_incomingGradMask, &h_incomingGrad, true, bwBackprop-10);
 
     u8 *startPtr, *curPtr;
     getKeyBuf(&startPtr, &curPtr, 4 * OneGB);
@@ -169,7 +169,7 @@ int main(int argc, char *argv[])
         auto outGrad = h_maskedOutgoingGrad[i] - h_outgoingGradMask[i];
         cpuMod(outGrad, bwBackprop);
         if (i < 10 || outGrad != outgoingGradCt[i])
-            printf("%d: %lu %lu\n", i, outGrad, outgoingGradCt[i]);
+            printf("%d: %lu %lu, %lu\n", i, outGrad, outgoingGradCt[i], outGrad - outgoingGradCt[i]);
         // assert(outGrad == outgoingGradCt[i]);
     }
     return 0;

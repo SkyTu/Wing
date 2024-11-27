@@ -441,7 +441,6 @@ __global__ void selectForMaxpoolBackpropKernel(MaxpoolParams p, uint32_t *oneHot
         // 之前这里没有乘以 2 的 m次方  
         auto mx = (1 - gpuMsb(y, bin));
         y = y - (1ULL << (bin - 2));
-        gpuMod(y, bout);
         assert(mx == 0 || mx == 1);
         if(is_zero_x){
             out[i] = rb[i] * y + mx * d_p[i] + v[i] - rin[i] + rout[i];
@@ -449,7 +448,7 @@ __global__ void selectForMaxpoolBackpropKernel(MaxpoolParams p, uint32_t *oneHot
         else{
             out[i] = (party - rb[i]) * y + mx * d_q[i] - v[i] + rout[i];
         }
-        gpuMod(out[i], p.bwBackprop);
+        gpuMod(y, bout);
     }
 }
 
