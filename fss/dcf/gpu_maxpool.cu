@@ -91,7 +91,7 @@ namespace dcf
         writeInt(key_as_bytes, p.bw);
         writeInt(key_as_bytes, outSz);
         auto d_dreluMask = dpf::gpuKeyGenDRelu(key_as_bytes, party, p.bin, outSz, d_diffMask, gaes);
-        auto d_newMaxMask = gpuKeyGenSelect<T, T, u8>(key_as_bytes, party, outSz, d_inputMask, d_dreluMask, p.bw);
+        auto d_newMaxMask = gpuKeyGenSelect<T, T, u8>(key_as_bytes, party, outSz, d_diffMask, d_dreluMask, p.bw);
         // auto d_newMaxMask = gpuKeyGenSelect<T, T, u8>(key_as_bytes, party, outSz, d_inputMask, d_dreluMask, p.bw);
         // auto d_res = gpuGenTwoRoundReluKey(key_as_bytes, party, p.bin, p.bw, outSz, d_diffMask, gaes);
         // auto d_dreluMask = d_res.first;
