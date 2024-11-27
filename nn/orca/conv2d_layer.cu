@@ -176,13 +176,13 @@ namespace dcf
                 // d_mask_truncated_dI = genGPUTruncateKey<T>(key_as_bytes, party, tf, p.bin, p.bout, global::scale, p.size_I, d_mask_dI, gaes);
             }
 
-            genOptimizerKey<T>(key_as_bytes, party, p.bin, p.bout, p.size_F, mask_F, d_mask_F, mask_Vf, d_mask_dF, global::scale, 2 * global::scale, 2 * global::scale, tb, this->useMomentum, gaes, epoch);
+            genOptimizerKey<T>(key_as_bytes, party, p.bin, p.bout, p.size_F, mask_F, d_mask_F, mask_Vf, d_mask_dF, global::scale, 2 * global::scale, 2 * global::scale, tf, this->useMomentum, gaes, epoch);
 
             if (useBias)
             {
                 auto d_mask_db = getBiasGrad<T>(p.size_O / p.CO, p.CO, p.bin, d_mask_grad);
                 // printf("Old Mask b=%ld, %ld, %ld\n", b[0], b[1], b[2]);
-                genOptimizerKey<T>(key_as_bytes, party, p.bin, p.bout, p.CO, mask_b, NULL, mask_Vb, d_mask_db, 2 * global::scale, 2 * global::scale - lr_scale[epoch], global::scale, tb, this->useMomentum, gaes, epoch);
+                genOptimizerKey<T>(key_as_bytes, party, p.bin, p.bout, p.CO, mask_b, NULL, mask_Vb, d_mask_db, 2 * global::scale, 2 * global::scale - lr_scale[epoch], global::scale, tf, this->useMomentum, gaes, epoch);
                 // printf("New Mask b=%ld, %ld, %ld\n", b[0], b[1], b[2]);
                 gpuFree(d_mask_db);
             }
@@ -291,14 +291,14 @@ namespace dcf
             }
 
             auto d_dF = gpuConv2DBeaver(convKeydF, party, d_incomingGrad, d_I, d_mask_incomingGrad, d_mask_I, (T *)NULL, &(this->s), 2);
-            peer->reconstructInPlace(d_dF, p.bin, p.size_F, &(this->s));
+            // peer->reconstructInPlace(d_dF, p.bin, p.size_F, &(this->s));
 
-            optimize(p.bin, p.bout, p.size_F, F, d_F, Vf, d_dF, global::scale, 2 * global::scale, 2 * global::scale, tb, truncateKeyVf, truncateKeyF, party, peer, this->useMomentum, gaes, &(this->s), epoch);
+            optimize(p.bin, p.bout, p.size_F, F, d_F, Vf, d_dF, global::scale, 2 * global::scale, 2 * global::scale, tf, truncateKeyVf, truncateKeyF, party, peer, this->useMomentum, gaes, &(this->s), epoch);
 
             if (useBias)
             {
                 auto d_db = getBiasGrad<T>(p.size_O / p.CO, p.CO, p.bout, d_incomingGrad);
-                optimize(p.bin, p.bout, p.CO, b, (T *)NULL, Vb, d_db, 2 * global::scale, 2 * global::scale - lr_scale[epoch], global::scale, tb, truncateKeyVb, truncateKeyb,
+                optimize(p.bin, p.bout, p.CO, b, (T *)NULL, Vb, d_db, 2 * global::scale, 2 * global::scale - lr_scale[epoch], global::scale, tf, truncateKeyVb, truncateKeyb,
                             party, peer, this->useMomentum, gaes, &(this->s), epoch);
                 gpuFree(d_db);
             }
