@@ -174,7 +174,6 @@ namespace dcf
             auto d_outgoingGradExpanded = gpuSelectForMaxpoolBackprop(p, backpropSelectKey, d_oneHot, d_incomingGrad,
                                                                       party, &(this->s));
             gpuFree(d_incomingGrad);
-            peer->reconstructInPlace(d_outgoingGradExpanded, p.bwBackprop, backpropSelectKey.N, &(this->s));
             auto d_outgoingGrad = gpuCollectGradients(p, d_outgoingGradExpanded, &(this->s));
             peer->reconstructInPlace(d_outgoingGrad, p.bwBackprop, outgoingGradSize, &(this->s));
             gpuFree(d_oneHot);
