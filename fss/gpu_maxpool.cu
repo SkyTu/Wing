@@ -574,7 +574,6 @@ T *gpuSelectForMaxpoolBackprop(MaxpoolParams p, GPUSelectExtendKey<T> k,
     T *d_out = (T *)gpuMalloc(memSz);
 
     const int tb_size = 256;
-
     selectForMaxpoolBackpropKernel<T><<<(k.N - 1) / tb_size + 1, tb_size>>>(p, d_oneHot,
                                                                             d_incomingGrad, d_out, d_rb, d_rin, d_rout, d_v, d_p, d_q, party, p.bin, p.bwBackprop, k.N);
     checkCudaErrors(cudaDeviceSynchronize());
