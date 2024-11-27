@@ -299,7 +299,6 @@ namespace dpf{
             int n = k.dpfTreeKey[0].N;
             size_t bIntSzOut = k.dpfTreeKey[0].memSzOut / sizeof(PACK_TYPE);
             // printf("outSz=%lu\n", bIntSzOut);
-            printf("k.B in gpuDcf is %d", k.B);
             for (int b = 0; b < k.B; b++)
             {
                 gpuDpfTreeEval<T, doDcf<E, pr, ep>>(k.dpfTreeKey[b], party, d_in + b * n, g, s, d_out + b * bIntSzOut, (u64)gIntSzOut);
