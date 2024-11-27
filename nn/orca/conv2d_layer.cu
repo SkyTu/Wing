@@ -44,7 +44,7 @@ namespace dcf
     {
         template <typename T>
         Conv2DLayer<T>::Conv2DLayer(int bin, int bout, int N, int H, int W, int CI, int FH, int FW, int CO,
-                                    int zPadHLeft, int zPadHRight, int zPadWLeft, int zPadWRight, int strideH, int strideW, bool useBias, dcf::TruncateType tf, dcf::TruncateType tb, bool computedI, bool inputIsShares, bool behindReLUExt)
+                                    int zPadHLeft, int zPadHRight, int zPadWLeft, int zPadWRight, int strideH, int strideW, bool useBias, dcf::TruncateType tf, dcf::TruncateType tb, bool computedI, bool inputIsShares, bool nextBackExt)
         {
             assert(bin == bout && bin <= sizeof(T) * 8);
             this->name = "Conv2D";
@@ -56,7 +56,7 @@ namespace dcf
             this->s.transfer_time = 0;
             this->tf = tf;
             this->tb = tb;
-            this->behindReLUExt = behindReLUExt;
+            this->nextBackExt = nextBackExt;
             size_t memSizeI = p.size_I * sizeof(T);
             size_t memSizeF = p.size_F * sizeof(T);
 
@@ -169,7 +169,7 @@ namespace dcf
                 auto d_masked_dI = gpuConv2DPlaintext<T>(convKeydI, d_mask_grad, d_mask_F, d_mask_dI, 1, false);
                 writeShares<T, T>(key_as_bytes, party, p.size_I, d_masked_dI, p.bout);
                 gpuFree(d_masked_dI);
-                if (this->behindReLUExt)
+                if (this->nextBackExt)
                     d_mask_truncated_dI = genGPUTruncateKey(key_as_bytes, party, tf, p.bin, p.bout, global::scale, p.size_I, d_mask_dI, gaes);
                 else
                     d_mask_truncated_dI = genGPUTruncateKey(key_as_bytes, party, tb, p.bout, p.bout, global::scale, p.size_I, d_mask_dI, gaes);
@@ -229,7 +229,7 @@ namespace dcf
                 convKeydI.O = mask_dI;
 
                 // should refactor this later to look pretty
-                if (this->behindReLUExt)
+                if (this->nextBackExt)
                     truncateKeydI = readGPUTruncateKey<T>(tf, key_as_bytes);
                 else
                     truncateKeydI = readGPUTruncateKey<T>(tb, key_as_bytes);
@@ -284,7 +284,7 @@ namespace dcf
                 auto d_mask_F = (T *)moveToGPU((u8 *)convKey.F, convKey.mem_size_F, &(this->s));
                 d_dI = gpuConv2DBeaver(convKeydI, party, d_incomingGrad, d_F, d_mask_incomingGrad, d_mask_F, (T *)NULL, &(this->s), 1);
                 gpuFree(d_mask_F);
-                if (this->behindReLUExt)
+                if (this->nextBackExt)
                     dcf::gpuTruncate(p.bin, p.bout, tf, truncateKeydI, global::scale, peer, party, p.size_I, d_dI, gaes, &(this->s));
                 else
                     dcf::gpuTruncate(p.bin, p.bout, tb, truncateKeydI, global::scale, peer, party, p.size_I, d_dI, gaes, &(this->s));

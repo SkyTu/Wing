@@ -131,8 +131,6 @@ model_accuracy: experiments/orca/model_accuracy.cu experiments/orca/datasets/mni
 orca: orca_dealer orca_evaluator orca_inference orca_inference_u32 piranha
 
 clean:
-	# rm -rf ext/cutlass/build
-	# rm -rf ext/sytorch/build
 	rm -rf orca/experiments/output
 	rm -rf sigma/experiments/output
 	rm experiments/orca/orca_dealer

@@ -42,7 +42,7 @@ namespace dcf
     {
 
         template <typename T>
-        FCLayer<T>::FCLayer(int bin, int bout, int M, int N, int K, dcf::TruncateType tf, dcf::TruncateType tb, bool useBias, bool computedX, bool inputIsShares, bool behindReLUExt)
+        FCLayer<T>::FCLayer(int bin, int bout, int M, int N, int K, dcf::TruncateType tf, dcf::TruncateType tb, bool useBias, bool computedX, bool inputIsShares, bool nextBackExt)
         {
             assert(bin == bout && bin <= sizeof(T) * 8);
             assert(useBias);
@@ -78,7 +78,7 @@ namespace dcf
             this->useBias = useBias;
             this->computedX = computedX;
             this->inputIsShares = inputIsShares;
-            this->behindReLUExt = behindReLUExt;
+            this->nextBackExt = nextBackExt;
             if (useBias)
             {
                 size_t memSzY = p.N * sizeof(T);
@@ -165,7 +165,7 @@ namespace dcf
                 writeShares<T, T>(key_as_bytes, party, p.size_A, d_masked_dX, p.bw);
                 gpuFree(d_masked_dX);
                 // d_mask_dX gets freed inside keygen for truncate
-                if (this->behindReLUExt)
+                if (this->nextBackExt)
                     d_mask_truncated_dX = genGPUTruncateKey(key_as_bytes, party, tf, p.bw, p.bw - global::scale, global::scale, p.size_A, d_mask_dX, gaes);
                 else
                     d_mask_truncated_dX = genGPUTruncateKey(key_as_bytes, party, tb, p.bw, p.bw, global::scale, p.size_A, d_mask_dX, gaes);
@@ -219,7 +219,7 @@ namespace dcf
                 mmKeydX.A = mask_grad;
                 mmKeydX.B = mmKey.B;
                 mmKeydX.C = mask_dX;
-                if (this->behindReLUExt)
+                if (this->nextBackExt)
                     truncateKeydX = readGPUTruncateKey<T>(tf, key_as_bytes);
                 else
                     truncateKeydX = readGPUTruncateKey<T>(tb, key_as_bytes);
@@ -279,9 +279,9 @@ namespace dcf
                 auto d_mask_W = (T *)moveToGPU((u8 *)mmKeydX.B, mmKeydX.mem_size_B, &(this->s));
                 d_dX = gpuMatmulBeaver(pdX, mmKeydX, party, d_incomingGrad, d_W, d_mask_grad, d_mask_W, (T *)NULL, &(this->s));
                 gpuFree(d_mask_W);
-                // 如果是反传，当behindReLUExt时，我们调用tf，此时是stochasticTR，只Reveal一部分
-                if (this->behindReLUExt)
-                    dcf::gpuTruncate(p.bw, p.bw - global::scale, tf, truncateKeydX, global::scale, peer, party, p.size_A, d_dX, gaes, &(this->s), this->behindReLUExt);
+                // 如果是反传，当nextBackExt时，我们调用tf，此时是stochasticTR，只Reveal一部分
+                if (this->nextBackExt)
+                    dcf::gpuTruncate(p.bw, p.bw - global::scale, tf, truncateKeydX, global::scale, peer, party, p.size_A, d_dX, gaes, &(this->s), this->nextBackExt);
                 else
                     dcf::gpuTruncate(p.bw, p.bw, tb, truncateKeydX, global::scale, peer, party, p.size_A, d_dX, gaes, &(this->s));
             }

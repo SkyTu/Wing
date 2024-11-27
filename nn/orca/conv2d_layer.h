@@ -47,7 +47,7 @@ namespace dcf
             Conv2DParams p;
             GPUConv2DKey<T> convKey, convKeydI, convKeydF;
             bool inputIsShares;
-            bool behindReLUExt;
+            bool nextBackExt;
             T *I, *F, *Vf, *b, *Vb;
             // Stats s;
             bool useBias, computedI;
@@ -58,7 +58,7 @@ namespace dcf
             T *mask_I, *d_mask_I, *mask_F, *mask_Vf, *mask_b, *mask_Vb;
 
             Conv2DLayer(int bin, int bout, int N, int H, int W, int CI, int FH, int FW, int CO,
-                        int zPadHLeft, int zPadHRight, int zPadWLeft, int zPadWRight, int strideH, int strideW, bool useBias, dcf::TruncateType tf, dcf::TruncateType tb, bool computedI, bool inputIsShares, bool behindReLUExt);
+                        int zPadHLeft, int zPadHRight, int zPadWLeft, int zPadWRight, int strideH, int strideW, bool useBias, dcf::TruncateType tf, dcf::TruncateType tb, bool computedI, bool inputIsShares, bool nextBackExt = false);
             T *genForwardKey(u8 **key_as_bytes, int party, T *mask_I, AESGlobalContext *gaes);
             T *genBackwardKey(u8 **key_as_bytes, int party, T *mask_grad, AESGlobalContext *gaes, int epoch);
             void readForwardKey(u8 **key_as_bytes);

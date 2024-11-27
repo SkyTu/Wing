@@ -34,12 +34,13 @@ namespace dcf
     namespace orca
     {
         template <typename T>
-        ReluExtendLayer<T>::ReluExtendLayer(int bin, int bout, int numRelus)
+        ReluExtendLayer<T>::ReluExtendLayer(int bin, int bout, int numRelus, bool nextBackExt=false)
         {
             this->name = "ReLU Extend";
             this->bin = bin;
             this->bout = bout;
             this->numRelus = numRelus;
+            this->nextBackExt = nextBackExt;
             dReluMask = (u8 *)cpuMalloc(numRelus);
             drelu = (u32 *)cpuMalloc(((numRelus - 1) / PACKING_SIZE + 1) * sizeof(PACK_TYPE));
         }
@@ -70,7 +71,16 @@ namespace dcf
         {
             this->checkIfTrain();
             auto d_dreluMask = (u8 *)moveToGPU((u8 *)dReluMask, numRelus, NULL);
-            auto d_outgoingGradMask = gpuKeyGenSelectExtend<T, u8>(key_as_bytes, bin, bout, party, numRelus, d_incomingGradMask, d_dreluMask);
+            // 如果ReLU反传时候下一层能够扩环，那可以确定就是MaxPool2D，则这一层没必要扩环，也不需要截断，直接进行select即可，而且位长应当保持为bin
+            T * d_outgoingGradMask;
+            if (this->nextBackExt)
+            {
+                d_outgoingGradMask = gpuKeyGenSelect<T, T, u8>(key_as_bytes, party, numRelus, d_incomingGradMask, d_dreluMask, bin);
+            }
+            else{
+                d_outgoingGradMask = gpuKeyGenSelectExtend<T, u8>(key_as_bytes, bin, bout, party, numRelus, d_incomingGradMask, d_dreluMask);
+            }
+            
             // auto d_outgoingGradMask = gpuKeyGenSelect<T, T, u8>(key_as_bytes, party, numRelus, d_incomingGradMask, d_dreluMask, bout);
             gpuFree(d_incomingGradMask);
             gpuFree(d_dreluMask);
@@ -87,8 +97,13 @@ namespace dcf
         template <typename T>
         void ReluExtendLayer<T>::readBackwardKey(u8 **key_as_bytes, int epoch)
         {
-            backpropSelectKey = readGPUSelectExtendKey<T>(key_as_bytes, numRelus);
-            // backpropSelectKey = readGPUSelectKey<T>(key_as_bytes, numRelus);
+            if (this->nextBackExt)
+            {
+                backpropSelectKey = readGPUSelectKey<T>(key_as_bytes, numRelus);
+            }
+            else{
+                backpropSelectExtKey = readGPUSelectExtendKey<T>(key_as_bytes, numRelus);
+            }
         }
 
         // no memory leak
@@ -116,8 +131,14 @@ namespace dcf
         {
             this->checkIfTrain();
             auto d_drelu = (u32 *)moveToGPU((u8 *)drelu, ((numRelus - 1) / PACKING_SIZE + 1) * sizeof(PACK_TYPE), &(this->s));
-            auto d_selectOutput = gpuSelectExtend<T, 0, 0>(peer, bin, bout, party, backpropSelectKey, d_drelu, d_incomingGrad, &(this->s));
-            // auto d_selectOutput = gpuSelect<T, T, 0, 0>(peer, party, bout, backpropSelectKey, d_drelu, d_incomingGrad, &(this->s));
+            T * d_selectOutput;
+            if (this->nextBackExt)
+            {
+                auto d_selectOutput = gpuSelect<T, T, 0, 0>(peer, party, bin, backpropSelectKey, d_drelu, d_incomingGrad, &(this->s));
+            }
+            else{
+                auto d_selectOutput = gpuSelectExtend<T, 0, 0>(peer, bin, bout, party, backpropSelectExtKey, d_drelu, d_incomingGrad, &(this->s));
+            }
             gpuFree(d_drelu);
             gpuFree(d_incomingGrad);
             return d_selectOutput;

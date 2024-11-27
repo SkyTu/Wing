@@ -43,7 +43,7 @@ namespace dcf
         int rounds = p.FH * p.FW - 1;
         // printf("Rounds=%d\n", rounds);
         // k.reluKey = new GPU2RoundReLUKey<T>[rounds + 1];
-        k.reluKey = new dpf::GPUDReluKey[rounds + 1];
+        k.reluKey = new dpf::GPUReluKey<T>[rounds + 1];
         for (int i = 0; i < rounds; i++)
         {
             // k.reluKey[i + 1] = readTwoRoundReluKey<T>(key_as_bytes);
