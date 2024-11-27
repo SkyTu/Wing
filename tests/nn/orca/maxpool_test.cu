@@ -132,8 +132,8 @@ int main(int argc, char *argv[])
     auto h_inputMask = (T *)moveToCPU((u8 *)d_inputMask, inSz * sizeof(T), NULL);
     auto d_masked_I = getMaskedInputOnGpu(inSz, bin, d_inputMask, &h_I);
 
-    auto d_incomingGradMask = randomGEOnGpu<T>(outSz, bwBackprop);
-    auto d_maskedIncomingGrad = getMaskedInputOnGpu(outSz, bwBackprop, d_incomingGradMask, &h_incomingGrad);
+    auto d_incomingGradMask = randomGEOnGpu<T>(outSz, 40);
+    auto d_maskedIncomingGrad = getMaskedInputOnGpu(outSz, 40, d_incomingGradMask, &h_incomingGrad, true, bwBackprop-1);
 
     u8 *startPtr, *curPtr;
     getKeyBuf(&startPtr, &curPtr, 4 * OneGB);
