@@ -437,6 +437,7 @@ __global__ void selectForMaxpoolBackpropKernel(MaxpoolParams p, uint32_t *oneHot
         T is_zero_x = (x == 0);
         int j = n * p.H * p.W * p.C + h * p.W * p.C + w * p.C + c;
         T y = incomingGrad[j] + (1ULL << (bin - 2));
+        assert (y < (1ULL << (bin - 1)));
         gpuMod(y, bin);
         // 之前这里没有乘以 2 的 m次方  
         auto mx = (1 - gpuMsb(y, bin));
