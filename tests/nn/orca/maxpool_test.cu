@@ -139,16 +139,12 @@ int main(int argc, char *argv[])
     getKeyBuf(&startPtr, &curPtr, 4 * OneGB);
 
     auto d_outputMask = maxpool_layer.genForwardKey(&curPtr, party, d_inputMask, &g);
-    std::cout << "geneated forward key" << std::endl;
     auto h_outputMask = (T *)moveToCPU((u8 *)d_outputMask, outSz * sizeof(T), NULL);
     auto d_outgoingGradMask = maxpool_layer.genBackwardKey(&curPtr, party, d_incomingGradMask, &g, epoch);
-    std::cout << "generated backward key" << std::endl;
     auto h_outgoingGradMask = (T *)moveToCPU((u8 *)d_outgoingGradMask, inSz * sizeof(T), NULL);
 
     curPtr = startPtr;
-    std::cout << "reading forward key" << std::endl;
     maxpool_layer.readForwardKey(&curPtr);
-    std::cout << "reading backward key" << std::endl;
     maxpool_layer.readBackwardKey(&curPtr, epoch);
     
     auto d_O = maxpool_layer.forward(peer, party, d_masked_I, &g);
