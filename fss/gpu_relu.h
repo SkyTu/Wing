@@ -63,12 +63,8 @@ namespace dpf{
         memcpy(&k, *key_as_bytes, 3 * sizeof(int));
         *key_as_bytes += 3 * sizeof(int);
 
-        std::cout << "Reading dpf key" << std::endl;
         k.dreluKey = readGPUDReluKey(key_as_bytes);
-        std::cout << "Reading select key" << std::endl;
         k.selectKey = readGPUSelectKey<T>(key_as_bytes, k.numRelus);
-        std::cout << "k.numRelus: " << k.numRelus << std::endl;
-        std::cout << "Done reading relu key" << std::endl;
         return k;
     }
 }
