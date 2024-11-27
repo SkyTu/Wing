@@ -230,7 +230,7 @@ T *gpuSelectExtend(SigmaPeer *peer, int bin, int bout, int party, GPUSelectExten
     checkCudaErrors(cudaDeviceSynchronize());
     // printf("finished kernel\n");
     if (opMasked)
-        peer->reconstructInPlace(d_v, bout, k.N, s);
+        peer->reconstructInPlace(d_out, bout, k.N, s);
     gpuFree(d_rb);
     gpuFree(d_rin);
     gpuFree(d_rout);
