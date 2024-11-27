@@ -40,7 +40,7 @@ namespace dcf
         std::vector<u32 *> h_mask({dreluKey.mask});
         auto d_drelu = dpf::gpuDcf<T, 1, dpf::dReluPrologue<0>, dpf::dReluEpilogue<0, false>>(k.dreluKey.dpfKey, party, d_diff, gaes, s, &h_mask);
         peer->reconstructInPlace(d_drelu, 1, k.numRelus, s);
-        auto d_newMax = gpuSelect<T, T, 0, 0>(peer, party, k.bout, k.selectKey, (u32 *)d_drelu, d_I, s);
+        auto d_newMax = gpuSelect<T, T, 0, 0>(peer, party, k.bout, k.selectKey, (u32 *)d_drelu, d_diff, s);
         gpuFree(d_diff);
         // relu(x-y) + y
         gpuLinearComb(p.bw, outSz, d_newMax, T(1), d_newMax, T(1), d_curMax);
