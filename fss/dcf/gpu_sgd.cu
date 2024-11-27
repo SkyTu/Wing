@@ -99,18 +99,16 @@ namespace dcf
                             dcf::GPUTruncateKey<T> truncateKeyVw, GPUTruncateKey<T> truncateKeyW, int party, SigmaPeer *peer, AESGlobalContext *gaes, Stats *s, int epoch)
     {
         size_t memSizeW = N * sizeof(T);
-        printf("Enter gpuSgdWithMomentum\n");
-        printf("h_Vw=%ld\n", h_Vw[0]);
         auto d_Vw = (T *)moveToGPU((u8 *)h_Vw, memSizeW, s);
         int shift = orca::mom_scale + scaleVw - scaledW;
         // printf("h_Vw=%ld\n", h_Vw[0]);
         // the d_dW mask got moved to the left by shift
         gpuLeftShiftAndAdd(N, d_dW, d_Vw, d_Vw, shift, T(orca::mom_fp));
         moveIntoCPUMem((u8 *)h_Vw, (u8 *)d_Vw /*d_dW*/, memSizeW, s);
-        printf("h_Vw=%ld\n", h_Vw[0]);
+        
         dcf::gpuTruncate(bin, bout, t, truncateKeyVw, orca::mom_scale, peer, party, N, d_Vw, gaes, s);
         moveIntoCPUMem((u8 *)h_Vw, (u8 *)d_Vw /*d_dW*/, memSizeW, s);
-        printf("h_Vw=%ld\n", h_Vw[0]);
+        
 
         bool dWWasNull = false;
         if (d_W == NULL)

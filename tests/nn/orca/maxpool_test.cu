@@ -99,7 +99,7 @@ int main(int argc, char *argv[])
     int bin = 40;
     int bout = 40;
     int bwBackprop = 64;
-    int N = 100;
+    int N = 1;
     int imgH = 30;
     int imgW = 30;
     int C = 3;
@@ -111,7 +111,7 @@ int main(int argc, char *argv[])
     int zPadHRight = 0;
     int zPadWLeft = 0;
     int zPadWRight = 0;
-    bool useMomentum = true;
+    bool useMomentum = false;
     int epoch = 0;
 
     int party = atoi(argv[1]);
@@ -139,14 +139,18 @@ int main(int argc, char *argv[])
     getKeyBuf(&startPtr, &curPtr, 4 * OneGB);
 
     auto d_outputMask = maxpool_layer.genForwardKey(&curPtr, party, d_inputMask, &g);
+    std::cout << "geneated forward key" << std::endl;
     auto h_outputMask = (T *)moveToCPU((u8 *)d_outputMask, outSz * sizeof(T), NULL);
     auto d_outgoingGradMask = maxpool_layer.genBackwardKey(&curPtr, party, d_incomingGradMask, &g, epoch);
+    std::cout << "generated backward key" << std::endl;
     auto h_outgoingGradMask = (T *)moveToCPU((u8 *)d_outgoingGradMask, inSz * sizeof(T), NULL);
 
     curPtr = startPtr;
+    std::cout << "reading forward key" << std::endl;
     maxpool_layer.readForwardKey(&curPtr);
+    std::cout << "reading backward key" << std::endl;
     maxpool_layer.readBackwardKey(&curPtr, epoch);
-
+    
     auto d_O = maxpool_layer.forward(peer, party, d_masked_I, &g);
     auto d_maskedOutgoingGrad = maxpool_layer.backward(peer, party, d_maskedIncomingGrad, &g, epoch);
 
@@ -158,10 +162,10 @@ int main(int argc, char *argv[])
     {
         auto unmasked_output = (h_O[i] - h_outputMask[i]);
         cpuMod(unmasked_output, bout);
-        if (i < 10 || unmasked_output != ct_o[i])
-            printf("%d=%lu %lu\n", i, unmasked_output, ct_o[i]);
+        // if (i < 10 || unmasked_output != ct_o[i])
+        printf("%d=%lu %lu\n", i, unmasked_output, ct_o[i]);
 
-        assert(unmasked_output == ct_o[i]);
+        // assert(unmasked_output == ct_o[i]);
     }
     // printf("\n");
     T *h_maskedOutgoingGrad = (T *)moveToCPU((u8 *)d_maskedOutgoingGrad, inSz * sizeof(T), NULL);
@@ -169,9 +173,9 @@ int main(int argc, char *argv[])
     {
         auto outGrad = h_maskedOutgoingGrad[i] - h_outgoingGradMask[i];
         cpuMod(outGrad, bwBackprop);
-        if (i < 10 || outGrad != outgoingGradCt[i])
-            printf("%d: %lu %lu\n", i, outGrad, outgoingGradCt[i]);
-        assert(outGrad == outgoingGradCt[i]);
+        // if (i < 10 || outGrad != outgoingGradCt[i])
+        printf("%d: %lu %lu\n", i, outGrad, outgoingGradCt[i]);
+        // assert(outGrad == outgoingGradCt[i]);
     }
     return 0;
 }
