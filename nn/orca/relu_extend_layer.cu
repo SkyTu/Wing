@@ -131,13 +131,14 @@ namespace dcf
         {
             this->checkIfTrain();
             auto d_drelu = (u32 *)moveToGPU((u8 *)drelu, ((numRelus - 1) / PACKING_SIZE + 1) * sizeof(PACK_TYPE), &(this->s));
-            T * d_selectOutput;
+            T * d_selectOutput = (T*) gpuMalloc(numRelus * sizeof(T));
             if (this->nextBackExt)
             {
-                auto d_selectOutput = gpuSelect<T, T, 0, 0>(peer, party, bin, backpropSelectKey, d_drelu, d_incomingGrad, &(this->s));
+                d_selectOutput = gpuSelect<T, T, 0, 0>(peer, party, bin, backpropSelectKey, d_drelu, d_incomingGrad, &(this->s));
             }
             else{
-                auto d_selectOutput = gpuSelectExtend<T, 0, 0>(peer, bin, bout, party, backpropSelectExtKey, d_drelu, d_incomingGrad, &(this->s));
+                std::cout << "SelectExtend" << std::endl;
+                d_selectOutput = gpuSelectExtend<T, 0, 0>(peer, bin, bout, party, backpropSelectExtKey, d_drelu, d_incomingGrad, &(this->s));
             }
             gpuFree(d_drelu);
             gpuFree(d_incomingGrad);
