@@ -162,10 +162,9 @@ int main(int argc, char *argv[])
     {
         auto unmasked_output = (h_O[i] - h_outputMask[i]);
         cpuMod(unmasked_output, bout);
-        // if (i < 10 || unmasked_output != ct_o[i])
-        printf("%d=%lu %lu\n", i, unmasked_output, ct_o[i]);
-
-        // assert(unmasked_output == ct_o[i]);
+        if (i < 10 || unmasked_output != ct_o[i])
+            printf("%d=%lu %lu\n", i, unmasked_output, ct_o[i]);
+        assert(unmasked_output == ct_o[i]);
     }
     // printf("\n");
     T *h_maskedOutgoingGrad = (T *)moveToCPU((u8 *)d_maskedOutgoingGrad, inSz * sizeof(T), NULL);
@@ -173,9 +172,9 @@ int main(int argc, char *argv[])
     {
         auto outGrad = h_maskedOutgoingGrad[i] - h_outgoingGradMask[i];
         cpuMod(outGrad, bwBackprop);
-        // if (i < 10 || outGrad != outgoingGradCt[i])
-        printf("%d: %lu %lu\n", i, outGrad, outgoingGradCt[i]);
-        // assert(outGrad == outgoingGradCt[i]);
+        if (i < 10 || outGrad != outgoingGradCt[i])
+            printf("%d: %lu %lu\n", i, outGrad, outgoingGradCt[i]);
+        assert(outGrad == outgoingGradCt[i]);
     }
     return 0;
 }
