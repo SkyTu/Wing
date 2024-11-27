@@ -38,7 +38,7 @@ namespace dcf
         public:
             MaxpoolParams p;
             GPUMaxpoolKey<T> maxpoolKey;
-            GPUSelectKey<T> backpropSelectKey;
+            GPUSelectExtendKey<T> backpropSelectKey;
             u32 *oneHot;
             u8 *oneHotOutputMask;
             AESGlobalContext *gaes;

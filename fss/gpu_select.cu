@@ -23,6 +23,7 @@
 #include "utils/misc_utils.h"
 #include "utils/gpu_random.h"
 
+#include "gpu_fss_helper.h"
 #include "gpu_select.h"
 #include "gpu_linear_helper.h"
 
