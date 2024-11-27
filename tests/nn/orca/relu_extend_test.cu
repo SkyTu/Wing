@@ -73,8 +73,8 @@ int main(int argc, char *argv[]) {
         auto outgoingGradCt = (h_I[i] < (T(1) << (bin - 1)) ? h_incomingGrad[i] : 0);
         auto outgoingGrad = h_maskedOutgoingGrad[i] - h_outgoingGradMask[i];
         cpuMod(outgoingGrad, bout);
-        printf("%lu %lu\n", u64(outgoingGrad), u64(outgoingGradCt));
-        // assert(outgoingGrad == outgoingGradCt);
+        // printf("%lu %lu\n", u64(outgoingGrad), u64(outgoingGradCt));
+        assert(outgoingGrad == outgoingGradCt);
     }
     return 0;
 }
