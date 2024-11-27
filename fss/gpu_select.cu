@@ -182,7 +182,7 @@ T *gpuKeyGenSelectExtend(uint8_t **key_as_bytes, int bin, int bout, int party, i
 // select(b, x-p, 0) + q
 template <typename T, u64 p, u64 q>
 __global__ void selectExtendKernel(u32 *X,
-                             T *Y,
+                             T *Y, T *out,
                              T *rb, T *rin,
                              T *rout,
                              T *v, T *d_p, T *d_q, int party, int N, int bin, int bout)
@@ -203,10 +203,10 @@ __global__ void selectExtendKernel(u32 *X,
         gpuMod(y, bout);
         assert(mx == 0 || mx == 1);
         if(is_zero_x){
-            v[i] = rb[i] * y + mx * d_p[i] + v[i] - rin[i] + rout[i];
+            out[i] = rb[i] * y + mx * d_p[i] + v[i] - rin[i] + rout[i];
         }
         else{
-            v[i] = (party - rb[i]) * y + mx * d_q[i] - v[i] + rout[i];
+            out[i] = (party - rb[i]) * y + mx * d_q[i] - v[i] + rout[i];
         }
     }
 }
@@ -224,8 +224,9 @@ T *gpuSelectExtend(SigmaPeer *peer, int bin, int bout, int party, GPUSelectExten
     T *d_v = (T *)moveToGPU((uint8_t *)k.v, memSz, s);
     T *d_p = (T *)moveToGPU((uint8_t *)k.p, memSz, s);
     T *d_q = (T *)moveToGPU((uint8_t *)k.q, memSz, s);
+    T *d_out = (T *)gpuMalloc(memSz);
     // printf("Doing select\n");
-    selectExtendKernel<T, p, q><<<(k.N - 1) / 256 + 1, 256>>>(d_x, d_Y, d_rb, d_rin, d_rout, d_v, d_p, d_q, party, k.N, bin, bout);
+    selectExtendKernel<T, p, q><<<(k.N - 1) / 256 + 1, 256>>>(d_x, d_Y, d_out, d_rb, d_rin, d_rout, d_v, d_p, d_q, party, k.N, bin, bout);
     checkCudaErrors(cudaDeviceSynchronize());
     // printf("finished kernel\n");
     if (opMasked)
@@ -235,5 +236,6 @@ T *gpuSelectExtend(SigmaPeer *peer, int bin, int bout, int party, GPUSelectExten
     gpuFree(d_rout);
     gpuFree(d_p);
     gpuFree(d_q);
-    return d_v;
+    gpuFree(d_v);
+    return d_out;
 }
