@@ -68,14 +68,14 @@ piranha_softmax: tests/fss/piranha_softmax.cu
 orca_dealer: experiments/orca/orca_dealer.cu
 	$(CXX) $(FLAGS) $(INCLUDES) $^ $(UTIL_FILES) $(LIBS) $(SECFLOAT_LIBS) -o experiments/orca/orca_dealer
 
-orca_evaluator: experiments/orca/orca_evaluator.cu experiments/orca/datasets/mnist.cpp
+orca_evaluator: experiments/orca/orca_evaluator.cu experiments/datasets/mnist.cpp
 	$(CXX) $(FLAGS) $(INCLUDES) $^ $(UTIL_FILES) $(LIBS) $(SECFLOAT_LIBS) -o experiments/orca/orca_evaluator
 
-wing_dealer: experiments/orca/wing_dealer.cu
-	$(CXX) $(FLAGS) $(INCLUDES) $^ $(UTIL_FILES) $(LIBS) $(SECFLOAT_LIBS) -o experiments/orca/wing_dealer
+wing_dealer: experiments/wing/wing_dealer.cu
+	$(CXX) $(FLAGS) $(INCLUDES) $^ $(UTIL_FILES) $(LIBS) $(SECFLOAT_LIBS) -o experiments/wing/wing_dealer
 
-wing_evaluator: experiments/orca/wing_evaluator.cu experiments/orca/datasets/mnist.cpp
-	$(CXX) $(FLAGS) $(INCLUDES) $^ $(UTIL_FILES) $(LIBS) $(SECFLOAT_LIBS) -o experiments/orca/wing_evaluator
+wing_evaluator: experiments/wing/wing_evaluator.cu experiments/datasets/mnist.cpp
+	$(CXX) $(FLAGS) $(INCLUDES) $^ $(UTIL_FILES) $(LIBS) $(SECFLOAT_LIBS) -o experiments/wing/wing_evaluator
 
 dcf: tests/fss/dcf/dcf.cu
 	$(CXX) $(FLAGS) $(INCLUDES) $^ $(UTIL_FILES) $(LIBS) -o tests/fss/dcf/dcf
@@ -122,10 +122,10 @@ sigma_correctness: experiments/sigma/sigma.cu
 piranha: experiments/orca/piranha.cu 
 	$(CXX) $(FLAGS) $(INCLUDES) $^ $(UTIL_FILES) $(LIBS) -o experiments/orca/piranha
 
-share_data: experiments/orca/share_data.cpp experiments/orca/datasets/mnist.cpp
+share_data: experiments/orca/share_data.cpp experiments/datasets/mnist.cpp
 	$(CXX) $(FLAGS) $(INCLUDES) $^ $(UTIL_FILES) $(LIBS) -o experiments/orca/share_data
 
-model_accuracy: experiments/orca/model_accuracy.cu experiments/orca/datasets/mnist.cpp
+model_accuracy: experiments/orca/model_accuracy.cu experiments/datasets/mnist.cpp
 	$(CXX) $(FLAGS) $(INCLUDES) $^ $(UTIL_FILES) $(LIBS) -o experiments/orca/model_accuracy
 
 orca: orca_dealer orca_evaluator orca_inference orca_inference_u32 piranha

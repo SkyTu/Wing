@@ -36,7 +36,7 @@
 #include "utils/gpu_mem.h"
 #include "utils/helper_cuda.h"
 #include "utils/gpu_random.h"
-#include "datasets/gpu_data.h"
+#include "../datasets/gpu_data.h"
 
 #include "nn/orca/gpu_layer.h"
 #include "nn/orca/gpu_model.h"

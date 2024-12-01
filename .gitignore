@@ -22,3 +22,5 @@ experiments/orca/keys/
 experiments/orca/output/
 experiments/orca/weights/
 experiments/orca/figure/
+*.tar.gz
+experiments/datasets/mnist/*

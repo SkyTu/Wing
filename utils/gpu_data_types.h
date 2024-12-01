@@ -66,3 +66,12 @@ namespace dcf
         }
     }
 }
+
+namespace wing
+{
+    namespace global
+    {
+        static const int bw = 64;
+        static const int scale = 24;
+    }
+}
