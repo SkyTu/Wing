@@ -102,7 +102,7 @@ namespace dcf
             this->checkIfTrain();
             size_t oneHotSize = p.N * p.H * p.W * p.C * p.FH * p.FW;
             auto d_oneHotMask = (u8 *)moveToGPU((u8 *)oneHotOutputMask, oneHotSize, NULL);
-            auto d_outgoingGradMask = keyGenMaxpoolBackProp(key_as_bytes, party, p, d_oneHotMask, d_incomingGradMask);
+            auto d_outgoingGradMask = keyGenMaxpoolBackPropOrca(key_as_bytes, party, p, d_oneHotMask, d_incomingGradMask);
             gpuFree(d_oneHotMask);
             gpuFree(d_incomingGradMask);
             return d_outgoingGradMask;
