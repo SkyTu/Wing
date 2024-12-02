@@ -98,11 +98,13 @@ void trainModel(dcf::orca::GPUModel<u64> *m, u8 **keyBuf, int party, SigmaPeer *
     // printf("Forward pass ");
     checkCudaErrors(cudaDeviceSynchronize());
     d_I = gpuSoftmax(m->batchSz, m->classes, party, peer, d_I, labels, secfloat, llama);
-    // printf("Softmax pass ");
+    printf("Softmax pass ");
     for (int i = m->layers.size() - 1; i >= 0; i--)
     {
         m->layers[i]->readBackwardKey(keyBuf, epoch);
+        printf("readBackwardKey %d\n", i);
         d_I = m->layers[i]->backward(peer, party, d_I, g, epoch);
+        printf("backward %d\n", i);
     }
 }
 
