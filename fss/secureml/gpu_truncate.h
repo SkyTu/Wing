@@ -27,7 +27,7 @@
 #include "utils/gpu_stats.h"
 #include "utils/gpu_comms.h"
 
-namespace dcf
+namespace secureml
 {
     enum TruncateType
     {
@@ -40,9 +40,9 @@ namespace dcf
         StochasticTruncate,
     };
 
-    using GPUMaskedDCFKey = dcf::GPUDReluKey;
+    using GPUMaskedDCFKey = secureml::GPUDReluKey;
     using GPUMaskedDPFKey = dpf::GPUDReluKey;
-    const auto readGPUMaskedDCFKey = dcf::readGPUDReluKey;
+    const auto readGPUMaskedDCFKey = secureml::readGPUDReluKey;
     const auto readGPUMaskedDPFKey = dpf::readGPUDReluKey;
     template <typename T>
     struct GPUTReKey

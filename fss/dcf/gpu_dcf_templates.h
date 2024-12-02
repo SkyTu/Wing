@@ -42,8 +42,8 @@ namespace dcf
                                 u64 *o_l, u32 *out_g, u64 oStride);
 
     __device__ void idPrologue(int party, int bin, int N,
-                                u64 x,
-                                u64 *o)
+                               u64 x,
+                               u64 *o)
     {
         o[0] = x;
     }
@@ -90,9 +90,7 @@ namespace dcf
         {
             auto x2 = (x + (1ULL << (bin - 1)));
             gpuMod(x2, bin);
-            // printf("x=%lu, x2=%lu, %lu\n", x, x2, (1ULL << (bin - 1)));
             o += (x2 >= (1ULL << (bin - 1)));
-            // printf("o=%ld, %d, %d, %d\n", o, (x2 >= (1ULL << (bin - 1))), bin, bout);
         }
         gpuMod(o, bout);
         writePackedOp(out_g, o, bout, N);

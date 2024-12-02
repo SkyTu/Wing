@@ -12,10 +12,10 @@ https://github.com/takafumihoriuchi/MNIST_for_C
 #include <string.h>
 
 // set appropriate path for data
-#define TRAIN_IMAGE "./datasets/mnist/train-images.idx3-ubyte"
-#define TRAIN_LABEL "./datasets/mnist/train-labels.idx1-ubyte"
-#define TEST_IMAGE "./datasets/mnist/t10k-images.idx3-ubyte"
-#define TEST_LABEL "./datasets/mnist/t10k-labels.idx1-ubyte"
+#define TRAIN_IMAGE "../datasets/mnist/train-images.idx3-ubyte"
+#define TRAIN_LABEL "../datasets/mnist/train-labels.idx1-ubyte"
+#define TEST_IMAGE "../datasets/mnist/t10k-images.idx3-ubyte"
+#define TEST_LABEL "../datasets/mnist/t10k-labels.idx1-ubyte"
 
 #define SIZE 784 // 28*28
 #define NUM_TRAIN 60000

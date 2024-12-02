@@ -31,7 +31,7 @@
 #include "fss/gpu_local_truncate.h"
 #include <cassert>
 
-namespace dcf
+namespace secureml
 {
 
     template <typename T>

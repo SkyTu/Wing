@@ -71,11 +71,11 @@ orca_dealer: experiments/orca/orca_dealer.cu
 orca_evaluator: experiments/orca/orca_evaluator.cu experiments/datasets/mnist.cpp
 	$(CXX) $(FLAGS) $(INCLUDES) $^ $(UTIL_FILES) $(LIBS) $(SECFLOAT_LIBS) -o experiments/orca/orca_evaluator
 
-wing_dealer: experiments/wing/wing_dealer.cu
-	$(CXX) $(FLAGS) $(INCLUDES) $^ $(UTIL_FILES) $(LIBS) $(SECFLOAT_LIBS) -o experiments/wing/wing_dealer
+wing_dealer: experiments/orca_o/wing_dealer.cu
+	$(CXX) $(FLAGS) $(INCLUDES) $^ $(UTIL_FILES) $(LIBS) $(SECFLOAT_LIBS) -o experiments/orca_o/wing_dealer
 
-wing_evaluator: experiments/wing/wing_evaluator.cu experiments/datasets/mnist.cpp
-	$(CXX) $(FLAGS) $(INCLUDES) $^ $(UTIL_FILES) $(LIBS) $(SECFLOAT_LIBS) -o experiments/wing/wing_evaluator
+wing_evaluator: experiments/orca_o/wing_evaluator.cu experiments/datasets/mnist.cpp
+	$(CXX) $(FLAGS) $(INCLUDES) $^ $(UTIL_FILES) $(LIBS) $(SECFLOAT_LIBS) -o experiments/orca_o/wing_evaluator
 
 dcf: tests/fss/dcf/dcf.cu
 	$(CXX) $(FLAGS) $(INCLUDES) $^ $(UTIL_FILES) $(LIBS) -o tests/fss/dcf/dcf

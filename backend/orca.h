@@ -45,9 +45,13 @@ public:
     {
         if (mode == 2)
         {
+            // auto h_inp = (T*) moveToCPU((u8*) in.d_data, in.size() * sizeof(T), NULL);
+            // printf("Relu input=%ld, %ld, %ld\n", h_inp[0], h_inp[1], h_inp[2]);
+
             auto start = std::chrono::high_resolution_clock::now();
-            auto k = dcf::readGPUReluZeroExtKey<T>(&(this->keyBuf));
-            auto d_temp = dcf::gpuReluZeroExt(this->peer, this->party, k, in.d_data, &(this->g), &(this->s));
+
+            auto k = dcf::readGPUReluExtendKey<T>(&(this->keyBuf));
+            auto d_temp = dcf::gpuReluExtend(this->peer, this->party, k, in.d_data, &(this->g), &(this->s));
             auto d_drelu = d_temp.first;
             gpuFree(d_drelu);
             out.d_data = d_temp.second;
@@ -81,19 +85,17 @@ public:
         if (mode == 0)
         {
             auto k = dcf::readGPUTrStochasticKey<T>(&(this->keyBuf));
-            dcf::gpuStTR(k, this->party, this->peer, in.d_data, &(this->g), &(this->s));
+            dcf::gpuStochasticTruncate(k, this->party, this->peer, in.d_data, &(this->g), &(this->s));
         }
         else if (mode == 1)
         {
             auto k = dcf::readGPUStTRKey<T>(&(this->keyBuf));
-            dcf::gpuTRe(k, this->party, this->peer, in.d_data, &(this->g), &(this->s));
+            dcf::gpuStochasticTR(k, this->party, this->peer, in.d_data, &(this->g), &(this->s));
         }
         else
         {
             assert(0);
         }
-        // auto h_data = (T*) moveToCPU((u8*) in.d_data, in.size() * sizeof(T), NULL);
-        // printf("Truncate output=%lu, %lu, %lu\n", h_data[0], h_data[1], h_data[in.size() - 1]);
 
         auto end = std::chrono::high_resolution_clock::now();
         auto elapsed = end - start;
@@ -104,8 +106,8 @@ public:
     {
         // printf("Sign ext=%lu\n", x.size());
         auto start = std::chrono::high_resolution_clock::now();
-        auto k = dcf::readGPUZeroExtKey<T>(&(this->keyBuf));
-        dcf::gpuZeroExt(k, this->party, this->peer, x.d_data, &(this->g), &(this->s));
+        auto k = dcf::readGPUSignExtendKey<T>(&(this->keyBuf));
+        dcf::gpuSignExtend(k, this->party, this->peer, x.d_data, &(this->g), &(this->s));
 
         auto end = std::chrono::high_resolution_clock::now();
         auto elapsed = end - start;
@@ -184,11 +186,11 @@ public:
     {
         if (mode == 0)
         {
-            in.d_data = dcf::genGPUStTRKey(&(this->keyBuf), this->party, this->bw, this->bw, shift, in.size(), in.d_data, &(this->g));
+            in.d_data = dcf::genGPUStochasticTruncateKey(&(this->keyBuf), this->party, this->bw, this->bw, shift, in.size(), in.d_data, &(this->g));
         }
         else if (mode == 1)
         {
-            in.d_data = dcf::genGPUTReKey(&(this->keyBuf), this->party, this->bw, this->bw - shift, shift, in.size(), in.d_data, &(this->g));
+            in.d_data = dcf::genGPUStTRKey(&(this->keyBuf), this->party, this->bw, this->bw - shift, shift, in.size(), in.d_data, &(this->g));
         }
         else
         {
@@ -203,7 +205,7 @@ public:
 
         int bin = this->bw - scale;
         int bout = this->bw;
-        x.d_data = dcf::genGPUZeroExtKey(&(this->keyBuf), this->party, bin, bout, x.size(), x.d_data, &(this->g));
+        x.d_data = dcf::genSignExtendKey(&(this->keyBuf), this->party, bin, bout, x.size(), x.d_data, &(this->g));
 
         // auto h_mask = (T*) moveToCPU((u8*) x.d_data, x.size() * sizeof(T), NULL);
         // printf("Signext out mask %lx=%ld, %ld\n", x.d_data, h_mask[0], h_mask[1]);

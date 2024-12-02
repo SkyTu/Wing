@@ -161,7 +161,7 @@ def run_table6(party, dealer_gpu, eval_gpu, dealer_key_dir, peer_ip):
         remove_key(dealer_key_dir, key_file)
     
     table = dict()
-    for network in ['CNN2', 'ModelB', 'AlexNet', 'CNN3']:
+    for network in ['CNN2']:#, 'ModelB', 'AlexNet', 'CNN3']:
         stats = list(map(lambda x: x.split(":")[-1], open("output/P{}/training/{}.txt".format(party, network)).readlines()))
         time = stats[-4]
         comm = stats[-1]
@@ -177,14 +177,14 @@ def run_table6(party, dealer_gpu, eval_gpu, dealer_key_dir, peer_ip):
 def run_table7(party, dealer_gpu, eval_gpu, dealer_key_dir, peer_ip):
     log_dir = 'output/P{}/Table7/logs/'.format(party)
 
-    for network in ['CNN2', 'CNN3']:
+    for network in ['CNN2']:#, 'CNN3']:
         dealer_cmd = "CUDA_VISIBLE_DEVICES={} ./orca_dealer {} {}-perf {}".format(dealer_gpu, party, network, dealer_key_dir)
         eval_cmd = "CUDA_VISIBLE_DEVICES={} ./orca_evaluator {} {} {}-perf {}".format(eval_gpu, party, peer_ip, network, dealer_key_dir)
         run_seq(dealer_cmd, eval_cmd, log_dir)
         key_file = '{}_training_key{}.dat'.format(network, party)
         remove_key(dealer_key_dir, key_file)
 
-    for network in ['CNN2', 'CNN3']:
+    for network in ['CNN2']:#, 'CNN3']:
         bw = 64
         scale = 24
         dealer_cmd = "CUDA_VISIBLE_DEVICES={} ./orca_inference {} {} {} {} {} {}".format(dealer_gpu, network, bw, scale, 0, party, dealer_key_dir)

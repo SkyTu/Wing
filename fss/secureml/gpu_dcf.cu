@@ -35,7 +35,7 @@
 #include "gpu_dcf_templates.h"
 #include "gpu_sstab.h"
 
-namespace dcf
+namespace secureml
 {
 
     __device__ u64 getGroupElementFromAESBlock(AESBlock b, int bout, int vector_elem_pos)
@@ -168,7 +168,7 @@ namespace dcf
         u32 *d_out;
         if (k.bin <= 8)
         {
-            d_out = dcf::gpuLookupSSTable<T, E, pr, ep>(k.ssKey, party, d_in, s, h_masks);
+            d_out = secureml::gpuLookupSSTable<T, E, pr, ep>(k.ssKey, party, d_in, s, h_masks);
         }
         else
         {

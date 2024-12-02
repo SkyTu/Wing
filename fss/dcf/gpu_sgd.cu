@@ -36,6 +36,7 @@ namespace dcf
         if (i < N)
         {
             C[i] = (A[i] << shift) + alpha * B[i];
+            // if(i == 1) printf("%u %u %u %u %d\n", A[i], B[i], alpha, C[i], shift);
         }
     }
 
@@ -51,7 +52,6 @@ namespace dcf
     void genGpuSGDWithMomentumKey(u8 **key_as_bytes, int party, int bin, int bout, int N, T *h_W, T *d_W,
                                   T *h_Vw, T *d_dW, int scaleW, int scaleVw, int scaledW, TruncateType t, AESGlobalContext *gaes, int epoch)
     {
-        printf("Enter genGpuSGDWithMomentumKey\n");
         size_t memSizeW = N * sizeof(T);
         auto d_Vw = (T *)moveToGPU((u8 *)h_Vw, memSizeW, NULL);
         int shift = orca::mom_scale + scaleVw - scaledW;
@@ -59,7 +59,7 @@ namespace dcf
         gpuLeftShiftAndAdd(N, d_dW, d_Vw, d_Vw, shift, T(orca::mom_fp));
         d_Vw = genGPUTruncateKey(key_as_bytes, party, t, bin, bout, orca::mom_scale, N, d_Vw, gaes);
         moveIntoCPUMem((u8 *)h_Vw, (u8 *)d_Vw /*d_dW*/, memSizeW, NULL);
-        printf("h_Vw=%ld\n", h_Vw[0]);
+
         bool dWWasNull = false;
         if (d_W == NULL)
         {
@@ -104,11 +104,8 @@ namespace dcf
         // printf("h_Vw=%ld\n", h_Vw[0]);
         // the d_dW mask got moved to the left by shift
         gpuLeftShiftAndAdd(N, d_dW, d_Vw, d_Vw, shift, T(orca::mom_fp));
-        moveIntoCPUMem((u8 *)h_Vw, (u8 *)d_Vw /*d_dW*/, memSizeW, s);
-        
         dcf::gpuTruncate(bin, bout, t, truncateKeyVw, orca::mom_scale, peer, party, N, d_Vw, gaes, s);
         moveIntoCPUMem((u8 *)h_Vw, (u8 *)d_Vw /*d_dW*/, memSizeW, s);
-        
 
         bool dWWasNull = false;
         if (d_W == NULL)
@@ -122,7 +119,6 @@ namespace dcf
         if (shift > 0)
             dcf::gpuTruncate(bin, bout, t, truncateKeyW, shift, peer, party, N, d_W, gaes, s);
         moveIntoCPUMem((u8 *)h_W, (u8 *)d_W, memSizeW, s);
-        printf("h_W=%ld\n", h_W[0]);
         if (dWWasNull)
             gpuFree(d_W);
         gpuFree(d_Vw);
@@ -142,7 +138,7 @@ namespace dcf
             auto vw = h_masked_Vw[i] - h_mask_Vw[i];
             auto vw_ct = cpuArs((h_dW[i] << shiftdW) + T(orca::mom_fp) * h_Vw[i], bin, orca::mom_scale);
             // if(i < 10) printf("%lu %lu\n", u64(vw), u64(vw_ct));
-            // assert(vw - vw_ct <= 1);
+            assert(vw - vw_ct <= 1);
             auto w_ct = cpuArs((h_W[i] << shiftW) - T(orca::lr_fp) * vw_ct, bin, shiftW);
             // this is the new masked f
             auto w = h_masked_W[i] - h_mask_W[i];
@@ -226,7 +222,6 @@ namespace dcf
             d_W = (T *)moveToGPU((u8 *)h_W, memSizeW, NULL);
             dWWasNull = true;
             gpuLeftShiftAndAdd(N, d_delta, d_W, d_W, leftShift, T(1));
-            // peer->reconstructInPlace(d_W, bout, N, s);
         }
         gpuFree(d_delta);
         moveIntoCPUMem((u8 *)h_W, (u8 *)d_W, memSizeW, s);
@@ -252,7 +247,7 @@ namespace dcf
                 auto diff = abs(static_cast<int32_t>(w - w_ct));
                 if (i < 10)
                     printf("%lu %lu %d\n", u64(w), u64(w_ct), diff);
-                assert(diff <= 10);
+                assert(diff <= 1);
             }
         }
         else
@@ -268,7 +263,7 @@ namespace dcf
                 auto diff = abs(static_cast<int32_t>(w - w_ct));
                 if (i < 10)
                     printf("%lu %lu %ld\n", w, w_ct, diff);
-                // assert(diff == 0);
+                assert(diff == 0);
             }
         }
     }

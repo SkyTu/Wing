@@ -25,7 +25,7 @@
 #include "fss/gpu_sstab.h"
 #include <cassert>
 
-namespace dcf
+namespace secureml
 {
     struct GPUDCFTreeKey
     {

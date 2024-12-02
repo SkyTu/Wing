@@ -61,7 +61,7 @@ Dataset readDataset(std::string name, int party)
     }
     else
     {
-        auto sharesDir = "./datasets/shares/" + name + "/";
+        auto sharesDir = "../datasets/shares/" + name + "/";
         data = (u64 *)readFile(sharesDir + name + "_share" + std::to_string(party + 1) + ".dat", &dataSize);
         labels = (u64 *)readFile(sharesDir + name + "_labels" + std::to_string(party + 1) + ".dat", &labelSize);
     }

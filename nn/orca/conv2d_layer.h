@@ -47,7 +47,6 @@ namespace dcf
             Conv2DParams p;
             GPUConv2DKey<T> convKey, convKeydI, convKeydF;
             bool inputIsShares;
-            bool nextBackExt;
             T *I, *F, *Vf, *b, *Vb;
             // Stats s;
             bool useBias, computedI;
@@ -58,7 +57,7 @@ namespace dcf
             T *mask_I, *d_mask_I, *mask_F, *mask_Vf, *mask_b, *mask_Vb;
 
             Conv2DLayer(int bin, int bout, int N, int H, int W, int CI, int FH, int FW, int CO,
-                        int zPadHLeft, int zPadHRight, int zPadWLeft, int zPadWRight, int strideH, int strideW, bool useBias, dcf::TruncateType tf, dcf::TruncateType tb, bool computedI, bool inputIsShares, bool nextBackExt = false);
+                        int zPadHLeft, int zPadHRight, int zPadWLeft, int zPadWRight, int strideH, int strideW, bool useBias, dcf::TruncateType tf, dcf::TruncateType tb, bool computedI, bool inputIsShares);
             T *genForwardKey(u8 **key_as_bytes, int party, T *mask_I, AESGlobalContext *gaes);
             T *genBackwardKey(u8 **key_as_bytes, int party, T *mask_grad, AESGlobalContext *gaes, int epoch);
             void readForwardKey(u8 **key_as_bytes);
@@ -67,6 +66,7 @@ namespace dcf
             T *backward(SigmaPeer *peer, int party, T *d_incomingGrad, AESGlobalContext *gaes, int epoch);
             void initWeights(u8 **weights, bool floatWeights);
             void dumpWeights(std::ofstream &f);
+            void printWeights();
         };
     }
 }

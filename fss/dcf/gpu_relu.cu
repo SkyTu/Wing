@@ -24,53 +24,6 @@
 
 namespace dcf
 {
-    template <typename T>
-    __global__ void genSelectExtKernel(T* inputMask, T* outputMask, T* rm, u8* rd, T* rmd, T* rmu, T* m, T* ud, T* v, T* w, T* z, int bin, int bout, int N){
-        int i = blockIdx.x * blockDim.x + threadIdx.x;
-        if(i < N){
-            m[i] = (1ULL << bin) * (gpuMsb(inputMask[i], bin)) + rm[i];
-            ud[i] = rd[i] ^ 1;
-            assert(ud[i] == 0 || ud[i] == 1);
-            v[i] = ud[i] * inputMask[i] + outputMask[i];
-            w[i] = ud[i] * (rm[i] + inputMask[i]) + outputMask[i];
-            z[i] = 2 * ud[i] * (rm[i] + inputMask[i]);
-            rmd[i] = rm[i] * rd[i];
-            rmu[i] = rm[i] * ud[i];
-        }
-    }
-
-    template <typename T>
-    T* gpuKeyGenSelectExt(uint8_t** key_as_bytes, int party, int bin, int bout, int N, u8* rd, T* inputMask){
-        auto rm = randomGEOnGpu<T>(N, bout);
-        auto outputMask = randomGEOnGpu<T>(N, bout);
-        T* m = (T*)gpuMalloc(N * sizeof(T));
-        T* ud = (T*)gpuMalloc(N * sizeof(T));
-        T* v = (T*)gpuMalloc(N * sizeof(T));
-        T* w = (T*)gpuMalloc(N * sizeof(T));
-        T* z = (T*)gpuMalloc(N * sizeof(T));
-        T* rmd = (T*)gpuMalloc(N * sizeof(T));
-        T* rmu = (T*)gpuMalloc(N * sizeof(T));
-        genSelectExtKernel<<<(N - 1) / 256 + 1, 256>>>(inputMask, outputMask, rm, rd, rmd, rmu, m, ud, v, w, z, bin, bout, N);
-        writeShares<T, T>(key_as_bytes, party, N, rm, bout);
-        writeShares<T, T>(key_as_bytes, party, N, rmd, bout);
-        writeShares<T, T>(key_as_bytes, party, N, rmu, bout);
-        writeShares<T, T>(key_as_bytes, party, N, ud, bout);
-        writeReconstructed<T>(key_as_bytes, m, N);
-        writeShares<T, T>(key_as_bytes, party, N, v, bout);
-        writeShares<T, T>(key_as_bytes, party, N, w, bout);
-        writeShares<T, T>(key_as_bytes, party, N, z, bout);
-        writeShares<T, T>(key_as_bytes, party, N, inputMask, bout);
-        gpuFree(rm);
-        gpuFree(m);
-        gpuFree(ud);
-        gpuFree(v);
-        gpuFree(w);
-        gpuFree(z);
-        gpuFree(rmd);
-        gpuFree(rmu);
-        return outputMask;
-    }
-
     // need to check this
     // drelu mask is used as input mask for the next set of protocols
     // do we need something better than u64?
@@ -116,6 +69,7 @@ namespace dcf
             u32 d = (((u32 *)drelu)[j / 16] >> (2 * posInBlock)) & 3;
             u32 w = (((u32 *)xLTRin)[j / 16] >> (2 * posInBlock)) & 3;
             u32 i = (2 * d + w) & 3;
+            // if(j <= 1) printf("drelu=%u, lt=%u\n", d, w);
             // should i store this table transposed instead?
             // will always access sequential elements so might benefit from locality within a thread
             T rotatedP3 = oneHot[4 * j + ((2 - i) & 3)];
@@ -149,6 +103,7 @@ namespace dcf
         int i = blockIdx.x * blockDim.x + threadIdx.x;
         if (i < N)
         {
+            // if(i <= 1) printf("dreluMask=%u, ltMask=%u\n", d_dreluMask[i], d_dcfMask[i]);
             auto onePos = (-(2 * d_dreluMask[i] + d_dcfMask[i])) & T(3);
             assert(onePos < 4);
             for (int j = 0; j < 4; j++)
@@ -178,17 +133,6 @@ namespace dcf
     }
 
     template <typename T>
-    std::pair<u8*, T*> gpuKeyGenReluZeroExt(uint8_t **key_as_bytes, int party, int bin, int bout, int N, T *d_inputMask, AESGlobalContext* g)
-    {
-        writeInt(key_as_bytes, bin);
-        writeInt(key_as_bytes, bout);
-        writeInt(key_as_bytes, N);
-        auto d_dReluMask = dpf::gpuKeyGenDRelu(key_as_bytes, party, bin, N, d_inputMask, g);
-        auto d_outputMask = gpuKeyGenSelectExt(key_as_bytes, party, bin, bout, N, d_dReluMask, d_inputMask);
-        return std::make_pair(d_dReluMask, d_outputMask);
-    }
-
-    template <typename T>
     std::pair<u8 *, T *> gpuKeygenReluExtend(uint8_t **key_as_bytes, int party, int bin, int bout, int N, T *d_inputMask, AESGlobalContext* g)
     {
         writeInt(key_as_bytes, bin);
@@ -211,6 +155,7 @@ namespace dcf
     template <typename T>
     std::pair<u32 *, T *> gpuReluExtend(SigmaPeer *peer, int party, GPUReluExtendKey<T> k, T *d_I, AESGlobalContext *g, Stats *s)
     {
+        // printf("%d, %d, %d\n", k.bin, k.bout, k.N);
         std::vector<u32 *> h_masks = {k.dReluKey.dReluMask, k.dcfMask};
         auto d_dcf = gpuDcf<T, 2, dReluPrologue, dReluEpilogue<true>>(k.dReluKey.dcfKey, party, d_I, g, s, &h_masks);
         peer->reconstructInPlace(d_dcf, 2, 2 * k.dReluKey.dcfKey.memSzOut * 4, s);
@@ -219,60 +164,5 @@ namespace dcf
         auto d_relu = gpuReluExtendMux(party, k.bin, k.N, d_I, k.oneHot, k.outMask, d_drelu, d_xLTRin, s);
         peer->reconstructInPlace(d_relu, k.bout, k.N, s);
         return std::make_pair(d_drelu, d_relu);
-    }
-    
-    template <typename T>
-    __global__ void ReluZeroExtMuxKernel(int party, int bin, int bout, int N, T* d_I, u32* d_dcf, T* d_rm, T* d_rmd, T* d_rmu, T* d_ud, T* d_m, T* d_v, T* d_w, T* d_z, T* d_rin, T* res)
-    {
-        int i = blockIdx.x * blockDim.x + threadIdx.x;
-        if (i < N)
-        {
-            auto msb_x = gpuMsb(d_I[i], bin);
-            int laneId = threadIdx.x & 0x1f;
-            auto dhat = ((d_dcf[i / 32] >> laneId) & 1ULL);
-            auto that = d_m[i] * (1 ^ msb_x);
-            assert(dhat == 0 || dhat == 1);
-            if(dhat){
-                res[i] = d_ud[i] * (that + d_I[i]) + d_w[i] - d_z[i] + msb_x * d_rmu[i];
-            }
-            else{
-                res[i] = (party == SERVER1) * (that + d_I[i]) - d_ud[i] * (that + d_I[i]) + d_v[i] - d_rin[i] - (1 ^ msb_x) * d_rmd[i];
-            }
-        }
-    }
-    // 有必要开d_relu这个空间吗？
-    template <typename T>
-    T* gpuReluZeroExtMux(int party, int bin, int bout, int N, GPUSelectExtKey<T> k, T* d_I, u32* d_dcf, Stats *s){
-        auto d_relu = (T*)gpuMalloc(N * sizeof(T));
-        auto d_rm = (T *)moveToGPU((uint8_t *)k.rm, N * sizeof(T), s);
-        auto d_rmd = (T *)moveToGPU((uint8_t *)k.rmd, N * sizeof(T), s);
-        auto d_rmu = (T *)moveToGPU((uint8_t *)k.rmu, N * sizeof(T), s);
-        auto d_ud = (T *)moveToGPU((uint8_t *)k.ud, N * sizeof(T), s);
-        auto d_m = (T *)moveToGPU((uint8_t *)k.m, N * sizeof(T), s);
-        auto d_v = (T *)moveToGPU((uint8_t *)k.v, N * sizeof(T), s);
-        auto d_w = (T *)moveToGPU((uint8_t *)k.w, N * sizeof(T), s);
-        auto d_z = (T *)moveToGPU((uint8_t *)k.z, N * sizeof(T), s);
-        auto d_rin = (T *)moveToGPU((uint8_t *)k.rin, N * sizeof(T), s);
-        ReluZeroExtMuxKernel<<<(N - 1) / 256 + 1, 256>>>(party, bin, bout, N, d_I, d_dcf, d_rm, d_rmd, d_rmu, d_ud, d_m, d_v, d_w, d_z, d_rin, d_relu);
-        gpuFree(d_rm);
-        gpuFree(d_rmd);
-        gpuFree(d_rmu);
-        gpuFree(d_ud);
-        gpuFree(d_m);
-        gpuFree(d_v);
-        gpuFree(d_w);
-        gpuFree(d_z);
-        return d_relu;
-    }
-
-    template <typename T>
-    std::pair<u32 *, T *> gpuReluZeroExt(SigmaPeer *peer, int party, GPUReluZeroExtKey<T> k, T *d_I, AESGlobalContext *g, Stats *s)
-    {
-        std::vector<u32 *> h_mask({k.dReluKey.mask});
-        auto d_dcf = dpf::gpuDcf<T, 1, dpf::dReluPrologue<0>, dpf::dReluEpilogue<0, false>>(k.dReluKey.dpfKey, party, d_I, g, s, &h_mask);
-        peer->reconstructInPlace(d_dcf, 1, k.N, s); 
-        auto d_relu = gpuReluZeroExtMux(party, k.bin, k.bout, k.N, k.selectKey, d_I, d_dcf, s);
-        peer->reconstructInPlace(d_relu, k.bout, k.N, s);
-        return std::make_pair(d_dcf, d_relu);
     }
 }

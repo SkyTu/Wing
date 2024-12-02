@@ -21,18 +21,15 @@
 
 #pragma once
 
-#include "fss/dcf/gpu_truncate.h"
+#include "fss/secureml/gpu_truncate.h"
 
-namespace dcf
+namespace secureml
 {
-    namespace orca
-    {
-        static const uint64_t lr_fp = 1;
-        static const int lr_scale[5] = {6,6,9,9,9};
-        static const uint64_t mom_fp = 29;
-        static const int mom_scale = 5;
-    }
-
+    static const uint64_t lr_fp = 1;
+    static const int lr_scale[5] = {6,6,9,9,9};
+    static const uint64_t mom_fp = 29;
+    static const int mom_scale = 5;
+    
     template <typename T>
     void genOptimizerKey(uint8_t **key_as_bytes, int party, int bin, int bout, int N, T *h_W, T *d_W,
                          T *h_Vw, T *d_dW, int scaleW, int scaleVw, int scaledW, TruncateType t, bool useMomentum, AESGlobalContext *gaes, int epoch);

@@ -35,17 +35,14 @@ namespace dcf
         {
         public:
             int bin, bout, /*f,*/ numRelus;
-            GPUReluZeroExtKey<T> reluExtendKey;
-            // GPUReluExtendKey<T> reluExtendKey;
+            GPUReluExtendKey<T> reluExtendKey;
             u32 *drelu;
             u8 *dReluMask;
-            GPUSelectExtendKey<T> backpropSelectExtKey;
             GPUSelectKey<T> backpropSelectKey;
-            bool nextBackExt;
             // AESGlobalContext* gaes;
             // Stats s;
 
-            ReluExtendLayer(int bin, int bout, int numRelus, bool nextBackExt);
+            ReluExtendLayer(int bin, int bout, int numRelus);
             ~ReluExtendLayer();
             T *genForwardKey(uint8_t **key_as_bytes, int party, T *d_inputMask, AESGlobalContext *gaes);
             T *genBackwardKey(uint8_t **key_as_bytes, int party, T *d_incomingGradMask, AESGlobalContext *gaes, int epoch);

@@ -25,7 +25,7 @@
 #include "fss/gpu_sstab.h"
 #include "gpu_dcf_templates.h"
 
-namespace dcf
+namespace secureml
 {
     template <typename T, int E, dcfPrologue pr, dcfEpilogue ep>
     __global__ void lookupSSTable(int party, int bin, int N,
@@ -59,7 +59,7 @@ namespace dcf
         auto d_out = moveMasks(k.memSzOut, h_masks, s);
         // printf("Bin=%d, Memsz=%ld\n", k.bin, k.memSzSS);
         auto d_ss = (u8 *)moveToGPU((u8 *)k.ss, k.memSzSS, s);
-        dcf::lookupSSTable<T, E, pr, ep><<<(k.N - 1) / 128 + 1, 128>>>(party, k.bin, k.N, d_in, d_ss, d_out);
+        secureml::lookupSSTable<T, E, pr, ep><<<(k.N - 1) / 128 + 1, 128>>>(party, k.bin, k.N, d_in, d_ss, d_out);
         checkCudaErrors(cudaDeviceSynchronize());
         gpuFree(d_ss);
         return d_out;

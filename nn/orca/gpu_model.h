@@ -38,9 +38,10 @@ namespace dcf
 
             void initWeights(std::string weightsFile, bool floatWeights = false)
             {
-                std::cout << weightsFile << std::endl;
+                std::cout << "In GPU_Model, opening " + weightsFile + " to initialize weights" << std::endl;
                 if (weightsFile.compare("") != 0)
                 {
+                    std::cout << "In GPU_Model, opening " + weightsFile + " to initialize weights" << std::endl;
                     size_t wSize;
                     auto weights = readFile(weightsFile, &wSize, false);
                     auto tmpWeights = weights;
@@ -48,6 +49,7 @@ namespace dcf
                     {
                         layers[i]->initWeights(&tmpWeights, floatWeights);
                     }
+                    layers[0]->printWeights();
                     free(weights);
                 }
             }

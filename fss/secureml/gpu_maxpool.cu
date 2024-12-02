@@ -23,7 +23,7 @@
 #include "gpu_dcf.h"
 #include "gpu_maxpool.h"
 
-namespace dcf
+namespace secureml
 {
     template <typename T>
     // T *gpuMaxpoolHelper(SigmaPeer *peer, int party, MaxpoolParams p, GPU2RoundReLUKey<T> k, GPUAndKey andKey, int i, int j, T *d_I, T *d_curMax, u32 *d_oneHot, AESGlobalContext *gaes, Stats *s)

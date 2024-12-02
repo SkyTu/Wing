@@ -26,7 +26,7 @@
 
 #include "gpu_sgd.h"
 
-namespace dcf
+namespace secureml
 {
 
     template <typename T>
@@ -95,8 +95,8 @@ namespace dcf
 
     template <typename T>
     void gpuSgdWithMomentum(int bin, int bout, int N, T *h_W, T *d_W,
-                            T *h_Vw, T *d_dW, int scaleW, int scaleVw, int scaledW, dcf::TruncateType t,
-                            dcf::GPUTruncateKey<T> truncateKeyVw, GPUTruncateKey<T> truncateKeyW, int party, SigmaPeer *peer, AESGlobalContext *gaes, Stats *s, int epoch)
+                            T *h_Vw, T *d_dW, int scaleW, int scaleVw, int scaledW, secureml::TruncateType t,
+                            secureml::GPUTruncateKey<T> truncateKeyVw, GPUTruncateKey<T> truncateKeyW, int party, SigmaPeer *peer, AESGlobalContext *gaes, Stats *s, int epoch)
     {
         size_t memSizeW = N * sizeof(T);
         auto d_Vw = (T *)moveToGPU((u8 *)h_Vw, memSizeW, s);
@@ -106,7 +106,7 @@ namespace dcf
         gpuLeftShiftAndAdd(N, d_dW, d_Vw, d_Vw, shift, T(orca::mom_fp));
         moveIntoCPUMem((u8 *)h_Vw, (u8 *)d_Vw /*d_dW*/, memSizeW, s);
         
-        dcf::gpuTruncate(bin, bout, t, truncateKeyVw, orca::mom_scale, peer, party, N, d_Vw, gaes, s);
+        secureml::gpuTruncate(bin, bout, t, truncateKeyVw, orca::mom_scale, peer, party, N, d_Vw, gaes, s);
         moveIntoCPUMem((u8 *)h_Vw, (u8 *)d_Vw /*d_dW*/, memSizeW, s);
         
 
@@ -120,7 +120,7 @@ namespace dcf
         // this is wrong it needs to be -lr
         gpuLeftShiftAndAdd(N, d_W, d_Vw, d_W, shift, -T(orca::lr_fp));
         if (shift > 0)
-            dcf::gpuTruncate(bin, bout, t, truncateKeyW, shift, peer, party, N, d_W, gaes, s);
+            secureml::gpuTruncate(bin, bout, t, truncateKeyW, shift, peer, party, N, d_W, gaes, s);
         moveIntoCPUMem((u8 *)h_W, (u8 *)d_W, memSizeW, s);
         printf("h_W=%ld\n", h_W[0]);
         if (dWWasNull)
@@ -215,7 +215,7 @@ namespace dcf
         if (rightShift > 0)
         {
             assert(rightShift == orca::global::scale + orca::lr_scale[epoch]);
-            dcf::gpuTruncate(bin, bout, t, truncateKeyW, rightShift, peer, party, N, d_delta, gaes, s);
+            secureml::gpuTruncate(bin, bout, t, truncateKeyW, rightShift, peer, party, N, d_delta, gaes, s);
             gpuLinearComb(bin, N, d_W, T(1), d_W, T(1), d_delta);
         }
         else

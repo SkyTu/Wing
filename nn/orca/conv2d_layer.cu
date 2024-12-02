@@ -44,7 +44,7 @@ namespace dcf
     {
         template <typename T>
         Conv2DLayer<T>::Conv2DLayer(int bin, int bout, int N, int H, int W, int CI, int FH, int FW, int CO,
-                                    int zPadHLeft, int zPadHRight, int zPadWLeft, int zPadWRight, int strideH, int strideW, bool useBias, dcf::TruncateType tf, dcf::TruncateType tb, bool computedI, bool inputIsShares, bool nextBackExt)
+                                    int zPadHLeft, int zPadHRight, int zPadWLeft, int zPadWRight, int strideH, int strideW, bool useBias, dcf::TruncateType tf, dcf::TruncateType tb, bool computedI, bool inputIsShares)
         {
             assert(bin == bout && bin <= sizeof(T) * 8);
             this->name = "Conv2D";
@@ -56,7 +56,6 @@ namespace dcf
             this->s.transfer_time = 0;
             this->tf = tf;
             this->tb = tb;
-            this->nextBackExt = nextBackExt;
             size_t memSizeI = p.size_I * sizeof(T);
             size_t memSizeF = p.size_F * sizeof(T);
 
@@ -133,6 +132,9 @@ namespace dcf
         {
             if (this->train)
                 moveIntoCPUMem((u8 *)this->mask_I, (u8 *)d_mask_I, convKey.mem_size_I, NULL);
+            for(int i = 0; i < 5; i++){
+                printf("Mask I[%d]=%lu\n", i, this->mask_I[i]);
+            }
             auto d_mask_C = gpuKeygenConv2D<T>(key_as_bytes, party, convKey, d_mask_I, mask_F, true);
             // bias has scale 2s
             if (useBias)
@@ -169,20 +171,16 @@ namespace dcf
                 auto d_masked_dI = gpuConv2DPlaintext<T>(convKeydI, d_mask_grad, d_mask_F, d_mask_dI, 1, false);
                 writeShares<T, T>(key_as_bytes, party, p.size_I, d_masked_dI, p.bout);
                 gpuFree(d_masked_dI);
-                if (this->nextBackExt)
-                    d_mask_truncated_dI = genGPUTruncateKey(key_as_bytes, party, tf, p.bin, p.bout, global::scale, p.size_I, d_mask_dI, gaes);
-                else
-                    d_mask_truncated_dI = genGPUTruncateKey(key_as_bytes, party, tb, p.bout, p.bout, global::scale, p.size_I, d_mask_dI, gaes);
-                // d_mask_truncated_dI = genGPUTruncateKey<T>(key_as_bytes, party, tf, p.bin, p.bout, global::scale, p.size_I, d_mask_dI, gaes);
+                d_mask_truncated_dI = genGPUTruncateKey<T>(key_as_bytes, party, tb, p.bin, p.bout, global::scale, p.size_I, d_mask_dI, gaes);
             }
 
-            genOptimizerKey<T>(key_as_bytes, party, p.bin, p.bout, p.size_F, mask_F, d_mask_F, mask_Vf, d_mask_dF, global::scale, 2 * global::scale, 2 * global::scale, tf, this->useMomentum, gaes, epoch);
+            genOptimizerKey<T>(key_as_bytes, party, p.bin, p.bout, p.size_F, mask_F, d_mask_F, mask_Vf, d_mask_dF, global::scale, 2 * global::scale, 2 * global::scale, tb, this->useMomentum, gaes, epoch);
 
             if (useBias)
             {
                 auto d_mask_db = getBiasGrad<T>(p.size_O / p.CO, p.CO, p.bin, d_mask_grad);
                 // printf("Old Mask b=%ld, %ld, %ld\n", b[0], b[1], b[2]);
-                genOptimizerKey<T>(key_as_bytes, party, p.bin, p.bout, p.CO, mask_b, NULL, mask_Vb, d_mask_db, 2 * global::scale, 2 * global::scale - lr_scale[epoch], global::scale, tf, this->useMomentum, gaes, epoch);
+                genOptimizerKey<T>(key_as_bytes, party, p.bin, p.bout, p.CO, mask_b, NULL, mask_Vb, d_mask_db, 2 * global::scale, 2 * global::scale - lr_scale[epoch], global::scale, tb, this->useMomentum, gaes, epoch);
                 // printf("New Mask b=%ld, %ld, %ld\n", b[0], b[1], b[2]);
                 gpuFree(d_mask_db);
             }
@@ -229,15 +227,12 @@ namespace dcf
                 convKeydI.O = mask_dI;
 
                 // should refactor this later to look pretty
-                if (this->nextBackExt)
-                    truncateKeydI = readGPUTruncateKey<T>(tf, key_as_bytes);
-                else
-                    truncateKeydI = readGPUTruncateKey<T>(tb, key_as_bytes);
+                truncateKeydI = readGPUTruncateKey<T>(tb, key_as_bytes);
             }
             // readGpuSGDWithMomentumKey(tb, &truncateKeyVf, &truncateKeyF, &truncateKeyVb, key_as_bytes, useBias);
-            readOptimizerKey(tf, &truncateKeyVf, &truncateKeyF, key_as_bytes, global::scale, 2 * global::scale, 2 * global::scale, this->useMomentum, epoch);
+            readOptimizerKey(tb, &truncateKeyVf, &truncateKeyF, key_as_bytes, global::scale, 2 * global::scale, 2 * global::scale, this->useMomentum, epoch);
             if (useBias)
-                readOptimizerKey(tf, &truncateKeyVb, &truncateKeyb, key_as_bytes, 2 * global::scale, 2 * global::scale - lr_scale[epoch], global::scale, this->useMomentum, epoch);
+                readOptimizerKey(tb, &truncateKeyVb, &truncateKeyb, key_as_bytes, 2 * global::scale, 2 * global::scale - lr_scale[epoch], global::scale, this->useMomentum, epoch);
         }
 
         template <typename T>
@@ -247,14 +242,25 @@ namespace dcf
             d_mask_I = (T *)moveToGPU((u8 *)convKey.I, convKey.mem_size_I, &(this->s));
             if (inputIsShares)
             {
+                for (int i = 0; i < 5; i++){
+                    printf("In forward propagation: Mask I[%d]=%lu\n", i, convKey.I[i]);
+                }
+                printf("In conv2d_layer, Input is shares!!!!\n");
                 gpuLinearComb(p.bin, p.size_I, d_I, T(1), d_I, T(1), d_mask_I);
                 peer->reconstructInPlace(d_I, p.bin, p.size_I, &(this->s));
             }
-            if (this->train)
+            if (this->train){
                 moveIntoCPUMem((u8 *)I, (u8 *)d_I, convKey.mem_size_I, &(this->s));
+                for (int i = 0; i < 5; i++){
+                    printf("In forward propagation: I[%d]=%lu\n", i, I[i]);
+                }
+            }
 
             d_F = (T *)moveToGPU((u8 *)F, convKey.mem_size_F, &(this->s));
             d_mask_F = (T *)moveToGPU((u8 *)convKey.F, convKey.mem_size_F, &(this->s));
+            for (int i = 0; i < 5; i++){
+                printf("In forward propagation: F[%d]=%lu, mask_F[%d]=%lu\n", i, F[i], i, convKey.F[i]);
+            }
             auto d_C = gpuConv2DBeaver(convKey, party, d_I, d_F, d_mask_I, d_mask_F, useBias && party == SERVER0 ? b : (T*) NULL, &(this->s), 0);
 
             // should not be freeing d_I who knows where else it is being used
@@ -263,6 +269,7 @@ namespace dcf
             gpuFree(d_mask_I);
             gpuFree(d_mask_F);
 
+            peer->reconstructInPlace(d_C, p.bout, p.size_O, &(this->s));
             dcf::gpuTruncate(p.bin, p.bout, tf, truncateKeyC, global::scale, peer, party, p.size_O, d_C, gaes, &(this->s));
 
             return d_C;
@@ -271,35 +278,36 @@ namespace dcf
         template <typename T>
         T *Conv2DLayer<T>::backward(SigmaPeer *peer, int party, T *d_incomingGrad, AESGlobalContext *gaes, int epoch)
         {
+            printf("In Conv2DLayer backward\n");
             this->checkIfTrain();
-
             auto d_mask_incomingGrad = (T *)moveToGPU((u8 *)convKeydF.I, convKeydF.mem_size_I, &(this->s));
             auto d_mask_I = (T *)moveToGPU((u8 *)convKey.I, convKey.mem_size_I, &(this->s));
             auto d_I = (T *)moveToGPU((u8 *)I, convKey.mem_size_I, &(this->s));
             auto d_F = (T *)moveToGPU((u8 *)F, convKey.mem_size_F, &(this->s));
-
+            auto tmp = (T *)moveToCPU((u8 *)d_incomingGrad, convKeydF.mem_size_I, &(this->s));
+            for (int i = 0; i < 5; i++){
+                printf("In backward propagation: incomingGrad[%d] = %lu, mask_incomingGrad[%d] = %lu ,F[%d]=%lu, mask_F[%d]=%lu\n", i, tmp[i], i, convKey.I[i], i, F[i], i, convKey.F[i]);
+            }
             T *d_dI = NULL;
             if (computedI)
             {
                 auto d_mask_F = (T *)moveToGPU((u8 *)convKey.F, convKey.mem_size_F, &(this->s));
                 d_dI = gpuConv2DBeaver(convKeydI, party, d_incomingGrad, d_F, d_mask_incomingGrad, d_mask_F, (T *)NULL, &(this->s), 1);
                 gpuFree(d_mask_F);
-                if (this->nextBackExt)
-                    dcf::gpuTruncate(p.bin, p.bout, tf, truncateKeydI, global::scale, peer, party, p.size_I, d_dI, gaes, &(this->s));
-                else
-                    dcf::gpuTruncate(p.bin, p.bout, tb, truncateKeydI, global::scale, peer, party, p.size_I, d_dI, gaes, &(this->s));
+                peer->reconstructInPlace(d_dI, p.bin, p.size_I, &(this->s));
+                dcf::gpuTruncate(p.bin, p.bout, tb, truncateKeydI, global::scale, peer, party, p.size_I, d_dI, gaes, &(this->s));
             }
 
             auto d_dF = gpuConv2DBeaver(convKeydF, party, d_incomingGrad, d_I, d_mask_incomingGrad, d_mask_I, (T *)NULL, &(this->s), 2);
-            // peer->reconstructInPlace(d_dF, p.bin, p.size_F, &(this->s));
+            peer->reconstructInPlace(d_dF, p.bin, p.size_F, &(this->s));
 
-            optimize(p.bin, p.bout, p.size_F, F, d_F, Vf, d_dF, global::scale, 2 * global::scale, 2 * global::scale, tf, truncateKeyVf, truncateKeyF, party, peer, this->useMomentum, gaes, &(this->s), epoch);
+            optimize(p.bin, p.bout, p.size_F, F, d_F, Vf, d_dF, global::scale, 2 * global::scale, 2 * global::scale, tb, truncateKeyVf, truncateKeyF, party, peer, this->useMomentum, gaes, &(this->s), epoch);
 
             if (useBias)
             {
                 auto d_db = getBiasGrad<T>(p.size_O / p.CO, p.CO, p.bout, d_incomingGrad);
-                optimize(p.bin, p.bout, p.CO, b, (T *)NULL, Vb, d_db, 2 * global::scale, 2 * global::scale - lr_scale[epoch], global::scale, tf, truncateKeyVb, truncateKeyb,
-                            party, peer, this->useMomentum, gaes, &(this->s), epoch);
+                optimize(p.bin, p.bout, p.CO, b, (T *)NULL, Vb, d_db, 2 * global::scale, 2 * global::scale - lr_scale[epoch], global::scale, tb, truncateKeyVb, truncateKeyb,
+                              party, peer, this->useMomentum, gaes, &(this->s), epoch);
                 gpuFree(d_db);
             }
 
@@ -310,6 +318,14 @@ namespace dcf
             gpuFree(d_mask_I);
             gpuFree(d_dF);
 
+            if (computedI){
+                printf("Copying!\n");
+                auto tmp1 = moveToCPU((u8 *)d_dI, p.size_I, &(this->s));
+                printf("Copied\n");
+                for (int i = 0; i < 5; i++){
+                    printf("In backward propagation: OutGrad[%d] = %lu\n", i, tmp1[i]);
+                }
+            }
             return d_dI;
         }
 
@@ -348,6 +364,22 @@ namespace dcf
             // printf("Dumping weights=%lu, %lu, %lu\n", F[0], F[1], F[2]);
             if (useBias)
                 f.write((char *)b, p.CO * sizeof(T));
+        }
+
+        template <typename T>
+        void Conv2DLayer<T>::printWeights()
+        {
+            printf("F=");
+            for (int i = 0; i < p.size_F; i++)
+                printf("%lu, ", ((u64*)F)[i]);
+            printf("\n");
+            if (useBias)
+            {
+                printf("b=");
+                for (int i = 0; i < p.CO; i++)
+                    printf("%lu, ", ((u64*)b)[i]);
+                printf("\n");
+            }
         }
     }
 }

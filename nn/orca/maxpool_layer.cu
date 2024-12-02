@@ -113,8 +113,7 @@ namespace dcf
         {
             // maxpoolKey.p = p;
             // gaes = g;
-            // maxpoolKey.reluKey = new GPU2RoundReLUKey<T>[p.FH * p.FW];
-            maxpoolKey.reluKey = new dpf::GPUReluKey<T>[p.FH * p.FW];
+            maxpoolKey.reluKey = new GPU2RoundReLUKey<T>[p.FH * p.FW];
             maxpoolKey.andKey = new GPUAndKey[p.FH * p.FW];
             for (int i = 0; i < p.FH; i++)
             {
@@ -122,8 +121,7 @@ namespace dcf
                 {
                     if (i == 0 && j == 0)
                         continue;
-                    // maxpoolKey.reluKey[i * p.FW + j] = readTwoRoundReluKey<T>(key_as_bytes);
-                    maxpoolKey.reluKey[i * p.FW + j] = dpf::readReluKey<T>(key_as_bytes);
+                    maxpoolKey.reluKey[i * p.FW + j] = readTwoRoundReluKey<T>(key_as_bytes);
                     if (this->train)
                         maxpoolKey.andKey[i * p.FW + j] = readGPUAndKey(key_as_bytes);
                 }
@@ -134,8 +132,7 @@ namespace dcf
         void MaxPool2DLayer<T>::readBackwardKey(uint8_t **key_as_bytes, int epoch)
         {
             int numSelects = p.N * p.H * p.W * p.C * p.FH * p.FW;
-            backpropSelectKey = readGPUSelectExtendKey<T>(key_as_bytes, numSelects);
-            // backpropSelectKey = readGPUSelectKey<T>(key_as_bytes, numSelects);
+            backpropSelectKey = readGPUSelectKey<T>(key_as_bytes, numSelects);
         }
 
         // no memory leak

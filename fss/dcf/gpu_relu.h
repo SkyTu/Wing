@@ -22,23 +22,10 @@
 #pragma once
 
 #include "gpu_dcf.h"
-#include "fss/gpu_relu.h"
 #include "fss/gpu_select.h"
 
 namespace dcf
 {
-    template <typename T>
-    struct GPUSelectExtKey{
-        int N;
-        T *rm, *rmd, *rmu, *ud, *m, *v, *w, *z, *rin;
-    };
-    template <typename T>
-    struct GPUReluZeroExtKey
-    {
-        int bin, bout, N;
-        dpf::GPUDReluKey dReluKey;
-        GPUSelectExtKey<T> selectKey;
-    };
 
     struct GPUDReluKey
     {
@@ -64,32 +51,6 @@ namespace dcf
         T *outMask;
     };
 
-    template <typename T>
-    GPUSelectExtKey<T> readGPUSelectExtKey(uint8_t** key_as_bytes, int N) {
-        GPUSelectExtKey<T> k;
-        k.N = N;
-        size_t memSz = N * sizeof(T);
-        k.rm = (T *) *key_as_bytes;
-        *key_as_bytes += memSz;
-        k.rmd = (T *) *key_as_bytes;
-        *key_as_bytes += memSz;
-        k.rmu = (T *) *key_as_bytes;
-        *key_as_bytes += memSz;
-        k.ud = (T *) *key_as_bytes;
-        *key_as_bytes += memSz;
-        k.m = (T *) *key_as_bytes;
-        *key_as_bytes += memSz;
-        k.v = (T *) *key_as_bytes;
-        *key_as_bytes += memSz;
-        k.w = (T *) *key_as_bytes;
-        *key_as_bytes += memSz;
-        k.z = (T *) *key_as_bytes;
-        *key_as_bytes += memSz;
-        k.rin = (T *) *key_as_bytes;
-        *key_as_bytes += memSz;
-        return k;
-    };
-
     GPUDReluKey readGPUDReluKey(u8 **key_as_bytes)
     {
         GPUDReluKey k;
@@ -101,32 +62,20 @@ namespace dcf
     }
 
     template <typename T>
-    GPUReluZeroExtKey<T> readGPUReluZeroExtKey(u8 **key_as_bytes)
-    {
-        GPUReluZeroExtKey<T> k;
-        k.bin = *((int *)*key_as_bytes);
-        *key_as_bytes += sizeof(int);
-        k.bout = *((int *)*key_as_bytes);
-        *key_as_bytes += sizeof(int);
-        k.N = *((int *)*key_as_bytes);
-        *key_as_bytes += sizeof(int);
-        k.dReluKey = dpf::readGPUDReluKey(key_as_bytes);
-        k.selectKey = readGPUSelectExtKey<T>(key_as_bytes, k.N);
-        return k;
-    }
-
-
-    template <typename T>
     GPU2RoundReLUKey<T> readTwoRoundReluKey(u8 **key_as_bytes)
     {
         GPU2RoundReLUKey<T> k;
         k.bin = *((int *)*key_as_bytes);
         *key_as_bytes += sizeof(int);
+
         k.bout = *((int *)*key_as_bytes);
         *key_as_bytes += sizeof(int);
+
         k.N = *((int *)*key_as_bytes);
         *key_as_bytes += sizeof(int);
+
         size_t memSz = k.N * sizeof(T);
+
         k.dreluKey = readGPUDReluKey(key_as_bytes);
         k.selectKey = readGPUSelectKey<T>(key_as_bytes, k.N);
         return k;

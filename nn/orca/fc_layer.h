@@ -62,9 +62,8 @@ namespace dcf
             bool useBias;
             bool computedX;
             bool inputIsShares;
-            bool nextBackExt;
 
-            FCLayer(int bin, int bout, int M, int N, int K, dcf::TruncateType tf, dcf::TruncateType tb, bool useBias, bool computedX, bool inputIsShares, bool nextBackExt = false);
+            FCLayer(int bin, int bout, int M, int N, int K, dcf::TruncateType tf, dcf::TruncateType tb, bool useBias, bool computedX, bool inputIsShares);
             T *genForwardKey(uint8_t **key_as_bytes, int party, T *d_mask_X, AESGlobalContext *gaes);
             T *genBackwardKey(uint8_t **key_as_bytes, int party, T *d_mask_grad, AESGlobalContext *gaes, int epoch);
             void readForwardKey(uint8_t **key_as_bytes);

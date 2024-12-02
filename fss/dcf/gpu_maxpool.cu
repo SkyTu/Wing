@@ -26,21 +26,15 @@
 namespace dcf
 {
     template <typename T>
-    // T *gpuMaxpoolHelper(SigmaPeer *peer, int party, MaxpoolParams p, GPU2RoundReLUKey<T> k, GPUAndKey andKey, int i, int j, T *d_I, T *d_curMax, u32 *d_oneHot, AESGlobalContext *gaes, Stats *s)
-    T *gpuMaxpoolHelper(SigmaPeer *peer, int party, MaxpoolParams p, dpf::GPUReluKey<T> k, GPUAndKey andKey, int i, int j, T *d_I, T *d_curMax, u32 *d_oneHot, AESGlobalContext *gaes, Stats *s)
+    T *gpuMaxpoolHelper(SigmaPeer *peer, int party, MaxpoolParams p, GPU2RoundReLUKey<T> k, GPUAndKey andKey, int i, int j, T *d_I, T *d_curMax, u32 *d_oneHot, AESGlobalContext *gaes, Stats *s)
     {
         int outSz = getMSz(p);
         T *d_diff = (T *)gpuMalloc(outSz * sizeof(T));
         diffWithCurMax<<<(outSz - 1) / 256 + 1, 256>>>(p, i, j, d_curMax, d_I, d_diff, outSz);
         checkCudaErrors(cudaDeviceSynchronize());
-        // auto d_res = gpuTwoRoundRelu(peer, party, k, d_diff, gaes, s);
-        // auto d_drelu = d_res.first;
-        // auto d_newMax = d_res.second;
-        auto &dreluKey = k.dreluKey;
-        std::vector<u32 *> h_mask({dreluKey.mask});
-        auto d_drelu = dpf::gpuDcf<T, 1, dpf::dReluPrologue<0>, dpf::dReluEpilogue<0, false>>(k.dreluKey.dpfKey, party, d_diff, gaes, s, &h_mask);
-        peer->reconstructInPlace(d_drelu, 1, k.numRelus, s);
-        auto d_newMax = gpuSelect<T, T, 0, 0>(peer, party, k.bout, k.selectKey, (u32 *)d_drelu, d_diff, s);
+        auto d_res = gpuTwoRoundRelu(peer, party, k, d_diff, gaes, s);
+        auto d_drelu = d_res.first;
+        auto d_newMax = d_res.second;
         gpuFree(d_diff);
         // relu(x-y) + y
         gpuLinearComb(p.bw, outSz, d_newMax, T(1), d_newMax, T(1), d_curMax);
@@ -87,15 +81,9 @@ namespace dcf
         // d_diffMask = inputMask - curMask
         diffWithCurMax<<<(outSz - 1) / 256 + 1, 256>>>(p, fh, fw, d_curMaxMask, d_inputMask, d_diffMask, outSz);
         checkCudaErrors(cudaDeviceSynchronize());
-        writeInt(key_as_bytes, p.bin);
-        writeInt(key_as_bytes, p.bw);
-        writeInt(key_as_bytes, outSz);
-        auto d_dreluMask = dpf::gpuKeyGenDRelu(key_as_bytes, party, p.bin, outSz, d_diffMask, gaes);
-        auto d_newMaxMask = gpuKeyGenSelect<T, T, u8>(key_as_bytes, party, outSz, d_diffMask, d_dreluMask, p.bw);
-        // auto d_newMaxMask = gpuKeyGenSelect<T, T, u8>(key_as_bytes, party, outSz, d_inputMask, d_dreluMask, p.bw);
-        // auto d_res = gpuGenTwoRoundReluKey(key_as_bytes, party, p.bin, p.bw, outSz, d_diffMask, gaes);
-        // auto d_dreluMask = d_res.first;
-        // auto d_newMaxMask = d_res.second;
+        auto d_res = gpuGenTwoRoundReluKey(key_as_bytes, party, p.bin, p.bw, outSz, d_diffMask, gaes);
+        auto d_dreluMask = d_res.first;
+        auto d_newMaxMask = d_res.second;
         gpuFree(d_diffMask);
         gpuLinearComb(p.bw, outSz, d_newMaxMask, T(1), d_newMaxMask, T(1), d_curMaxMask);
         if (d_oneHotMask)

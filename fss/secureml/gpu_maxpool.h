@@ -25,7 +25,7 @@
 #include "fss/gpu_and.h"
 #include "gpu_relu.h"
 
-namespace dcf
+namespace secureml
 {
 
     template <typename T>
