@@ -414,6 +414,36 @@ T *gpuMaxpool(SigmaPeer *peer, int party, MaxpoolParams p, GPUMaxpoolKey<T> k, T
 }
 
 template <typename T>
+__global__ void selectForMaxpoolBackpropKernelOrca(MaxpoolParams p, uint32_t *oneHot,
+                                               T *incomingGrad,
+                                               T *out,
+                                               T *a, T *b,
+                                               T *e, T *d1,
+                                               T *d2, int party, int N)
+{
+    int i = blockIdx.x * blockDim.x + threadIdx.x;
+    if (i < N)
+    {
+        int laneId = threadIdx.x & 0x1f;
+        int t = i;
+        int n = t / (p.H * p.W * p.C * p.FH * p.FW);
+        t = t % (p.H * p.W * p.C * p.FH * p.FW);
+        int h = t / (p.W * p.C * p.FH * p.FW);
+        t = t % (p.W * p.C * p.FH * p.FW);
+        int w = t / (p.C * p.FH * p.FW);
+        t = t % (p.C * p.FH * p.FW);
+        int c = t / (p.FH * p.FW);
+
+        T x = (oneHot[i / 32] >> laneId) & T(1);
+        T is_zero_x = (x == 0);
+        int j = n * p.H * p.W * p.C + h * p.W * p.C + w * p.C + c;
+        T y = incomingGrad[j];
+        out[i] = (-a[i] * y - b[i] * x + e[i] + y * is_zero_x * d1[i] + is_zero_x * d2[i] + (party == SERVER1) * (x * y));
+        gpuMod(out[i], p.bwBackprop);
+    }
+}
+
+template <typename T>
 __global__ void selectForMaxpoolBackpropKernel(MaxpoolParams p, uint32_t *oneHot,
                                                T *incomingGrad, T *out,
                                                T *rb, T *rin,
@@ -554,6 +584,32 @@ __global__ void gpuCollectGradientsKernel(MaxpoolParams p, T *outgoingGradExpand
         outgoingGrad[i] = sumGrads;
         gpuMod(outgoingGrad[i], p.bwBackprop);
     }
+}
+
+template <typename T>
+T *gpuSelectForMaxpoolBackprop(MaxpoolParams p, GPUSelectKey<T> k,
+                               uint32_t *d_oneHot,
+                               T *d_incomingGrad,
+                               int party, Stats *stats)
+{
+    size_t size_in_bytes = k.N * sizeof(T);
+
+    T *d_out = (T *)gpuMalloc(size_in_bytes);
+    T *d_a, *d_b, *d_c, *d_d1, *d_d2;
+    d_a = (T *)moveToGPU((uint8_t *)k.a, 5 * size_in_bytes, stats);
+    d_b = d_a + k.N;
+    d_c = d_b + k.N;
+    d_d1 = d_c + k.N;
+    d_d2 = d_d1 + k.N;
+
+    const int tb_size = 256;
+
+    selectForMaxpoolBackpropKernelOrca<T><<<(k.N - 1) / tb_size + 1, tb_size>>>(p, d_oneHot,
+                                                                            d_incomingGrad, d_out, d_a, d_b, d_c, d_d1, d_d2, party, k.N);
+    checkCudaErrors(cudaDeviceSynchronize());
+
+    gpuFree(d_a);
+    return d_out;
 }
 
 // no memory leak
