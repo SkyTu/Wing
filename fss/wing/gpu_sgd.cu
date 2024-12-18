@@ -72,7 +72,7 @@ namespace wing
         }
         shift = wing::lr_scale[epoch] + scaleVw - scaleW;
         auto d_new_W = (T *)gpuMalloc(memSizeW);
-        gpuLeftShiftAndAdd(N, d_W, d_Vw, d_W, shift, -T(wing::lr_fp));
+        gpuLeftShiftAndAdd(N, d_W, d_Vw, d_new_W, shift, -T(wing::lr_fp));
         if (shift > 0){
             d_new_W = genGPUTruncateKey(key_as_bytes, party, TruncateType::StochasticTruncate, bin, bout, shift, N, d_new_W, gaes);
         }
