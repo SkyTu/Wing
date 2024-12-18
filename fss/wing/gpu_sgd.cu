@@ -104,10 +104,10 @@ namespace wing
         int shift = wing::mom_scale + scaleVw - scaledW;
         // printf("h_Vw=%ld\n", h_Vw[0]);
         // the d_dW mask got moved to the left by shift
+        gpuLinearComb(wing::global::bw, N, d_Vw, T(party), d_Vw);
         gpuLeftShiftAndAdd(N, d_dW, d_Vw, d_Vw, shift, T(wing::mom_fp));
-        moveIntoCPUMem((u8 *)h_Vw, (u8 *)d_Vw /*d_dW*/, memSizeW, s);
         
-        wing::gpuTruncate(bin, bout, TruncateType::StochasticTruncate, truncateKeyVw, wing::mom_scale, peer, party, N, d_Vw, gaes, s, false);
+        wing::gpuTruncate(bin, bout, TruncateType::StochasticTruncate, truncateKeyVw, wing::mom_scale, peer, party, N, d_Vw, gaes, s);
         moveIntoCPUMem((u8 *)h_Vw, (u8 *)d_Vw /*d_dW*/, memSizeW, s);
         
 
