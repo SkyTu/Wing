@@ -110,13 +110,12 @@ namespace wing
         gpuLeftShiftAndAdd(N, d_dW, d_Vw, d_Vw, shift, T(wing::mom_fp));
         if (update_bias){
             wing::gpuTruncate(bin, bout, TruncateType::StochasticTruncate, truncateKeyVw, wing::mom_scale, peer, party, N, d_Vw, gaes, s);
-            moveIntoCPUMem((u8 *)h_Vw, (u8 *)d_Vw /*d_dW*/, memSizeW, s);
         }
         else{
             wing::gpuTruncate(bin, bout, TruncateType::StochasticTruncate, truncateKeyVw, wing::mom_scale, peer, party, N, d_Vw, gaes, s, false);
-            moveIntoCPUMem((u8 *)h_Vw, (u8 *)d_Vw /*d_dW*/, memSizeW, s);
         }
-        
+        std::cout << "h_Vw=" << h_Vw[0] << std::endl;
+        moveIntoCPUMem((u8 *)h_Vw, (u8 *)d_Vw /*d_dW*/, memSizeW, s);
 
         bool dWWasNull = false;
         if (d_W == NULL)
