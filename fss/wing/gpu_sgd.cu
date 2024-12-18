@@ -88,10 +88,10 @@ namespace wing
     template <typename T>
     void readGpuSGDWithMomentumKey(TruncateType t, GPUTruncateKey<T> *truncateKeyVw, GPUTruncateKey<T> *truncateKeyW, u8 **key_as_bytes, int scaleW, int scaleVw, int scaledW, int epoch)
     {
-        *truncateKeyVw = readGPUTruncateKey<T>(t, key_as_bytes);
+        *truncateKeyVw = readGPUTruncateKey<T>(TruncateType::StochasticTR, key_as_bytes);
         int shift = wing::lr_scale[epoch] + scaleVw - scaleW;
         if (shift > 0)
-            *truncateKeyW = readGPUTruncateKey<T>(t, key_as_bytes);
+            *truncateKeyW = readGPUTruncateKey<T>(TruncateType::StochasticTruncate, key_as_bytes);
     }
 
     template <typename T>

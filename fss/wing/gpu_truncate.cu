@@ -239,6 +239,7 @@ namespace wing
     template <typename T>
     void gpuZeroExt(GPUZeroExtKey<T> k, int party, SigmaPeer *peer, T *d_I, AESGlobalContext *g, Stats *s, bool reconstruct = true)
     {
+        std::cout << "In gpu_truncate.cu gpuZeroExt bin, bout = " << k.bin << " " << k.bout << std::endl;
         gpuZeroExtend(party, k.N, k.bin, k.bout, d_I, k.m, k.u, s);
         if (reconstruct)
             peer->reconstructInPlace(d_I, k.bout, k.N, s);
@@ -248,7 +249,7 @@ namespace wing
     template <typename T>
     void gpuTRe(GPUTReKey<T> k, int party, SigmaPeer *peer, T *d_I, AESGlobalContext *g, Stats *s, bool gap = true)
     {   
-        std::cout << "In gpu_truncate.cu gpuTRe bin, bout = " << k.bin << k.bout << std::endl;
+        std::cout << "In gpu_truncate.cu gpuTRe bin, bout = " << k.bin << " " << k.bout << std::endl;
         TReKernel<<<(k.N - 1) / 128 + 1, 128>>>(party, k.bin, k.bout, k.shift, k.N, d_I, gap);
         peer->reconstructInPlace(d_I, k.bout, k.N, s);
     }
