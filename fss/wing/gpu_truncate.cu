@@ -189,7 +189,7 @@ namespace wing
 
 
     template <typename T>
-    __global__ void TReKernel(int party, int bin, int bout, int shift, int N, T *x, bool gap)
+    __global__ void TReKernel(int party, int bin, int bout, int shift, int N, T *x)
     {
         int i = blockIdx.x * blockDim.x + threadIdx.x;
         if (i < N)
@@ -247,17 +247,18 @@ namespace wing
 
 
     template <typename T>
-    void gpuTRe(GPUTReKey<T> k, int party, SigmaPeer *peer, T *d_I, AESGlobalContext *g, Stats *s, bool gap = true)
+    void gpuTRe(GPUTReKey<T> k, int party, SigmaPeer *peer, T *d_I, AESGlobalContext *g, Stats *s, bool reconstruct = true)
     {   
         std::cout << "In gpu_truncate.cu gpuTRe bin, bout = " << k.bin << " " << k.bout << std::endl;
-        TReKernel<<<(k.N - 1) / 128 + 1, 128>>>(party, k.bin, k.bout, k.shift, k.N, d_I, gap);
-        peer->reconstructInPlace(d_I, k.bout, k.N, s);
+        TReKernel<<<(k.N - 1) / 128 + 1, 128>>>(party, k.bin, k.bout, k.shift, k.N, d_I);
+        if (reconstruct)
+            peer->reconstructInPlace(d_I, k.bout, k.N, s);
     }
 
     template <typename T>
-    void gpuRevealedTRe(GPUTReKey<T> k, int party, SigmaPeer *peer, T *d_I, AESGlobalContext *g, Stats *s, bool gap = true)
+    void gpuRevealedTRe(GPUTReKey<T> k, int party, SigmaPeer *peer, T *d_I, AESGlobalContext *g, Stats *s)
     {   
-        TReKernel<<<(k.N - 1) / 128 + 1, 128>>>(party, k.bin, k.bout, k.shift, k.N, d_I, gap);
+        TReKernel<<<(k.N - 1) / 128 + 1, 128>>>(party, k.bin, k.bout, k.shift, k.N, d_I);
     }
 
     template <typename T>
@@ -285,7 +286,7 @@ namespace wing
             break;
         case TruncateType::StochasticTR:
             bout = bin - shift;
-            gpuTRe(k.TReKey, party, peer, d_I, gaes, s);
+            gpuTRe(k.TReKey, party, peer, d_I, gaes, s, reconstruct);
             break;
         case TruncateType::LocalARS:
             gpuLocalTr<T, T, ars>(party, bin, shift, N, d_I, true);
