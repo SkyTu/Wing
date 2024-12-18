@@ -290,7 +290,9 @@ namespace wing
         gpuFree(d_X);
         gpuFree(d_mask_X);
 
+        std::cout << "---------Before optimize weights---------" << std::endl;
         optimize(p.bw, p.bw, p.size_B, W, d_W, Vw, d_dW, global::scale, 2 * global::scale, 2 * global::scale, tf, truncateKeyVw, truncateKeyW, party, peer, this->useMomentum, gaes, &(this->s), epoch);
+        std::cout << "---------After optimize weights---------" << std::endl;
 
         gpuFree(d_W);
         gpuFree(d_dW);
