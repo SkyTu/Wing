@@ -77,7 +77,7 @@ namespace wing
         // 这里额外多一步Reconstruct
         gpuLeftShiftAndAdd(N, d_W, d_Vw, d_new_W, shift, -T(wing::lr_fp));
         if (shift > 0)
-            d_new_W = genGPUTruncateKey(key_as_bytes, party, TruncateType::StochasticTruncate, bin, bout, shift, N, d_new_W, gaes);
+            d_new_W = genGPUTruncateKey(key_as_bytes, party, TruncateType::StochasticTruncate, bin + wing::lr_scale[epoch], bout, shift, N, d_new_W, gaes);
         moveIntoCPUMem((u8 *)h_W, (u8 *)d_new_W, memSizeW, NULL);
         gpuFree(d_new_W);
         if (dWWasNull)
@@ -122,11 +122,16 @@ namespace wing
         }
         shift = wing::lr_scale[epoch] + scaleVw - scaleW;
         // this is wrong it needs to be -lr
+        std::cout << "In gpu_sgd.cu " << __LINE__ << std::endl;
         auto d_new_W = (T *)gpuMalloc(memSizeW);
         gpuLinearComb(wing::global::bw, N, d_new_W, T(party), d_W);
+        std::cout << "In gpu_sgd.cu " << __LINE__ << std::endl;
         gpuLeftShiftAndAdd(N, d_new_W, d_Vw, d_W, shift, -T(wing::lr_fp));
+        std::cout << "In gpu_sgd.cu " << __LINE__ << std::endl;
+        std::cout << "shift=" << shift << std::endl;
         if (shift > 0)
             wing::gpuTruncate(bin, bout, TruncateType::StochasticTruncate, truncateKeyW, shift, peer, party, N, d_W, gaes, s);
+        std::cout << "In gpu_sgd.cu " << __LINE__ << std::endl;
         moveIntoCPUMem((u8 *)h_W, (u8 *)d_W, memSizeW, s);
         printf("h_W=%ld\n", h_W[0]);
         if (dWWasNull)
