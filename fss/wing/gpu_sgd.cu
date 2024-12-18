@@ -49,6 +49,7 @@ namespace wing
         checkCudaErrors(cudaDeviceSynchronize());
     }
 
+    // global::scale, Vw: 2 * global::scale, dW: 2 * global::scale
     template <typename T>
     void genGpuSGDWithMomentumKey(u8 **key_as_bytes, int party, int bin, int bout, int N, T *h_W, T *d_W,
                                   T *h_Vw, T *d_dW, int scaleW, int scaleVw, int scaledW, TruncateType t, AESGlobalContext *gaes, int epoch)
@@ -57,11 +58,10 @@ namespace wing
         size_t memSizeW = N * sizeof(T);
         auto d_Vw = (T *)moveToGPU((u8 *)h_Vw, memSizeW, NULL);
         int shift = wing::mom_scale + scaleVw - scaledW;
-        // the d_dW mask got moved to the left by shift
-        // d_dW是没有reconstruct的
+        
         gpuLeftShiftAndAdd(N, d_dW, d_Vw, d_Vw, shift, T(wing::mom_fp));
         // 这里不用reconstruct
-        d_Vw = genGPUTruncateKey(key_as_bytes, party, TruncateType::StochasticTruncate, bin, bout, wing::mom_scale, N, d_Vw, gaes);
+        d_Vw = genGPUTruncateKey(key_as_bytes, party, TruncateType::StochasticTR, bin, bout, wing::mom_scale, N, d_Vw, gaes);
         moveIntoCPUMem((u8 *)h_Vw, (u8 *)d_Vw /*d_dW*/, memSizeW, NULL);
         //这里应该变成secret share的形式？
         printf("h_Vw=%ld\n", h_Vw[0]);
@@ -109,9 +109,10 @@ namespace wing
         std::cout << "In gpu_sgd.cu " << __LINE__ << std::endl;
         gpuLeftShiftAndAdd(N, d_dW, d_Vw, d_Vw, shift, T(wing::mom_fp));
         std::cout << "In gpu_sgd.cu " << __LINE__ << std::endl;
-        wing::gpuTruncate(bin, bout, TruncateType::StochasticTruncate, truncateKeyVw, wing::mom_scale, peer, party, N, d_Vw, gaes, s);
+        wing::gpuTruncate(bin, bout, TruncateType::StochasticTR, truncateKeyVw, wing::mom_scale, peer, party, N, d_Vw, gaes, s, false);
+        std::cout << "In gpu_sgd.cu " << __LINE__ << std::endl;
         moveIntoCPUMem((u8 *)h_Vw, (u8 *)d_Vw /*d_dW*/, memSizeW, s);
-        
+        std::cout << "In gpu_sgd.cu " << __LINE__ << std::endl;
 
         bool dWWasNull = false;
         if (d_W == NULL)
@@ -121,13 +122,16 @@ namespace wing
         }
         shift = wing::lr_scale[epoch] + scaleVw - scaleW;
         // this is wrong it needs to be -lr
-        gpuLeftShiftAndAdd(N, d_W, d_Vw, d_W, shift, -T(wing::lr_fp));
+        auto d_new_W = (T *)gpuMalloc(memSizeW);
+        gpuLinearComb(wing::global::bw, N, d_new_W, T(party), d_W);
+        gpuLeftShiftAndAdd(N, d_new_W, d_Vw, d_W, shift, -T(wing::lr_fp));
         if (shift > 0)
             wing::gpuTruncate(bin, bout, TruncateType::StochasticTruncate, truncateKeyW, shift, peer, party, N, d_W, gaes, s);
         moveIntoCPUMem((u8 *)h_W, (u8 *)d_W, memSizeW, s);
         printf("h_W=%ld\n", h_W[0]);
         if (dWWasNull)
             gpuFree(d_W);
+        gpuFree(d_new_W);
         gpuFree(d_Vw);
     }
 
