@@ -77,7 +77,7 @@ namespace wing
         // 这里额外多一步Reconstruct
         gpuLeftShiftAndAdd(N, d_W, d_Vw, d_new_W, shift, -T(wing::lr_fp));
         if (shift > 0)
-            d_new_W = genGPUTruncateKey(key_as_bytes, party, TruncateType::StochasticTruncate, bin + wing::lr_scale[epoch], bout, shift, N, d_new_W, gaes);
+            d_new_W = genGPUTruncateKey(key_as_bytes, party, TruncateType::StochasticTruncate, bin, bout, shift, N, d_new_W, gaes);
         moveIntoCPUMem((u8 *)h_W, (u8 *)d_new_W, memSizeW, NULL);
         gpuFree(d_new_W);
         if (dWWasNull)
