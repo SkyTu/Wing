@@ -105,7 +105,6 @@ namespace wing
         int shift = wing::mom_scale + scaleVw - scaledW;
         // printf("h_Vw=%ld\n", h_Vw[0]);
         // the d_dW mask got moved to the left by shift
-        gpuLinearComb(wing::global::bw, N, d_Vw, T(party), d_Vw);
         std::cout << "calculate Vw current" << std::endl;
         gpuLeftShiftAndAdd(N, d_dW, d_Vw, d_Vw, shift, T(wing::mom_fp));
         wing::gpuTruncate(bin, bout, TruncateType::StochasticTR, truncateKeyVw, wing::mom_scale, peer, party, N, d_Vw, gaes, s, false);
