@@ -25,7 +25,7 @@
 #include "fss/gpu_relu.h"
 #include "fss/gpu_select.h"
 
-namespace secureml
+namespace wing
 {
     template <typename T>
     struct GPUSelectExtKey{

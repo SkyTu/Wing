@@ -26,12 +26,11 @@
 #include "utils/gpu_comms.h"
 #include "utils/gpu_mem.h"
 #include "fss/gpu_avgpool.h"
-#include "fss/secureml/gpu_truncate.h"
+#include "fss/wing/gpu_truncate.h"
 
 #include "avg_pool_layer.h"
 
-
-namespace secureml
+namespace wing
 {
     template <typename T>
     AvgPool2DLayer<T>::AvgPool2DLayer(int bin, int bout, int scaleDiv, int N, int imgH, int imgW, int C, int FH, int FW, int strideH,
@@ -57,7 +56,7 @@ namespace secureml
     {
         auto d_mask_O = gpuAddPool(p, d_inputMask, &(this->s));
         // gpuFree(d_inputMask);
-        auto d_mask_truncated_O = secureml::genGPUTruncateKey(key_as_bytes, party, tf, p.bw, p.bw, p.scaleDiv, outSz, d_mask_O, gaes); /*, mask_truncated_C);*/
+        auto d_mask_truncated_O = wing::genGPUTruncateKey(key_as_bytes, party, tf, p.bw, p.bw, p.scaleDiv, outSz, d_mask_O, gaes); /*, mask_truncated_C);*/
         return d_mask_truncated_O;
     }
 
@@ -66,20 +65,20 @@ namespace secureml
     {
         auto d_mask_dI = gpuAddPoolBackProp(p, d_incomingGradMask, &(this->s));
         gpuFree(d_incomingGradMask);
-        auto d_mask_truncated_dI = secureml::genGPUTruncateKey(key_as_bytes, party, tb, p.bw, p.bw, p.scaleDiv, inSz, d_mask_dI, gaes); /*, mask_truncated_C);*/
+        auto d_mask_truncated_dI = wing::genGPUTruncateKey(key_as_bytes, party, tb, p.bw, p.bw, p.scaleDiv, inSz, d_mask_dI, gaes); /*, mask_truncated_C);*/
         return d_mask_truncated_dI;
     }
 
     template <typename T>
     void AvgPool2DLayer<T>::readForwardKey(u8 **key_as_bytes)
     {
-        truncateKeyF = secureml::readGPUTruncateKey<T>(tf, key_as_bytes);
+        truncateKeyF = wing::readGPUTruncateKey<T>(tf, key_as_bytes);
     }
 
     template <typename T>
     void AvgPool2DLayer<T>::readBackwardKey(u8 **key_as_bytes, int epoch)
     {
-        truncateKeyB = secureml::readGPUTruncateKey<T>(tb, key_as_bytes);
+        truncateKeyB = wing::readGPUTruncateKey<T>(tb, key_as_bytes);
     }
 
     template <typename T>
@@ -87,7 +86,7 @@ namespace secureml
     {
         auto d_O = gpuAddPool(p, d_I, &(this->s));
         // gpuFree(d_I);
-        secureml::gpuTruncate(p.bw, p.bw, tf, truncateKeyF, p.scaleDiv, peer, party, outSz, d_O, g, &(this->s));
+        wing::gpuTruncate(p.bw, p.bw, tf, truncateKeyF, p.scaleDiv, peer, party, outSz, d_O, g, &(this->s));
         return d_O;
     }
 
@@ -96,7 +95,7 @@ namespace secureml
     {
         auto d_dI = gpuAddPoolBackProp(p, d_incomingGrad, &(this->s));
         gpuFree(d_incomingGrad);
-        secureml::gpuTruncate(p.bw, p.bw, tb, truncateKeyB, p.scaleDiv, peer, party, inSz, d_dI, g, &(this->s));
+        wing::gpuTruncate(p.bw, p.bw, tb, truncateKeyB, p.scaleDiv, peer, party, inSz, d_dI, g, &(this->s));
         return d_dI;
     }
 }

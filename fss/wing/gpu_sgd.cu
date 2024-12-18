@@ -26,7 +26,7 @@
 
 #include "gpu_sgd.h"
 
-namespace secureml
+namespace wing
 {
 
     template <typename T>
@@ -35,10 +35,12 @@ namespace secureml
         int i = blockIdx.x * blockDim.x + threadIdx.x;
         if (i < N)
         {
+            // (d_dW << wing::mom_fp + T(wing::mom_fp) * d_Vw) >> wing::mom_fp;
             C[i] = (A[i] << shift) + alpha * B[i];
         }
     }
 
+    // gpuLeftShiftAndAdd(N, d_dW, d_Vw, d_Vw, shift, T(wing::mom_fp));
     template <typename T>
     void gpuLeftShiftAndAdd(int N, T *d_A, T *d_B, T *d_C, int shift, T alpha)
     {
@@ -54,11 +56,14 @@ namespace secureml
         printf("Enter genGpuSGDWithMomentumKey\n");
         size_t memSizeW = N * sizeof(T);
         auto d_Vw = (T *)moveToGPU((u8 *)h_Vw, memSizeW, NULL);
-        int shift = orca::mom_scale + scaleVw - scaledW;
+        int shift = wing::mom_scale + scaleVw - scaledW;
         // the d_dW mask got moved to the left by shift
-        gpuLeftShiftAndAdd(N, d_dW, d_Vw, d_Vw, shift, T(orca::mom_fp));
-        d_Vw = genGPUTruncateKey(key_as_bytes, party, t, bin, bout, orca::mom_scale, N, d_Vw, gaes);
+        // d_dW是没有reconstruct的
+        gpuLeftShiftAndAdd(N, d_dW, d_Vw, d_Vw, shift, T(wing::mom_fp));
+        // 这里不用reconstruct
+        d_Vw = genGPUTruncateKey(key_as_bytes, party, TruncateType::StochasticTruncate, bin, bout, wing::mom_scale, N, d_Vw, gaes);
         moveIntoCPUMem((u8 *)h_Vw, (u8 *)d_Vw /*d_dW*/, memSizeW, NULL);
+        //这里应该变成secret share的形式？
         printf("h_Vw=%ld\n", h_Vw[0]);
         bool dWWasNull = false;
         if (d_W == NULL)
@@ -66,61 +71,57 @@ namespace secureml
             d_W = (T *)moveToGPU((u8 *)h_W, memSizeW, NULL);
             dWWasNull = true;
         }
-        shift = orca::lr_scale[epoch] + scaleVw - scaleW;
+        shift = wing::lr_scale[epoch] + scaleVw - scaleW;
         // this is wrong it needs to be -lr
         auto d_new_W = (T *)gpuMalloc(memSizeW);
-        gpuLeftShiftAndAdd(N, d_W, d_Vw, d_new_W, shift, -T(orca::lr_fp));
+        // 这里额外多一步Reconstruct
+        gpuLeftShiftAndAdd(N, d_W, d_Vw, d_new_W, shift, -T(wing::lr_fp));
         if (shift > 0)
-            d_new_W = genGPUTruncateKey(key_as_bytes, party, t, bin, bout, shift, N, d_new_W, gaes);
+            d_new_W = genGPUTruncateKey(key_as_bytes, party, TruncateType::StochasticTruncate, bin, bout, shift, N, d_new_W, gaes);
         moveIntoCPUMem((u8 *)h_W, (u8 *)d_new_W, memSizeW, NULL);
         gpuFree(d_new_W);
         if (dWWasNull)
             gpuFree(d_W);
         gpuFree(d_Vw);
-        // // dW = W << (scale + orca::lr_scale[epoch]) + orca::lr_fp * Vw;
-        // shift = scaleVw + orca::lr_scale[epoch] - scaleW;
-        // // Neha: this is wrong. it needs to be -lr
-        // gpuLeftShiftAndAddWrapper(N, W, Vw, dW, shift, -orca::lr_fp);
-        // genGPUTruncateKey(f1, f2, shift > 0 ? t : TruncateType::None, bin, bout, shift, N, dW, W);
     }
 
     template <typename T>
     void readGpuSGDWithMomentumKey(TruncateType t, GPUTruncateKey<T> *truncateKeyVw, GPUTruncateKey<T> *truncateKeyW, u8 **key_as_bytes, int scaleW, int scaleVw, int scaledW, int epoch)
     {
         *truncateKeyVw = readGPUTruncateKey<T>(t, key_as_bytes);
-        int shift = orca::lr_scale[epoch] + scaleVw - scaleW;
+        int shift = wing::lr_scale[epoch] + scaleVw - scaleW;
         if (shift > 0)
             *truncateKeyW = readGPUTruncateKey<T>(t, key_as_bytes);
     }
 
     template <typename T>
     void gpuSgdWithMomentum(int bin, int bout, int N, T *h_W, T *d_W,
-                            T *h_Vw, T *d_dW, int scaleW, int scaleVw, int scaledW, secureml::TruncateType t,
-                            secureml::GPUTruncateKey<T> truncateKeyVw, GPUTruncateKey<T> truncateKeyW, int party, SigmaPeer *peer, AESGlobalContext *gaes, Stats *s, int epoch)
+                            T *h_Vw, T *d_dW, int scaleW, int scaleVw, int scaledW, wing::TruncateType t,
+                            wing::GPUTruncateKey<T> truncateKeyVw, GPUTruncateKey<T> truncateKeyW, int party, SigmaPeer *peer, AESGlobalContext *gaes, Stats *s, int epoch)
     {
         size_t memSizeW = N * sizeof(T);
         auto d_Vw = (T *)moveToGPU((u8 *)h_Vw, memSizeW, s);
-        int shift = orca::mom_scale + scaleVw - scaledW;
+        int shift = wing::mom_scale + scaleVw - scaledW;
         // printf("h_Vw=%ld\n", h_Vw[0]);
         // the d_dW mask got moved to the left by shift
-        gpuLeftShiftAndAdd(N, d_dW, d_Vw, d_Vw, shift, T(orca::mom_fp));
+        gpuLeftShiftAndAdd(N, d_dW, d_Vw, d_Vw, shift, T(wing::mom_fp));
         moveIntoCPUMem((u8 *)h_Vw, (u8 *)d_Vw /*d_dW*/, memSizeW, s);
         
-        secureml::gpuTruncate(bin, bout, t, truncateKeyVw, orca::mom_scale, peer, party, N, d_Vw, gaes, s);
+        wing::gpuTruncate(bin, bout, TruncateType::StochasticTruncate, truncateKeyVw, wing::mom_scale, peer, party, N, d_Vw, gaes, s, false);
         moveIntoCPUMem((u8 *)h_Vw, (u8 *)d_Vw /*d_dW*/, memSizeW, s);
         
 
         bool dWWasNull = false;
         if (d_W == NULL)
         {
-            d_W = (T *)moveToGPU((u8 *)h_W, memSizeW, s);
+            d_W = (T *)moveToGPU((u8 *)h_W, memSizeW, s);  
             dWWasNull = true;
         }
-        shift = orca::lr_scale[epoch] + scaleVw - scaleW;
+        shift = wing::lr_scale[epoch] + scaleVw - scaleW;
         // this is wrong it needs to be -lr
-        gpuLeftShiftAndAdd(N, d_W, d_Vw, d_W, shift, -T(orca::lr_fp));
+        gpuLeftShiftAndAdd(N, d_W, d_Vw, d_W, shift, -T(wing::lr_fp));
         if (shift > 0)
-            secureml::gpuTruncate(bin, bout, t, truncateKeyW, shift, peer, party, N, d_W, gaes, s);
+            wing::gpuTruncate(bin, bout, TruncateType::StochasticTruncate, truncateKeyW, shift, peer, party, N, d_W, gaes, s);
         moveIntoCPUMem((u8 *)h_W, (u8 *)d_W, memSizeW, s);
         printf("h_W=%ld\n", h_W[0]);
         if (dWWasNull)
@@ -135,15 +136,15 @@ namespace secureml
                               T *h_mask_W, T *h_mask_Vw,
                               int scaleW, int scaleVw, int scaledW, int epoch)
     {
-        int shiftdW = scaleVw + orca::mom_scale - scaledW;
-        int shiftW = orca::lr_scale[epoch] + scaleVw - scaleW;
+        int shiftdW = scaleVw + wing::mom_scale - scaledW;
+        int shiftW = wing::lr_scale[epoch] + scaleVw - scaleW;
         for (int i = 0; i < N; i++)
         {
             auto vw = h_masked_Vw[i] - h_mask_Vw[i];
-            auto vw_ct = cpuArs((h_dW[i] << shiftdW) + T(orca::mom_fp) * h_Vw[i], bin, orca::mom_scale);
+            auto vw_ct = cpuArs((h_dW[i] << shiftdW) + T(wing::mom_fp) * h_Vw[i], bin, wing::mom_scale);
             // if(i < 10) printf("%lu %lu\n", u64(vw), u64(vw_ct));
             // assert(vw - vw_ct <= 1);
-            auto w_ct = cpuArs((h_W[i] << shiftW) - T(orca::lr_fp) * vw_ct, bin, shiftW);
+            auto w_ct = cpuArs((h_W[i] << shiftW) - T(wing::lr_fp) * vw_ct, bin, shiftW);
             // this is the new masked f
             auto w = h_masked_W[i] - h_mask_W[i];
             // need to test this when the starting vf is non-zero
@@ -168,19 +169,19 @@ namespace secureml
                       T *d_dW, int scaleW, int scaledW, TruncateType t, AESGlobalContext *gaes, int epoch)
     {
         size_t memSizeW = N * sizeof(T);
-        auto d_delta = gpuMultiplyByConstant(d_dW, -T(orca::lr_fp), N);
-        int rightShift = scaledW + orca::lr_scale[epoch] - scaleW;
+        auto d_delta = gpuMultiplyByConstant(d_dW, -T(wing::lr_fp), N);
+        int rightShift = scaledW + wing::lr_scale[epoch] - scaleW;
         bool dWWasNull = false;
         if (rightShift > 0)
         {
-            assert(rightShift == orca::global::scale + orca::lr_scale[epoch]);
+            assert(rightShift == wing::global::scale + wing::lr_scale[epoch]);
             d_delta = genGPUTruncateKey(key_as_bytes, party, t, bin, bout, rightShift, N, d_delta, gaes);
             gpuLinearComb(bin, N, d_W, T(1), d_W, T(1), d_delta);
         }
         else
         {
-            int leftShift = scaleW - orca::lr_scale[epoch] - scaledW;
-            assert(leftShift == orca::global::scale - orca::lr_scale[epoch]);
+            int leftShift = scaleW - wing::lr_scale[epoch] - scaledW;
+            assert(leftShift == wing::global::scale - wing::lr_scale[epoch]);
             assert(d_W == NULL);
             d_W = (T *)moveToGPU((u8 *)h_W, memSizeW, NULL);
             dWWasNull = true;
@@ -195,7 +196,7 @@ namespace secureml
     template <typename T>
     void readGpuSGDKey(TruncateType t, int scaleW, int scaledW, GPUTruncateKey<T> *truncateKeyW, u8 **key_as_bytes, int epoch)
     {
-        int rightShift = scaledW + orca::lr_scale[epoch] - scaleW;
+        int rightShift = scaledW + wing::lr_scale[epoch] - scaleW;
         if (rightShift > 0)
         {
             *truncateKeyW = readGPUTruncateKey<T>(t, key_as_bytes);
@@ -209,19 +210,19 @@ namespace secureml
     {
         size_t memSizeW = N * sizeof(T);
         // the d_dW mask got moved to the left by shift
-        auto d_delta = gpuMultiplyByConstant(d_dW, -T(orca::lr_fp), N);
-        int rightShift = orca::lr_scale[epoch] + scaledW - scaleW;
+        auto d_delta = gpuMultiplyByConstant(d_dW, -T(wing::lr_fp), N);
+        int rightShift = wing::lr_scale[epoch] + scaledW - scaleW;
         bool dWWasNull = false;
         if (rightShift > 0)
         {
-            assert(rightShift == orca::global::scale + orca::lr_scale[epoch]);
-            secureml::gpuTruncate(bin, bout, t, truncateKeyW, rightShift, peer, party, N, d_delta, gaes, s);
+            assert(rightShift == wing::global::scale + wing::lr_scale[epoch]);
+            wing::gpuTruncate(bin, bout, t, truncateKeyW, rightShift, peer, party, N, d_delta, gaes, s);
             gpuLinearComb(bin, N, d_W, T(1), d_W, T(1), d_delta);
         }
         else
         {
-            int leftShift = scaleW - orca::lr_scale[epoch] - scaledW;
-            assert(leftShift == orca::global::scale - orca::lr_scale[epoch]);
+            int leftShift = scaleW - wing::lr_scale[epoch] - scaledW;
+            assert(leftShift == wing::global::scale - wing::lr_scale[epoch]);
             assert(d_W == NULL);
             d_W = (T *)moveToGPU((u8 *)h_W, memSizeW, NULL);
             dWWasNull = true;
@@ -239,13 +240,13 @@ namespace secureml
                   T *h_W, T *h_dW, T *h_masked_W,
                   T *h_mask_W, int scaleW, int scaledW, int epoch)
     {
-        int rightShift = orca::lr_scale[epoch] + scaledW - scaleW;
+        int rightShift = wing::lr_scale[epoch] + scaledW - scaleW;
         if (rightShift > 0)
         {
-            assert(rightShift == orca::global::scale + orca::lr_scale[epoch]);
+            assert(rightShift == wing::global::scale + wing::lr_scale[epoch]);
             for (int i = 0; i < N; i++)
             {
-                auto w_ct = h_W[i] - cpuArs(T(orca::lr_fp) * h_dW[i], bin, rightShift);
+                auto w_ct = h_W[i] - cpuArs(T(wing::lr_fp) * h_dW[i], bin, rightShift);
                 // this is the new masked f
                 auto w = h_masked_W[i] - h_mask_W[i];
                 // need to test this when the starting vf is non-zero
@@ -257,11 +258,11 @@ namespace secureml
         }
         else
         {
-            int leftShift = scaleW - orca::lr_scale[epoch] - scaledW;
-            assert(leftShift == orca::global::scale - orca::lr_scale[epoch]);
+            int leftShift = scaleW - wing::lr_scale[epoch] - scaledW;
+            assert(leftShift == wing::global::scale - wing::lr_scale[epoch]);
             for (int i = 0; i < N; i++)
             {
-                auto w_ct = h_W[i] - T(orca::lr_fp) * h_dW[i] * (T(1) << leftShift);
+                auto w_ct = h_W[i] - T(wing::lr_fp) * h_dW[i] * (T(1) << leftShift);
                 // this is the new masked f
                 auto w = h_masked_W[i] - h_mask_W[i];
                 // need to test this when the starting vf is non-zero

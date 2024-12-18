@@ -31,7 +31,7 @@
 #include <vector>
 
 // using namespace std;
-namespace secureml
+namespace wing
 {
 
     typedef void (*dcfPrologue)(int party, int bin, int N,

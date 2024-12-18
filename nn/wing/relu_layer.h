@@ -19,68 +19,37 @@
 // OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 // SOFTWARE.
 
-// #ifndef GPU_DATA_TYPES_H
-// #define GPU_DATA_TYPES_H
-
 #pragma once
 
-#include <utility>
-#include <stdint.h>
-#include <cstddef>
+#include "utils/gpu_comms.h"
 
-#include <sytorch/tensor.h>
+#include "fss/gpu_select.h"
+#include "fss/gpu_and.h"
+#include "fss/wing/gpu_relu.h"
 
-#include "gpu_stats.h"
-
-typedef unsigned __int128 AESBlock;
-
-#define SERVER0 0
-#define SERVER1 1
-#define DEALER 2
-#define AES_BLOCK_LEN_IN_BITS 128
-#define FULL_MASK 0xffffffff
-#define LOG_AES_BLOCK_LEN 7
-
-#define PACKING_SIZE 32
-#define PACK_TYPE uint32_t
-
-#define NUM_SHARED_MEM_BANKS 32
-
-using orcaTemplateClass = u64;
-
-struct replicated_secret_share64{
-    u64 * share_0;
-    u64 * share_1;
-    static const int bw = 64;
-    static const int scale = 24;
-};
-
-namespace dcf
-{
-    namespace orca
-    {
-        namespace global
-        {
-            static const int bw = 64;
-            static const int scale = 24;
-        }
-    }
-}
-
-namespace orca_o
-{
-    namespace global
-    {
-        static const int bw = 64;
-        static const int scale = 24;
-    }
-}
+#include "gpu_layer.h"
 
 namespace wing
 {
-    namespace global
+
+    template <typename T>
+    class ReluLayer : public GPULayer<T>
     {
-        static const int bw = 64;
-        static const int scale = 24;
-    }
+    public:
+        int bin, bout, numRelus;
+        GPU2RoundReLUKey<T> reluKey;
+        GPUSelectKey<T> backpropSelectKey;
+        u32 *drelu;
+        u8 *dReluMask;
+
+        ReluLayer(int bin, int bout, int numRelus);
+        T *genForwardKey(uint8_t **key_as_bytes, int party, T *d_inputMask, AESGlobalContext *g);
+        T *genBackwardKey(uint8_t **key_as_bytes, int party, T *d_incomingGradMask, AESGlobalContext *g, int epoch);
+        void readForwardKey(uint8_t **key_as_bytes);
+        void readBackwardKey(uint8_t **key_as_bytes, int epoch);
+        T *forward(SigmaPeer *peer, int party, T *d_I, AESGlobalContext *g);
+        T *backward(SigmaPeer *peer, int party, T *d_incomingGrad, AESGlobalContext *g, int epoch);
+    };
 }
+
+#include "relu_layer.cu"

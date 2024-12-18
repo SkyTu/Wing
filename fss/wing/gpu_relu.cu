@@ -22,7 +22,7 @@
 #include "gpu_relu.h"
 #include "utils/gpu_comms.h"
 
-namespace secureml
+namespace wing
 {
     template <typename T>
     __global__ void genSelectExtKernel(T* inputMask, T* outputMask, T* rm, u8* rd, T* rmd, T* rmu, T* m, T* ud, T* v, T* w, T* z, int bin, int bout, int N){

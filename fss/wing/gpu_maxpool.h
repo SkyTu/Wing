@@ -21,38 +21,37 @@
 
 #pragma once
 
-#include "utils/gpu_comms.h"
-
-#include "fss/gpu_select.h"
+#include "fss/gpu_maxpool.h"
 #include "fss/gpu_and.h"
-#include "fss/dcf/gpu_relu.h"
+#include "gpu_relu.h"
 
-#include "gpu_layer.h"
-
-namespace dcf
+namespace wing
 {
-    namespace orca
+
+    template <typename T>
+    struct GPUMaxpoolKey
     {
+        // GPU2RoundReLUKey<T> *reluKey;
+        dpf::GPUReluKey<T> *reluKey;
+        GPUAndKey *andKey;
+    };
 
-        template <typename T>
-        class ReluLayer : public GPULayer<T>
+    template <typename T>
+    GPUMaxpoolKey<T> readGPUMaxpoolKey(MaxpoolParams p, u8 **key_as_bytes)
+    {
+        GPUMaxpoolKey<T> k;
+        int rounds = p.FH * p.FW - 1;
+        // printf("Rounds=%d\n", rounds);
+        // k.reluKey = new GPU2RoundReLUKey<T>[rounds + 1];
+        k.reluKey = new dpf::GPUReluKey<T>[rounds + 1];
+        for (int i = 0; i < rounds; i++)
         {
-        public:
-            int bin, bout, numRelus;
-            GPU2RoundReLUKey<T> reluKey;
-            GPUSelectKey<T> backpropSelectKey;
-            u32 *drelu;
-            u8 *dReluMask;
-
-            ReluLayer(int bin, int bout, int numRelus);
-            T *genForwardKey(uint8_t **key_as_bytes, int party, T *d_inputMask, AESGlobalContext *g);
-            T *genBackwardKey(uint8_t **key_as_bytes, int party, T *d_incomingGradMask, AESGlobalContext *g, int epoch);
-            void readForwardKey(uint8_t **key_as_bytes);
-            void readBackwardKey(uint8_t **key_as_bytes, int epoch);
-            T *forward(SigmaPeer *peer, int party, T *d_I, AESGlobalContext *g);
-            T *backward(SigmaPeer *peer, int party, T *d_incomingGrad, AESGlobalContext *g, int epoch);
-        };
+            // k.reluKey[i + 1] = readTwoRoundReluKey<T>(key_as_bytes);
+            k.reluKey[i + 1] = dpf::readReluKey<T>(key_as_bytes);
+            // printf("Round %d=%d relus\n", i + 1, k.reluKey[i + 1].N);
+        }
+        return k;
     }
 }
 
-#include "relu_layer.cu"
+#include "gpu_maxpool.cu"

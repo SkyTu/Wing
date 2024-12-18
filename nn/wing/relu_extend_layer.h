@@ -22,39 +22,38 @@
 #pragma once
 
 #include "utils/gpu_comms.h"
-#include "fss/dcf/gpu_relu.h"
+#include "fss/wing/gpu_relu.h"
 #include "gpu_layer.h"
 
-namespace dcf
+
+namespace wing
 {
-    namespace orca
+
+    template <typename T>
+    class ReluExtendLayer : public GPULayer<T>
     {
+    public:
+        int bin, bout, /*f,*/ numRelus;
+        GPUReluZeroExtKey<T> reluExtendKey;
+        // GPUReluExtendKey<T> reluExtendKey;
+        u32 *drelu;
+        u8 *dReluMask;
+        GPUSelectExtendKey<T> backpropSelectExtKey;
+        GPUSelectKey<T> backpropSelectKey;
+        bool nextBackExt;
+        // AESGlobalContext* gaes;
+        // Stats s;
 
-        template <typename T>
-        class ReluExtendLayer : public GPULayer<T>
-        {
-        public:
-            int bin, bout, /*f,*/ numRelus;
-            GPUReluZeroExtKey<T> reluExtendKey;
-            // GPUReluExtendKey<T> reluExtendKey;
-            u32 *drelu;
-            u8 *dReluMask;
-            GPUSelectExtendKey<T> backpropSelectExtKey;
-            GPUSelectKey<T> backpropSelectKey;
-            bool nextBackExt;
-            // AESGlobalContext* gaes;
-            // Stats s;
-
-            ReluExtendLayer(int bin, int bout, int numRelus, bool nextBackExt);
-            ~ReluExtendLayer();
-            T *genForwardKey(uint8_t **key_as_bytes, int party, T *d_inputMask, AESGlobalContext *gaes);
-            T *genBackwardKey(uint8_t **key_as_bytes, int party, T *d_incomingGradMask, AESGlobalContext *gaes, int epoch);
-            void readForwardKey(uint8_t **key_as_bytes);
-            void readBackwardKey(uint8_t **key_as_bytes, int epoch);
-            T *forward(SigmaPeer *peer, int party, T *d_I, AESGlobalContext *g);
-            T *backward(SigmaPeer *peer, int party, T *d_incomingGrad, AESGlobalContext *g, int epoch);
-        };
-    }
+        ReluExtendLayer(int bin, int bout, int numRelus, bool nextBackExt);
+        ~ReluExtendLayer();
+        T *genForwardKey(uint8_t **key_as_bytes, int party, T *d_inputMask, AESGlobalContext *gaes);
+        T *genBackwardKey(uint8_t **key_as_bytes, int party, T *d_incomingGradMask, AESGlobalContext *gaes, int epoch);
+        void readForwardKey(uint8_t **key_as_bytes);
+        void readBackwardKey(uint8_t **key_as_bytes, int epoch);
+        T *forward(SigmaPeer *peer, int party, T *d_I, AESGlobalContext *g);
+        T *backward(SigmaPeer *peer, int party, T *d_incomingGrad, AESGlobalContext *g, int epoch);
+    };
 }
+
 
 #include "relu_extend_layer.cu"

@@ -21,37 +21,33 @@
 
 #pragma once
 
-#include "fss/gpu_maxpool.h"
-#include "fss/gpu_and.h"
-#include "gpu_relu.h"
+#include "utils/gpu_comms.h"
+#include "fss/wing/gpu_truncate.h"
+#include "nn/wing/gpu_layer.h"
 
-namespace secureml
+namespace wing
 {
 
     template <typename T>
-    struct GPUMaxpoolKey
+    class AvgPool2DLayer : public GPULayer<T>
     {
-        // GPU2RoundReLUKey<T> *reluKey;
-        dpf::GPUReluKey<T> *reluKey;
-        GPUAndKey *andKey;
-    };
 
-    template <typename T>
-    GPUMaxpoolKey<T> readGPUMaxpoolKey(MaxpoolParams p, u8 **key_as_bytes)
-    {
-        GPUMaxpoolKey<T> k;
-        int rounds = p.FH * p.FW - 1;
-        // printf("Rounds=%d\n", rounds);
-        // k.reluKey = new GPU2RoundReLUKey<T>[rounds + 1];
-        k.reluKey = new dpf::GPUReluKey<T>[rounds + 1];
-        for (int i = 0; i < rounds; i++)
-        {
-            // k.reluKey[i + 1] = readTwoRoundReluKey<T>(key_as_bytes);
-            k.reluKey[i + 1] = dpf::readReluKey<T>(key_as_bytes);
-            // printf("Round %d=%d relus\n", i + 1, k.reluKey[i + 1].N);
-        }
-        return k;
-    }
+    public:
+        AvgPoolParams p;
+        wing::TruncateType tf, tb;
+        wing::GPUTruncateKey<T> truncateKeyF, truncateKeyB;
+        int inSz, outSz;
+
+        AvgPool2DLayer(int bin, int bout, int scaleDiv, int N, int imgH, int imgW, int C, int FH, int FW, int strideH,
+                        int strideW, int zPadHLeft, int zPadHRight, int zPadWLeft, int zPadWRight, TruncateType tf, TruncateType tb);
+        T *genForwardKey(uint8_t **key_as_bytes, int party, T *inputMask, AESGlobalContext *g);
+        T *genBackwardKey(uint8_t **key_as_bytes, int party, T *incomingGradMask, AESGlobalContext *g, int epoch);
+        void readForwardKey(uint8_t **key_as_bytes);
+        void readBackwardKey(uint8_t **key_as_bytes, int epoch);
+        T *forward(SigmaPeer *peer, int party, T *d_I, AESGlobalContext *g);
+        T *backward(SigmaPeer *peer, int party, T *d_incomingGrad, AESGlobalContext *g, int epoch);
+    };
 }
 
-#include "gpu_maxpool.cu"
+
+#include "avg_pool_layer.cu"

@@ -31,7 +31,7 @@
 #include "fss/gpu_local_truncate.h"
 #include <cassert>
 
-namespace secureml
+namespace wing
 {
 
     template <typename T>
@@ -98,6 +98,7 @@ namespace secureml
         writeInt(key_as_bytes, bout);
         writeInt(key_as_bytes, shift);
         writeInt(key_as_bytes, N);
+        
         keygenTReKernel<<<(N - 1) / 128 + 1, 128>>>(party, shift, N, d_inputMask);
         return d_inputMask;
     }
