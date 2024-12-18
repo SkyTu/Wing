@@ -55,14 +55,17 @@ namespace wing
     void genGpuSGDWithMomentumKey(u8 **key_as_bytes, int party, int bin, int bout, int N, T *h_W, T *d_W,
                                   T *h_Vw, T *d_dW, int scaleW, int scaleVw, int scaledW, TruncateType t, AESGlobalContext *gaes, int epoch)
     {
-        printf("Enter genGpuSGDWithMomentumKey\n");
         size_t memSizeW = N * sizeof(T);
         auto d_Vw = (T *)moveToGPU((u8 *)h_Vw, memSizeW, NULL);
         int shift = wing::mom_scale + scaleVw - scaledW;
-        
         gpuLeftShiftAndAdd(N, d_dW, d_Vw, d_Vw, shift, T(wing::mom_fp));
-        // 这里不用reconstruct
-        d_Vw = genGPUTruncateKey(key_as_bytes, party, TruncateType::StochasticTR, bin, bout, wing::mom_scale, N, d_Vw, gaes);
+        bool update_bias = (wing::lr_scale[epoch] + scaleVw - scaleW == 0);
+        if (update_bias){
+            d_Vw = genGPUTruncateKey(key_as_bytes, party, TruncateType::StochasticTruncate, bin, bout, wing::mom_scale, N, d_Vw, gaes);
+        }
+        else{
+            d_Vw = genGPUTruncateKey(key_as_bytes, party, TruncateType::StochasticTR, bin, bout, wing::mom_scale, N, d_Vw, gaes);
+        }
         moveIntoCPUMem((u8 *)h_Vw, (u8 *)d_Vw /*d_dW*/, memSizeW, NULL);
         //这里应该变成secret share的形式？
         printf("h_Vw=%ld\n", h_Vw[0]);
@@ -74,11 +77,16 @@ namespace wing
         }
         shift = wing::lr_scale[epoch] + scaleVw - scaleW;
         // this is wrong it needs to be -lr
+        // 如果更新bias则不变
+        // 如果更新weight，前面乘完momentum之后，已经右移了mom_scale，接着乘以lr之后，还需要右移lr_scale
         auto d_new_W = (T *)gpuMalloc(memSizeW);
-        // 这里额外多一步Reconstruct
-        gpuLeftShiftAndAdd(N, d_W, d_Vw, d_new_W, shift, -T(wing::lr_fp));
-        if (shift > 0)
-            d_new_W = genGPUTruncateKey(key_as_bytes, party, TruncateType::StochasticTruncate, bin, bout, shift, N, d_new_W, gaes);
+        if (update_bias){
+            gpuLeftShiftAndAdd(N, d_W, d_Vw, d_new_W, shift, -T(wing::lr_fp));
+        }
+        else{
+            gpuLeftShiftAndAdd(N, d_W, d_Vw, d_new_W, shift+wing::mom_scale, -T(wing::lr_fp));
+            d_new_W = genGPUTruncateKey(key_as_bytes, party, TruncateType::StochasticTruncate, bin, bout, shift+wing::mom_scale, N, d_new_W, gaes);
+        }
         moveIntoCPUMem((u8 *)h_W, (u8 *)d_new_W, memSizeW, NULL);
         gpuFree(d_new_W);
         if (dWWasNull)
@@ -89,10 +97,14 @@ namespace wing
     template <typename T>
     void readGpuSGDWithMomentumKey(TruncateType t, GPUTruncateKey<T> *truncateKeyVw, GPUTruncateKey<T> *truncateKeyW, u8 **key_as_bytes, int scaleW, int scaleVw, int scaledW, int epoch)
     {
-        *truncateKeyVw = readGPUTruncateKey<T>(TruncateType::StochasticTR, key_as_bytes);
         int shift = wing::lr_scale[epoch] + scaleVw - scaleW;
-        if (shift > 0)
+        if (shift > 0){
+            *truncateKeyVw = readGPUTruncateKey<T>(TruncateType::StochasticTR, key_as_bytes);
             *truncateKeyW = readGPUTruncateKey<T>(TruncateType::StochasticTruncate, key_as_bytes);
+        }
+        else{
+            *truncateKeyVw = readGPUTruncateKey<T>(TruncateType::StochasticTruncate, key_as_bytes);
+        }
     }
 
     template <typename T>
@@ -103,11 +115,15 @@ namespace wing
         size_t memSizeW = N * sizeof(T);
         auto d_Vw = (T *)moveToGPU((u8 *)h_Vw, memSizeW, s);
         int shift = wing::mom_scale + scaleVw - scaledW;
-        // printf("h_Vw=%ld\n", h_Vw[0]);
-        // the d_dW mask got moved to the left by shift
-        std::cout << "calculate Vw current" << std::endl;
+        bool update_bias = (wing::lr_scale[epoch] + scaleVw - scaleW == 0);
         gpuLeftShiftAndAdd(N, d_dW, d_Vw, d_Vw, shift, T(wing::mom_fp));
-        wing::gpuTruncate(bin, bout, TruncateType::StochasticTR, truncateKeyVw, wing::mom_scale, peer, party, N, d_Vw, gaes, s, false);
+        if (update_bias){
+            wing::gpuTruncate(bin, bout, TruncateType::StochasticTruncate, truncateKeyVw, wing::mom_scale, peer, party, N, d_Vw, gaes, s);
+        }
+        else{
+            wing::gpuTruncate(bin, bout, TruncateType::StochasticTR, truncateKeyVw, wing::mom_scale, peer, party, N, d_Vw, gaes, s, false);
+        }
+        std::cout << "calculate Vw current" << std::endl;
         moveIntoCPUMem((u8 *)h_Vw, (u8 *)d_Vw /*d_dW*/, memSizeW, s);
 
         bool dWWasNull = false;
@@ -118,18 +134,20 @@ namespace wing
         }
         shift = wing::lr_scale[epoch] + scaleVw - scaleW;
         // this is wrong it needs to be -lr
-        auto d_new_W = (T *)gpuMalloc(memSizeW);
-        gpuLinearComb(wing::global::bw, N, d_new_W, T(party), d_W);
-        std::cout << "calculate W current" << std::endl;
-        gpuLeftShiftAndAdd(N, d_new_W, d_Vw, d_W, shift, -T(wing::lr_fp));
-        std::cout << "shift=" << shift << std::endl;
-        if (shift > 0)
-            wing::gpuTruncate(bin, bout, TruncateType::StochasticTruncate, truncateKeyW, shift, peer, party, N, d_W, gaes, s);
+        
+        if (update_bias){
+            gpuLeftShiftAndAdd(N, d_W, d_Vw, d_W, shift, -T(wing::lr_fp));
+        }
+        else{
+            auto d_new_W = (T *)gpuMalloc(memSizeW);
+            gpuLeftShiftAndAdd(N, d_new_W, d_Vw, d_W, shift+ wing::mom_scale, -T(wing::lr_fp));
+            wing::gpuTruncate(bin, bout, TruncateType::StochasticTruncate, truncateKeyW, shift + wing::mom_scale, peer, party, N, d_W, gaes, s);
+            gpuFree(d_new_W);
+        }
         moveIntoCPUMem((u8 *)h_W, (u8 *)d_W, memSizeW, s);
         printf("h_W=%ld\n", h_W[0]);
         if (dWWasNull)
             gpuFree(d_W);
-        gpuFree(d_new_W);
         gpuFree(d_Vw);
     }
 
