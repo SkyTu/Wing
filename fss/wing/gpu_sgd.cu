@@ -140,7 +140,7 @@ namespace wing
         }
         else{
             auto d_new_W = (T *)gpuMalloc(memSizeW);
-            gpuLeftShiftAndAdd(N, d_new_W, d_Vw, d_W, shift+ wing::mom_scale, -T(wing::lr_fp));
+            gpuLeftShiftAndAdd(N, d_new_W, d_Vw, d_W, shift + wing::mom_scale, -T(wing::lr_fp));
             wing::gpuTruncate(bin, bout, TruncateType::StochasticTruncate, truncateKeyW, shift + wing::mom_scale, peer, party, N, d_W, gaes, s);
             gpuFree(d_new_W);
         }
