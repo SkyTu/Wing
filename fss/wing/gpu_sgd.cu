@@ -36,6 +36,7 @@ namespace wing
         if (i < N)
         {
             // (d_dW << wing::mom_fp + T(wing::mom_fp) * d_Vw) >> wing::mom_fp;
+            if(i == 0)printf("A[i]=%ld, B[i]=%ld\n", A[i], B[i]);
             C[i] = (A[i] << shift) + alpha * B[i];
         }
     }
@@ -104,15 +105,11 @@ namespace wing
         int shift = wing::mom_scale + scaleVw - scaledW;
         // printf("h_Vw=%ld\n", h_Vw[0]);
         // the d_dW mask got moved to the left by shift
-        std::cout << "In gpu_sgd.cu " << __LINE__ << std::endl;
         gpuLinearComb(wing::global::bw, N, d_Vw, T(party), d_Vw);
-        std::cout << "In gpu_sgd.cu " << __LINE__ << std::endl;
+        std::cout << "calculate Vw current" << std::endl;
         gpuLeftShiftAndAdd(N, d_dW, d_Vw, d_Vw, shift, T(wing::mom_fp));
-        std::cout << "In gpu_sgd.cu " << __LINE__ << std::endl;
         wing::gpuTruncate(bin, bout, TruncateType::StochasticTR, truncateKeyVw, wing::mom_scale, peer, party, N, d_Vw, gaes, s, false);
-        std::cout << "In gpu_sgd.cu " << __LINE__ << std::endl;
         moveIntoCPUMem((u8 *)h_Vw, (u8 *)d_Vw /*d_dW*/, memSizeW, s);
-        std::cout << "In gpu_sgd.cu " << __LINE__ << std::endl;
 
         bool dWWasNull = false;
         if (d_W == NULL)
@@ -122,16 +119,13 @@ namespace wing
         }
         shift = wing::lr_scale[epoch] + scaleVw - scaleW;
         // this is wrong it needs to be -lr
-        std::cout << "In gpu_sgd.cu " << __LINE__ << std::endl;
         auto d_new_W = (T *)gpuMalloc(memSizeW);
         gpuLinearComb(wing::global::bw, N, d_new_W, T(party), d_W);
-        std::cout << "In gpu_sgd.cu " << __LINE__ << std::endl;
+        std::cout << "calculate W current" << std::endl;
         gpuLeftShiftAndAdd(N, d_new_W, d_Vw, d_W, shift, -T(wing::lr_fp));
-        std::cout << "In gpu_sgd.cu " << __LINE__ << std::endl;
         std::cout << "shift=" << shift << std::endl;
         if (shift > 0)
             wing::gpuTruncate(bin, bout, TruncateType::StochasticTruncate, truncateKeyW, shift, peer, party, N, d_W, gaes, s);
-        std::cout << "In gpu_sgd.cu " << __LINE__ << std::endl;
         moveIntoCPUMem((u8 *)h_W, (u8 *)d_W, memSizeW, s);
         printf("h_W=%ld\n", h_W[0]);
         if (dWWasNull)
