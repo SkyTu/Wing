@@ -114,6 +114,7 @@ namespace wing
         int shift = wing::mom_scale + scaleVw - scaledW;
         if (wing::lr_scale[epoch] + scaleVw - scaleW > 0){
             std::cout << "-------shift 1 = " << shift << "---------" << std::endl;
+            std::cout << "-------Reconstruct---------" << std::endl;
             peer->reconstructInPlace(d_dW, wing::global::bw, N, s);
         }
         bool update_bias = (wing::lr_scale[epoch] + scaleVw - scaleW == 0);
@@ -147,7 +148,7 @@ namespace wing
         else{
             auto d_new_W = (T *)gpuMalloc(memSizeW);
             // gpuLinearComb(wing::global::bw, N, d_new_W, T(party), d_W);
-            gpuLeftShiftAndAdd(N, d_new_W, d_Vw, d_W, shift, -T(wing::lr_fp));
+            gpuLeftShiftAndAdd(N, d_W, d_Vw, d_W, shift, -T(wing::lr_fp));
             wing::gpuTruncate(bin, bout, TruncateType::StochasticTruncate, truncateKeyW, shift, peer, party, N, d_W, gaes, s);
             gpuFree(d_new_W);
         }
