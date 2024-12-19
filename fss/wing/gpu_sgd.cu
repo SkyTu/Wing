@@ -74,11 +74,11 @@ namespace wing
             dWWasNull = true;
         }
         shift = wing::lr_scale[epoch] + scaleVw - scaleW;
-        if (wing::lr_scale[epoch] + scaleVw - scaleW > 0){
-            std::cout << "-------shift 2 = " << shift << "---------" << std::endl;
-        }
         auto d_new_W = (T *)gpuMalloc(memSizeW);
         gpuLeftShiftAndAdd(N, d_W, d_Vw, d_new_W, shift, -T(wing::lr_fp));
+        if (wing::lr_scale[epoch] + scaleVw - scaleW > 0){
+            std::cout << "-------shift 1 = " << shift << "---------" << std::endl;
+        }
         if (shift > 0){
             d_new_W = genGPUTruncateKey(key_as_bytes, party, TruncateType::StochasticTruncate, bin, bout, shift, N, d_new_W, gaes);
         }
@@ -110,8 +110,11 @@ namespace wing
     {
         size_t memSizeW = N * sizeof(T);
         auto d_Vw = (T *)moveToGPU((u8 *)h_Vw, memSizeW, s);
-        std::cout << "h_Vw=" << h_Vw[0] << std::endl;
+        std::cout << "In gpuSgdWithMomentum h_Vw=" << h_Vw[0] << std::endl;
         int shift = wing::mom_scale + scaleVw - scaledW;
+        if (wing::lr_scale[epoch] + scaleVw - scaleW > 0){
+            std::cout << "-------shift 1 = " << shift << "---------" << std::endl;
+        }
         bool update_bias = (wing::lr_scale[epoch] + scaleVw - scaleW == 0);
         gpuLeftShiftAndAdd(N, d_dW, d_Vw, d_Vw, shift, T(wing::mom_fp));
         if (update_bias){
@@ -131,7 +134,9 @@ namespace wing
         }
         shift = wing::lr_scale[epoch] + scaleVw - scaleW;
         // this is wrong it needs to be -lr
-        
+        if (wing::lr_scale[epoch] + scaleVw - scaleW > 0){
+            std::cout << "-------shift 2 = " << shift << "---------" << std::endl;
+        }
         if (update_bias){
             gpuLeftShiftAndAdd(N, d_W, d_Vw, d_W, shift, -T(wing::lr_fp));
         }
