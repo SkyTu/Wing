@@ -68,8 +68,8 @@ int main(int argc, char *argv[])
     auto d_masked_grad = getMaskedInputOnGpu<T>(fc_layer.p.size_C, bin, d_mask_grad, &h_grad, true, 20);
 
     auto d_mask_Vw = randomGEOnGpu<T>(fc_layer.p.size_B, bin);
-    auto h_masked_Vw = getMaskedInputOnCpu<T>(fc_layer.p.size_B, bin, d_mask_Vw, &h_Vw, true, 20);
-    gpuLinearComb(wing::global::bw, fc_layer.p.size_B, d_mask_Vw, T(party), d_mask_Vw);
+    auto h_masked_Vw = getMaskedInputOnCpu<T>(fc_layer.p.size_B, bin, d_mask_Vw, &h_Vw, true, 20, true, party);
+
     auto d_mask_Vy = randomGEOnGpu<T>(N, bin);
     auto h_masked_Vy = getMaskedInputOnCpu<T>(N, bin, d_mask_Vy, &h_Vy, true, 20);
 

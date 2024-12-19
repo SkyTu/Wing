@@ -210,11 +210,15 @@ T *getMaskedInputOnGpu(int N, int bw, T *d_mask_I, T **h_I, bool smallInputs, in
 }
 
 template <typename T>
-T *getMaskedInputOnCpu(int N, int bw, T *h_mask_I, T **h_I, bool smallInputs, int smallBw)
+T *getMaskedInputOnCpu(int N, int bw, T *h_mask_I, T **h_I, bool smallInputs, int smallBw, bool outputShare, int party)
 {
   size_t memSzI = N * sizeof(T);
   auto d_mask_I = (T *)moveToGPU((u8 *)h_mask_I, memSzI, NULL);
   auto d_masked_I = getMaskedInputOnGpu<T>(N, bw, d_mask_I, h_I, smallInputs, smallBw);
+  if (outputShare)
+  {
+    gpuLinearComb(wing::global::bw, N, d_masked_I, T(party), d_masked_I);
+  }
   gpuFree(d_mask_I);
   auto h_masked_I = (T *)moveToCPU((u8 *)d_masked_I, memSzI, NULL);
   gpuFree(d_masked_I);

@@ -39,7 +39,7 @@ void destroyCPURandomness();
 template <typename T>
 T *getMaskedInputOnGpu(int N, int bw, T *d_mask_I, T **h_I, bool smallInputs = false, int smallBw = 0);
 template <typename T>
-T *getMaskedInputOnCpu(int N, int bw, T *h_mask_I, T **h_I, bool smallInputs = false, int smallBw = 0);
+T *getMaskedInputOnCpu(int N, int bw, T *h_mask_I, T **h_I, bool smallInputs = false, int smallBw = 0, bool outputShare = false, int party = 0);
 template <typename TIn, typename TOut>
 void writeShares(u8 **key_as_bytes, int party, u64 N, TIn *d_A, int bw, bool randomShares = true);
 
