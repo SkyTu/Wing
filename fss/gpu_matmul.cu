@@ -379,7 +379,7 @@ T *gpuMatmulGmw(SigmaPeer *peer, int party, MatmulParams p, GPUMatmulKey<T> &k, 
 }
 
 template <typename T>
-T *gpuMatmulWrapper(MatmulParams p, T *h_A, T *h_B, T *h_C, bool cIsBias)
+T *gpuMatmulWrapper(MatmulParams p, T *h_A, T *h_B, T *h_C, bool cIsBias, bool outputShare = false, int party = 1)
 {
     size_t memSzBias = p.N * sizeof(T);
     size_t memSzC = p.size_C * sizeof(T);
@@ -390,6 +390,8 @@ T *gpuMatmulWrapper(MatmulParams p, T *h_A, T *h_B, T *h_C, bool cIsBias)
         d_C = (T *)moveToGPU((u8 *)h_C, cIsBias ? memSzBias : memSzC, NULL);
     // Need to fix this
     auto d_D = cutlassMatmulWrapper<T>(p, d_A, d_B, d_C, cIsBias, true);
+    if (outputShare)
+        gpuLinearComb<T>(p.bw, p.size_C, d_D, T(party), d_D);
     gpuFree(d_A);
     gpuFree(d_B);
     if (d_C)

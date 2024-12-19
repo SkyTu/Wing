@@ -63,7 +63,7 @@ namespace wing
         }
         gpuLeftShiftAndAdd(N, d_dW, d_Vw, d_Vw, shift, T(wing::mom_fp));
         bool update_bias = (wing::lr_scale[epoch] + scaleVw - scaleW == 0);
-        d_Vw = genGPUTruncateKey(key_as_bytes, party, TruncateType::StochasticTruncate, bin, bout, wing::mom_scale, N, d_Vw, gaes);
+        d_Vw = genGPUTruncateKey(key_as_bytes, party, wing::TruncateType::StochasticTruncate, bin, bout, wing::mom_scale, N, d_Vw, gaes);
         moveIntoCPUMem((u8 *)h_Vw, (u8 *)d_Vw /*d_dW*/, memSizeW, NULL);
         //这里应该变成secret share的形式？
         printf("h_Vw=%ld\n", h_Vw[0]);
@@ -80,7 +80,7 @@ namespace wing
             std::cout << "-------shift 1 = " << shift << "---------" << std::endl;
         }
         if (shift > 0){
-            d_new_W = genGPUTruncateKey(key_as_bytes, party, TruncateType::StochasticTruncate, bin, bout, shift, N, d_new_W, gaes);
+            d_new_W = genGPUTruncateKey(key_as_bytes, party, wing::TruncateType::StochasticTruncate, bin, bout, shift, N, d_new_W, gaes);
         }
         moveIntoCPUMem((u8 *)h_W, (u8 *)d_new_W, memSizeW, NULL);
         gpuFree(d_new_W);
@@ -116,12 +116,12 @@ namespace wing
         
         if (update_bias){
             gpuLeftShiftAndAdd(N, d_dW, d_Vw, d_Vw, shift, T(wing::mom_fp));
-            wing::gpuTruncate(bin, bout, TruncateType::StochasticTruncate, truncateKeyVw, wing::mom_scale, peer, party, N, d_Vw, gaes, s);
+            wing::gpuTruncate(bin, bout, wing::TruncateType::StochasticTruncate, truncateKeyVw, wing::mom_scale, peer, party, N, d_Vw, gaes, s);
         }
         else{
-            gpuLinearComb(wing::global::bw, N, d_Vw, T(party), d_Vw);
+            // gpuLinearComb(wing::global::bw, N, d_Vw, T(party), d_Vw);
             gpuLeftShiftAndAdd(N, d_dW, d_Vw, d_Vw, shift, T(wing::mom_fp));
-            wing::gpuTruncate(bin, bout, TruncateType::StochasticTruncate, truncateKeyVw, wing::mom_scale, peer, party, N, d_Vw, gaes, s);
+            wing::gpuTruncate(bin, bout, wing::TruncateType::StochasticTruncate, truncateKeyVw, wing::mom_scale, peer, party, N, d_Vw, gaes, s, false);
         }
         moveIntoCPUMem((u8 *)h_Vw, (u8 *)d_Vw /*d_dW*/, memSizeW, s);
         std::cout << "h_Vw=" << h_Vw[0] << std::endl;
@@ -142,9 +142,9 @@ namespace wing
         }
         else{
             auto d_new_W = (T *)gpuMalloc(memSizeW);
-            // gpuLinearComb(wing::global::bw, N, d_new_W, T(party), d_W);
+            gpuLinearComb(wing::global::bw, N, d_new_W, T(party), d_W);
             gpuLeftShiftAndAdd(N, d_W, d_Vw, d_W, shift, -T(wing::lr_fp));
-            wing::gpuTruncate(bin, bout, TruncateType::StochasticTruncate, truncateKeyW, shift, peer, party, N, d_W, gaes, s);
+            wing::gpuTruncate(bin, bout, wing::TruncateType::StochasticTruncate, truncateKeyW, shift, peer, party, N, d_W, gaes, s);
             gpuFree(d_new_W);
         }
         moveIntoCPUMem((u8 *)h_W, (u8 *)d_W, memSizeW, s);

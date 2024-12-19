@@ -69,6 +69,7 @@ int main(int argc, char *argv[])
 
     auto d_mask_Vw = randomGEOnGpu<T>(fc_layer.p.size_B, bin);
     auto h_masked_Vw = getMaskedInputOnCpu<T>(fc_layer.p.size_B, bin, d_mask_Vw, &h_Vw, true, 20);
+    gpuLinearComb(wing::global::bw, fc_layer.p.size_B, d_mask_Vw, T(party), d_mask_Vw);
     auto d_mask_Vy = randomGEOnGpu<T>(N, bin);
     auto h_masked_Vy = getMaskedInputOnCpu<T>(N, bin, d_mask_Vy, &h_Vy, true, 20);
 
@@ -121,8 +122,8 @@ int main(int argc, char *argv[])
     printf("Checking dX\n");
 
     checkTrStWithTol<T>(bin, bout, global::scale, fc_layer.p.size_A, h_masked_dX, h_mask_dX, h_dX_ct);
-    auto h_dW_ct = gpuMatmulWrapper<T>(fc_layer.pdW, h_X, h_grad, NULL, false);
-
+    auto h_dW_ct = gpuMatmulWrapper<T>(fc_layer.pdW, h_X, h_grad, NULL, false, true, party);
+    
     printf("Checking sgd for W, momentum=%d\n", useMomentum);
     checkOptimizer<T>(bin, bout, fc_layer.p.size_B, h_W, h_Vw, h_dW_ct, fc_layer.W, fc_layer.Vw,
                       h_mask_new_W, h_mask_new_Vw, global::scale, 2 * global::scale, 2 * global::scale, useMomentum, epoch);
