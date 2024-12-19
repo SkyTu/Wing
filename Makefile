@@ -77,6 +77,9 @@ wing_dealer: experiments/wing/wing_dealer.cu
 wing_evaluator: experiments/wing/wing_evaluator.cu experiments/datasets/mnist.cpp
 	$(CXX) $(FLAGS) $(INCLUDES) $^ $(UTIL_FILES) $(LIBS) $(SECFLOAT_LIBS) -o experiments/wing/wing_evaluator
 
+wing_fc: tests/nn/wing/fc_test.cu
+	$(CXX) $(FLAGS) $(INCLUDES) $^ $(UTIL_FILES) $(LIBS) -o tests/nn/wing/fc
+
 dcf: tests/fss/dcf/dcf.cu
 	$(CXX) $(FLAGS) $(INCLUDES) $^ $(UTIL_FILES) $(LIBS) -o tests/fss/dcf/dcf
 

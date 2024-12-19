@@ -215,7 +215,7 @@ namespace dcf
                 mmKeydX.B = mmKey.B;
                 mmKeydX.C = mask_dX;
 
-                truncateKeydX = readGPUTruncateKey<T>(tb, key_as_bytes);
+                truncat eKeydX = readGPUTruncateKey<T>(tb, key_as_bytes);
             }
 
             readOptimizerKey(tb, &truncateKeyVw, &truncateKeyW, key_as_bytes, global::scale, 2 * global::scale, 2 * global::scale, this->useMomentum, epoch);

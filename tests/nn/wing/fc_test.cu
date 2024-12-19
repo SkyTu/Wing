@@ -28,6 +28,7 @@
 #include "utils/misc_utils.h"
 #include "utils/gpu_comms.h"
 #include "utils/gpu_random.h"
+#include "utils/rss3_comms.h"
 
 #include "fss/gpu_matmul.h"
 #include "nn/wing/fc_layer.h"
@@ -43,21 +44,21 @@ int main(int argc, char *argv[])
     AESGlobalContext g;
     initAESContext(&g);
     initGPURandomness();
-    int bin = 64, bout = 64, M = 100, N = 10, K = 64, shift = 24;
-    bool useMomentum = false;
+    int bin = 64, bout = 64, M = 100, N = 10, K = 64;
+    bool useMomentum = true;
     int epoch = 0;
 
     int party = atoi(argv[1]);
     auto peer = new GpuPeer(false);
     peer->connect(party, argv[2]);
 
-    auto fc_layer = wing::FCLayer<T>(bin, bout, M, N, K, wing::TruncateType::StochasticTruncate, wing::TruncateType::StochasticTruncate, true, true, false);
+    auto fc_layer = FCLayer<T>(bin, bout, M, N, K, wing::TruncateType::StochasticTR, wing::TruncateType::StochasticTruncate, true, true, false);
     fc_layer.setTrain(useMomentum);
     T *h_X, *h_W, *h_Y, *h_Z, *h_grad, *h_Vw, *h_Vy;
 
     // check: have you reconstructed the masked output in the protocol?
-    auto d_mask_X = randomGEOnGpu<T>(fc_layer.p.size_A, bin-shift);
-    auto d_masked_X = getMaskedInputOnGpu<T>(fc_layer.p.size_A, bin-shift, d_mask_X, &h_X, true, 20);
+    auto d_mask_X = randomGEOnGpu<T>(fc_layer.p.size_A, bin);
+    auto d_masked_X = getMaskedInputOnGpu<T>(fc_layer.p.size_A, bin, d_mask_X, &h_X, true, 20);
     auto d_mask_W = randomGEOnGpu<T>(fc_layer.p.size_B, bin);
     auto h_masked_W = getMaskedInputOnCpu<T>(fc_layer.p.size_B, bin, d_mask_W, &h_W, true, 20);
     auto d_mask_Y = randomGEOnGpu<T>(N, bin);
@@ -81,8 +82,8 @@ int main(int argc, char *argv[])
 
     auto d_mask_Z = fc_layer.genForwardKey(&curPtr, party, d_mask_X, &g);
     auto h_mask_Z = (T *)moveToCPU((u8 *)d_mask_Z, fc_layer.mmKey.mem_size_C, NULL);
-    // auto d_mask_dX = fc_layer.genBackwardKey(&curPtr, party, d_mask_grad, &g, epoch);
-    // auto h_mask_dX = (T *)moveToCPU((u8 *)d_mask_dX, fc_layer.mmKey.mem_size_A, NULL);
+    auto d_mask_dX = fc_layer.genBackwardKey(&curPtr, party, d_mask_grad, &g, epoch);
+    auto h_mask_dX = (T *)moveToCPU((u8 *)d_mask_dX, fc_layer.mmKey.mem_size_A, NULL);
 
     auto h_mask_new_Vw = (T *)cpuMalloc(fc_layer.p.size_B * sizeof(T));
     auto h_mask_new_Vy = (T *)cpuMalloc(N * sizeof(T));
@@ -107,27 +108,27 @@ int main(int argc, char *argv[])
     // uncommment for bias
     memcpy(fc_layer.Vy, h_masked_Vy, N * sizeof(T));
 
-    // auto d_masked_dX = fc_layer.backward(peer, party, d_masked_grad, &g, epoch);
+    auto d_masked_dX = fc_layer.backward(peer, party, d_masked_grad, &g, epoch);
 
     auto h_masked_Z = (T *)moveToCPU((u8 *)d_masked_Z, fc_layer.mmKey.mem_size_C, NULL);
-    // auto h_masked_dX = (T *)moveToCPU((u8 *)d_masked_dX, fc_layer.mmKey.mem_size_A, NULL);
+    auto h_masked_dX = (T *)moveToCPU((u8 *)d_masked_dX, fc_layer.mmKey.mem_size_A, NULL);
     auto h_Z_ct = gpuMatmulWrapper<T>(fc_layer.p, h_X, h_W, h_Y, true);
 
     printf("Checking Z\n");
     checkTrStWithTol<T>(bin, bout, global::scale, fc_layer.p.size_C, h_masked_Z, h_mask_Z, h_Z_ct);
 
     auto h_dX_ct = gpuMatmulWrapper<T>(fc_layer.pdX, h_grad, h_W, NULL, false);
-    // printf("Checking dX\n");
+    printf("Checking dX\n");
 
-    // checkTrStWithTol<T>(bin, bout, global::scale, fc_layer.p.size_A, h_masked_dX, h_mask_dX, h_dX_ct);
-    // auto h_dW_ct = gpuMatmulWrapper<T>(fc_layer.pdW, h_X, h_grad, NULL, false);
+    checkTrStWithTol<T>(bin, bout, global::scale, fc_layer.p.size_A, h_masked_dX, h_mask_dX, h_dX_ct);
+    auto h_dW_ct = gpuMatmulWrapper<T>(fc_layer.pdW, h_X, h_grad, NULL, false);
 
-    // printf("Checking sgd for W, momentum=%d\n", useMomentum);
-    // checkOptimizer<T>(bin, bout, fc_layer.p.size_B, h_W, h_Vw, h_dW_ct, fc_layer.W, fc_layer.Vw,
-    //                   h_mask_new_W, h_mask_new_Vw, global::scale, 2 * global::scale, 2 * global::scale, useMomentum, epoch);
+    printf("Checking sgd for W, momentum=%d\n", useMomentum);
+    checkOptimizer<T>(bin, bout, fc_layer.p.size_B, h_W, h_Vw, h_dW_ct, fc_layer.W, fc_layer.Vw,
+                      h_mask_new_W, h_mask_new_Vw, global::scale, 2 * global::scale, 2 * global::scale, useMomentum, epoch);
 
-    // auto h_dY_ct = getBiasGradWrapper<T>(M, N, bout, h_grad);
-    // printf("Checking sgd for Y, momentum=%d\n", useMomentum);
-    // checkOptimizer<T>(bin, bout, N, h_Y, h_Vy, h_dY_ct, fc_layer.Y, fc_layer.Vy, h_mask_new_Y, h_mask_new_Vy, 2 * global::scale, 2 * global::scale - lr_scale[epoch], global::scale, useMomentum, epoch);
+    auto h_dY_ct = getBiasGradWrapper<T>(M, N, bout, h_grad);
+    printf("Checking sgd for Y, momentum=%d\n", useMomentum);
+    checkOptimizer<T>(bin, bout, N, h_Y, h_Vy, h_dY_ct, fc_layer.Y, fc_layer.Vy, h_mask_new_Y, h_mask_new_Vy, 2 * global::scale, 2 * global::scale - lr_scale[epoch], global::scale, useMomentum, epoch);
     return 0;
 }
