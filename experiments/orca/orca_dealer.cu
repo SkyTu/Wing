@@ -176,10 +176,10 @@ int main(int argc, char *argv[])
 
     omp_set_num_threads(32);
     int epochs = 1;
-    int blocks = 46;
-    int blockSz = 10; // 600
+    int blocks = 5;   // 46;
+    int blockSz = 10; // 600;
     int batchSz = 128;
-    dealerE2E("CNN2", party, epochs, blocks, blockSz, batchSz, 28, 28, 1, false, false, keyDir, 300, "", true);
-    // dealerE2E("P-SecureML", party, epochs, blocks, blockSz, batchSz, 28, 28, 1, false, false, keyDir, 300, "", true);
+    // dealerE2E("CNN2", party, epochs, blocks, blockSz, batchSz, 28, 28, 1, false, false, keyDir, 300, "", true);
+    dealerE2E("P-SecureML", party, epochs, blocks, blockSz, batchSz, 28, 28, 1, true, true, keyDir, 300, "", true);
     return 0;
 }
