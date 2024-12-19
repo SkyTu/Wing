@@ -36,8 +36,9 @@ namespace wing
         if (i < N)
         {
             // (d_dW << wing::mom_fp + T(wing::mom_fp) * d_Vw) >> wing::mom_fp;
-            if(i == 0)printf("A[i]=%ld, B[i]=%ld\n", A[i], B[i]);
+            
             C[i] = (A[i] << shift) + alpha * B[i];
+            if(i == 10)printf("A[i]=%ld, B[i]=%ld, C[i]=%ld, shift=%d, alpha=%d\n", A[i], B[i], C[i]);
         }
     }
 
@@ -46,8 +47,16 @@ namespace wing
     void gpuLeftShiftAndAdd(int N, T *d_A, T *d_B, T *d_C, int shift, T alpha)
     {
         assert(shift < sizeof(T) * 64);
+        std::cout << "In gpuLeftShiftAndAdd" << std::endl;
+        std::cout << "shift=" << shift << ", alpha=" << alpha << std::endl;
         leftShiftAndAddKernel<<<(N - 1) / 128 + 1, 128>>>(d_A, d_B, d_C, shift, alpha, N);
         checkCudaErrors(cudaDeviceSynchronize());
+        // 检查内核调用后的错误
+        cudaError_t err = cudaGetLastError();
+        if (err != cudaSuccess)
+        {
+            std::cerr << "CUDA error: " << cudaGetErrorString(err) << std::endl;
+        }
     }
 
     // global::scale, Vw: 2 * global::scale, dW: 2 * global::scale
@@ -59,7 +68,7 @@ namespace wing
         auto d_Vw = (T *)moveToGPU((u8 *)h_Vw, memSizeW, NULL);
         int shift = wing::mom_scale + scaleVw - scaledW;
         if (wing::lr_scale[epoch] + scaleVw - scaleW > 0){
-            std::cout << "-------shift 1 = " << shift << "---------" << std::endl;
+            std::cout << "-------shift 1 = " << shift << " mom" << T(wing::mom_fp) << "---------" << std::endl;
         }
         gpuLeftShiftAndAdd(N, d_dW, d_Vw, d_Vw, shift, T(wing::mom_fp));
         bool update_bias = (wing::lr_scale[epoch] + scaleVw - scaleW == 0);
