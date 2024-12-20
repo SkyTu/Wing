@@ -35,10 +35,19 @@ namespace wing
         int i = blockIdx.x * blockDim.x + threadIdx.x;
         if (i < N)
         {
-            // (d_dW << wing::mom_fp + T(wing::mom_fp) * d_Vw) >> wing::mom_fp;
             assert(shift > 0 || alpha > 0);
-            C[i] = (A[i] << shift) + alpha * B[i];
-            if(i == 1) printf("%lu %lu %lu %lu %d\n", A[i], B[i], C[i], alpha, shift);
+            // C[i] = (A[i] << shift) + alpha * B[i];
+            if(i == 1) {
+                printf("%lu %lu %lu %lu %d\n", A[i], B[i], C[i], alpha, shift);
+            } 
+            auto c = alpha * B[i];
+            auto d = (A[i] << shift);
+            C[i] = c + d;
+            gpuMod(C[i], wing::global::bw);
+            if(i == 1) {
+                printf("%lu %lu %lu %lu %d\n", A[i], B[i], C[i], alpha, shift);
+                printf("%lu %lu \n", c, d);
+            }            
         }
     }
 
