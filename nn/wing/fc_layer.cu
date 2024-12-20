@@ -143,7 +143,8 @@ namespace wing
     {
         this->checkIfTrain();
 
-        auto d_mask_dW = randomGEOnGpu<T>(p.size_B, p.bw);
+        // auto d_mask_dW = randomGEOnGpu<T>(p.size_B, p.bw);
+        auto d_mask_dW = randomGEOnGpu<T>(p.size_B, 0);
         auto d_mask_X = (T *)moveToGPU((u8 *)mask_X, mmKey.mem_size_A, NULL);
         auto d_masked_dW = gpuMatmulPlaintext(pdW, d_mask_X, d_mask_grad, d_mask_dW, false);
 
