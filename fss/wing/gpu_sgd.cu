@@ -150,7 +150,7 @@ namespace wing
         else{
             auto d_new_W = (T *)gpuMalloc(memSizeW);
             gpuLinearComb(wing::global::bw, N, d_new_W, T(party), d_W);
-            gpuLeftShiftAndAdd(N, d_W, d_Vw, d_W, shift, -T(wing::lr_fp));
+            gpuLeftShiftAndAdd(N, d_new_W, d_Vw, d_W, shift, -T(wing::lr_fp));
             wing::gpuTruncate(bin, bout, wing::TruncateType::StochasticTruncate, truncateKeyW, shift, peer, party, N, d_W, gaes, s);
             gpuFree(d_new_W);
         }
@@ -170,7 +170,6 @@ namespace wing
     {
         int shiftdW = scaleVw + wing::mom_scale - scaledW;
         int shiftW = wing::lr_scale[epoch] + scaleVw - scaleW;
-        std::cout << "In checkSgdWithMomentum" << std::endl;
         std::cout << "bin=" << bin << ", bout=" << bout << ", mom_scale=" << wing::mom_scale << ", shiftW=" << shiftW << std::endl;
         for (int i = 0; i < N; i++)
         {
