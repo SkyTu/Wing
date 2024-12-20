@@ -104,7 +104,7 @@ namespace dcf
         size_t memSizeW = N * sizeof(T);
         auto d_Vw = (T *)moveToGPU((u8 *)h_Vw, memSizeW, s);
         int shift = orca::mom_scale + scaleVw - scaledW;
-        // printf("h_Vw=%ld\n", h_Vw[0]);
+        std::cout << "In gpuSgdWithMomentum h_Vw=" << h_Vw[0] << std::endl;
         // the d_dW mask got moved to the left by shift
         gpuLeftShiftAndAdd(N, d_dW, d_Vw, d_Vw, shift, T(orca::mom_fp));
         dcf::gpuTruncate(bin, bout, t, truncateKeyVw, orca::mom_scale, peer, party, N, d_Vw, gaes, s);
@@ -122,6 +122,7 @@ namespace dcf
         if (shift > 0)
             dcf::gpuTruncate(bin, bout, t, truncateKeyW, shift, peer, party, N, d_W, gaes, s);
         moveIntoCPUMem((u8 *)h_W, (u8 *)d_W, memSizeW, s);
+        std::cout << "h_Vw=" << h_Vw[0] << std::endl;
         if (dWWasNull)
             gpuFree(d_W);
         gpuFree(d_Vw);
