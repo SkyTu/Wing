@@ -149,7 +149,7 @@ namespace dcf
             // need to test this when the starting vf is non-zero
             auto diff = abs(static_cast<int64_t>(u64(w) - u64(w_ct)));
             if (i < 10)
-                printf("%lu %lu %ld\n", u64(w), u64(w_ct), diff);
+                printf("%lu %lu h_mask_Vw %lu %ld\n", u64(w), u64(w_ct), u64(h_mask_Vw[i]), diff);
             // the two is important
             assert(/*abs(static_cast<int64_t>(w - w_ct))*/ diff <= 2);
         }
