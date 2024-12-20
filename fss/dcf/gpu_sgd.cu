@@ -35,8 +35,11 @@ namespace dcf
         int i = blockIdx.x * blockDim.x + threadIdx.x;
         if (i < N)
         {
+            if(i == 1) {
+                printf("%lu %lu %lu %lu %d\n", A[i], B[i], C[i], alpha, shift);
+            } 
             C[i] = (A[i] << shift) + alpha * B[i];
-            // if(i == 1) printf("%u %u %u %u %d\n", A[i], B[i], alpha, C[i], shift);
+            if(i == 1) printf("%lu %lu %lu %lu %d\n", A[i], B[i], C[i], alpha, shift);
         }
     }
 
