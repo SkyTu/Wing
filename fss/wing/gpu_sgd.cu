@@ -151,9 +151,9 @@ namespace wing
             auto d_new_W = (T *)gpuMalloc(memSizeW);
             gpuLinearComb(wing::global::bw, N, d_new_W, T(party), d_W);
             gpuLeftShiftAndAdd(N, d_new_W, d_Vw, d_W, shift, -T(wing::lr_fp));
-            wing::gpuTruncate(bin, bout, wing::TruncateType::StochasticTruncate, truncateKeyW, shift, peer, party, N, d_W, gaes, s);
             gpuFree(d_new_W);
         }
+        wing::gpuTruncate(bin, bout, wing::TruncateType::StochasticTruncate, truncateKeyW, shift, peer, party, N, d_W, gaes, s);
         moveIntoCPUMem((u8 *)h_W, (u8 *)d_W, memSizeW, s);
         printf("h_W=%ld\n", h_W[0]);
         if (dWWasNull)
