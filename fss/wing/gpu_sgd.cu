@@ -36,9 +36,9 @@ namespace wing
         if (i < N)
         {
             // (d_dW << wing::mom_fp + T(wing::mom_fp) * d_Vw) >> wing::mom_fp;
-            
+            assert(shift > 0 || alpha > 0);
             C[i] = (A[i] << shift) + alpha * B[i];
-            if(i == 10)printf("A[i]=%ld, B[i]=%ld, C[i]=%ld, shift=%d, alpha=%d\n", A[i], B[i], C[i]);
+            if(i == 1) printf("%u %u %u %u %d\n", A[i], B[i], alpha, C[i], shift);
         }
     }
 
@@ -47,16 +47,10 @@ namespace wing
     void gpuLeftShiftAndAdd(int N, T *d_A, T *d_B, T *d_C, int shift, T alpha)
     {
         assert(shift < sizeof(T) * 64);
-        std::cout << "In gpuLeftShiftAndAdd" << std::endl;
-        std::cout << "shift=" << shift << ", alpha=" << alpha << std::endl;
         leftShiftAndAddKernel<<<(N - 1) / 128 + 1, 128>>>(d_A, d_B, d_C, shift, alpha, N);
         checkCudaErrors(cudaDeviceSynchronize());
         // 检查内核调用后的错误
         cudaError_t err = cudaGetLastError();
-        if (err != cudaSuccess)
-        {
-            std::cerr << "CUDA error: " << cudaGetErrorString(err) << std::endl;
-        }
     }
 
     // global::scale, Vw: 2 * global::scale, dW: 2 * global::scale
@@ -86,7 +80,7 @@ namespace wing
         auto d_new_W = (T *)gpuMalloc(memSizeW);
         gpuLeftShiftAndAdd(N, d_W, d_Vw, d_new_W, shift, -T(wing::lr_fp));
         if (wing::lr_scale[epoch] + scaleVw - scaleW > 0){
-            std::cout << "-------shift 1 = " << shift << "---------" << std::endl;
+            std::cout << "-------shift 2 = " << shift << "---------" << std::endl;
         }
         if (shift > 0){
             d_new_W = genGPUTruncateKey(key_as_bytes, party, wing::TruncateType::StochasticTruncate, bin, bout, shift, N, d_new_W, gaes);
