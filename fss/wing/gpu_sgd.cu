@@ -38,7 +38,7 @@ namespace wing
             // (d_dW << wing::mom_fp + T(wing::mom_fp) * d_Vw) >> wing::mom_fp;
             assert(shift > 0 || alpha > 0);
             C[i] = (A[i] << shift) + alpha * B[i];
-            if(i == 1) printf("%u %u %u %u %d\n", A[i], B[i], alpha, C[i], shift);
+            if(i == 1) printf("%lu %lu %lu %lu %d\n", A[i], B[i], C[i], alpha, shift);
         }
     }
 
@@ -49,8 +49,6 @@ namespace wing
         assert(shift < sizeof(T) * 64);
         leftShiftAndAddKernel<<<(N - 1) / 128 + 1, 128>>>(d_A, d_B, d_C, shift, alpha, N);
         checkCudaErrors(cudaDeviceSynchronize());
-        // 检查内核调用后的错误
-        cudaError_t err = cudaGetLastError();
     }
 
     // global::scale, Vw: 2 * global::scale, dW: 2 * global::scale
