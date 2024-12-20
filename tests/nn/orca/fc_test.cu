@@ -46,7 +46,7 @@ int main(int argc, char *argv[])
     initAESContext(&g);
     initGPURandomness();
     int bin = 64, bout = 64, M = 100, N = 10, K = 64;
-    bool useMomentum = false;
+    bool useMomentum = true;
     int epoch = 0;
 
     int party = atoi(argv[1]);
