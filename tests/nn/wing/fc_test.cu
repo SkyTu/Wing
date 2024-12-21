@@ -68,7 +68,11 @@ int main(int argc, char *argv[])
     auto d_masked_grad = getMaskedInputOnGpu<T>(fc_layer.p.size_C, bin, d_mask_grad, &h_grad, true, 20);
 
     auto d_mask_Vw = randomGEOnGpu<T>(fc_layer.p.size_B, bin);
-    auto h_masked_Vw = getMaskedInputOnCpu<T>(fc_layer.p.size_B, bin, d_mask_Vw, &h_Vw, true, 20, true, party);
+    auto d_masked_Vw = getMaskedInputOnGpu<T>(fc_layer.p.size_B, bin, d_mask_Vw, &h_Vw, true, 20);
+
+    auto h_masked_Vw_Rec = (T *)moveToCPU((u8 *)d_masked_Vw, fc_layer.p.size_B, NULL);
+    gpuLinearComb(bin, fc_layer.p.size_B, d_masked_Vw, T(party), d_masked_Vw, 1);
+    auto h_masked_Vw = (T *)moveToCPU((u8 *)d_masked_Vw, fc_layer.p.size_B, NULL);
 
     auto d_mask_Vy = randomGEOnGpu<T>(N, bin);
     auto h_masked_Vy = getMaskedInputOnCpu<T>(N, bin, d_mask_Vy, &h_Vy, true, 20);
@@ -105,7 +109,7 @@ int main(int argc, char *argv[])
     memcpy(fc_layer.Y, h_masked_Y, N * sizeof(T));
     auto d_masked_Z = fc_layer.forward(peer, party, d_masked_X, &g);
 
-    memcpy(fc_layer.Vw, h_masked_Vw, fc_layer.mmKey.mem_size_B);
+    memcpy(fc_layer.Vw, h_masked_Vw_Rec, fc_layer.mmKey.mem_size_B);
     // uncommment for bias
     memcpy(fc_layer.Vy, h_masked_Vy, N * sizeof(T));
 

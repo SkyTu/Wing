@@ -174,7 +174,7 @@ namespace wing
         {
             auto vw = h_masked_Vw[i] - h_mask_Vw[i];
             auto vw_ct = cpuArs((h_dW[i] << shiftdW) + T(wing::mom_fp) * h_Vw[i], bin, wing::mom_scale);
-            // if(i < 10) printf("%lu %lu\n", u64(vw), u64(vw_ct));
+            if(i < 10) printf("%lu %lu\n", u64(vw), u64(vw_ct));
             // assert(vw - vw_ct <= 1);
             auto w_ct = cpuArs((h_W[i] << shiftW) - T(wing::lr_fp) * vw_ct, bin, shiftW);
             // this is the new masked f
