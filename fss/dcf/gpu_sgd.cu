@@ -35,11 +35,7 @@ namespace dcf
         int i = blockIdx.x * blockDim.x + threadIdx.x;
         if (i < N)
         {
-            if(i == 0) {
-                printf("%lu %lu %lu %lu %d\n", A[i], B[i], C[i], alpha, shift);
-            } 
             C[i] = (A[i] << shift) + alpha * B[i];
-            if(i == 0) printf("%lu %lu %lu %lu %d\n", A[i], B[i], C[i], alpha, shift);
         }
     }
 
@@ -104,7 +100,6 @@ namespace dcf
         size_t memSizeW = N * sizeof(T);
         auto d_Vw = (T *)moveToGPU((u8 *)h_Vw, memSizeW, s);
         int shift = orca::mom_scale + scaleVw - scaledW;
-        std::cout << "In gpuSgdWithMomentum h_Vw=" << h_Vw[0] << std::endl;
         // the d_dW mask got moved to the left by shift
         gpuLeftShiftAndAdd(N, d_dW, d_Vw, d_Vw, shift, T(orca::mom_fp));
         dcf::gpuTruncate(bin, bout, t, truncateKeyVw, orca::mom_scale, peer, party, N, d_Vw, gaes, s);
@@ -122,7 +117,6 @@ namespace dcf
         if (shift > 0)
             dcf::gpuTruncate(bin, bout, t, truncateKeyW, shift, peer, party, N, d_W, gaes, s);
         moveIntoCPUMem((u8 *)h_W, (u8 *)d_W, memSizeW, s);
-        std::cout << "h_Vw=" << h_Vw[0] << std::endl;
         if (dWWasNull)
             gpuFree(d_W);
         gpuFree(d_Vw);
@@ -148,8 +142,6 @@ namespace dcf
             auto w = h_masked_W[i] - h_mask_W[i];
             // need to test this when the starting vf is non-zero
             auto diff = abs(static_cast<int64_t>(u64(w) - u64(w_ct)));
-            if (i < 10)
-                printf("%lu %lu h_mask_Vw %lu %ld\n", u64(w), u64(w_ct), u64(h_mask_Vw[i]), diff);
             // the two is important
             assert(/*abs(static_cast<int64_t>(w - w_ct))*/ diff <= 2);
         }

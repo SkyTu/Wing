@@ -273,7 +273,7 @@ int main(int argc, char *argv[])
     int blocks = 5;   // 46
     int blockSz = 10; // 600
     int batchSz = 128;
-    // evaluatorE2E("CNN2", "mnist", party, ip, "weights/CNN2.dat", false, epochs, blocks, blockSz, batchSz, 28, 28, 1, false, false, keyDir);
-    evaluatorE2E("P-SecureML", "mnist", party, ip, "weights/PSecureMlNoRelu.dat", false, epochs, blocks, blockSz, batchSz, 28, 28, 1, true, true, keyDir);
+    evaluatorE2E("CNN2", "mnist", party, ip, "weights/CNN2.dat", false, epochs, blocks, blockSz, batchSz, 28, 28, 1, false, true, keyDir);
+    // evaluatorE2E("P-SecureML", "mnist", party, ip, "weights/PSecureMlNoRelu.dat", false, epochs, blocks, blockSz, batchSz, 28, 28, 1, false, true, keyDir);
     return 0;
 }
