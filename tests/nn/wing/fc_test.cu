@@ -109,7 +109,7 @@ int main(int argc, char *argv[])
     memcpy(fc_layer.Y, h_masked_Y, N * sizeof(T));
     auto d_masked_Z = fc_layer.forward(peer, party, d_masked_X, &g);
 
-    memcpy(fc_layer.Vw, h_masked_Vw_Rec, fc_layer.mmKey.mem_size_B);
+    memcpy(fc_layer.Vw, h_masked_Vw, fc_layer.mmKey.mem_size_B);
     // uncommment for bias
     memcpy(fc_layer.Vy, h_masked_Vy, N * sizeof(T));
 
@@ -129,7 +129,7 @@ int main(int argc, char *argv[])
     auto h_dW_ct = gpuMatmulWrapper<T>(fc_layer.pdW, h_X, h_grad, NULL, false, true, party);
     
     printf("Checking sgd for W, momentum=%d\n", useMomentum);
-    checkOptimizer<T>(bin, bout, fc_layer.p.size_B, h_W, h_Vw, h_dW_ct, fc_layer.W, fc_layer.Vw,
+    checkOptimizer<T>(bin, bout, fc_layer.p.size_B, h_W, h_Vw, h_dW_ct, fc_layer.W, h_masked_Vw_Rec,
                       h_mask_new_W, h_mask_new_Vw, global::scale, 2 * global::scale, 2 * global::scale, useMomentum, epoch);
 
     auto h_dY_ct = getBiasGradWrapper<T>(M, N, bout, h_grad);
