@@ -126,7 +126,7 @@ int main(int argc, char *argv[])
     printf("Checking dX\n");
 
     checkTrStWithTol<T>(bin, bout, global::scale, fc_layer.p.size_A, h_masked_dX, h_mask_dX, h_dX_ct);
-    auto h_dW_ct = gpuMatmulWrapper<T>(fc_layer.pdW, h_X, h_grad, NULL, false, true, party);
+    auto h_dW_ct = gpuMatmulWrapper<T>(fc_layer.pdW, h_X, h_grad, NULL, false);
     
     printf("Checking sgd for W, momentum=%d\n", useMomentum);
     checkOptimizer<T>(bin, bout, fc_layer.p.size_B, h_W, h_Vw, h_dW_ct, fc_layer.W, h_masked_Vw_Rec,

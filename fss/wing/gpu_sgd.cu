@@ -70,7 +70,12 @@ namespace wing
         }
         gpuLeftShiftAndAdd(N, d_dW, d_Vw, d_Vw, shift, T(wing::mom_fp));
         bool update_bias = (wing::lr_scale[epoch] + scaleVw - scaleW == 0);
-        d_Vw = genGPUTruncateKey(key_as_bytes, party, wing::TruncateType::StochasticTruncate, bin, bout, wing::mom_scale, N, d_Vw, gaes);
+        if(update_bias){
+            d_Vw = genGPUTruncateKey(key_as_bytes, party, wing::TruncateType::RevealedStochasticTruncate, bin, bout, wing::mom_scale, N, d_Vw, gaes);
+        }
+        else{
+            d_Vw = genGPUTruncateKey(key_as_bytes, party, wing::TruncateType::StochasticTruncate, bin, bout, wing::mom_scale, N, d_Vw, gaes);
+        }
         moveIntoCPUMem((u8 *)h_Vw, (u8 *)d_Vw /*d_dW*/, memSizeW, NULL);
         //这里应该变成secret share的形式？
         printf("h_Vw=%ld\n", h_Vw[0]);
@@ -100,14 +105,14 @@ namespace wing
     void readGpuSGDWithMomentumKey(TruncateType t, GPUTruncateKey<T> *truncateKeyVw, GPUTruncateKey<T> *truncateKeyW, u8 **key_as_bytes, int scaleW, int scaleVw, int scaledW, int epoch)
     {
         int shift = wing::lr_scale[epoch] + scaleVw - scaleW;
-        *truncateKeyVw = readGPUTruncateKey<T>(TruncateType::StochasticTruncate, key_as_bytes);
+        
         if (shift > 0){
-            // *truncateKeyVw = readGPUTruncateKey<T>(TruncateType::StochasticTruncate, key_as_bytes);
+            *truncateKeyVw = readGPUTruncateKey<T>(TruncateType::StochasticTruncate, key_as_bytes);
             *truncateKeyW = readGPUTruncateKey<T>(TruncateType::StochasticTruncate, key_as_bytes);
         }
-        // else{
-        //     *truncateKeyVw = readGPUTruncateKey<T>(TruncateType::StochasticTruncate, key_as_bytes);
-        // }
+        else{
+            *truncateKeyVw = readGPUTruncateKey<T>(TruncateType::RevealedStochasticTruncate, key_as_bytes);
+        }
     }
 
     template <typename T>
@@ -123,7 +128,7 @@ namespace wing
         
         if (update_bias){
             gpuLeftShiftAndAdd(N, d_dW, d_Vw, d_Vw, shift, T(wing::mom_fp));
-            wing::gpuTruncate(bin, bout, wing::TruncateType::StochasticTruncate, truncateKeyVw, wing::mom_scale, peer, party, N, d_Vw, gaes, s);
+            wing::gpuTruncate(bin, bout, wing::TruncateType::RevealedStochasticTruncate, truncateKeyVw, wing::mom_scale, peer, party, N, d_Vw, gaes, s);
         }
         else{
             gpuLeftShiftAndAdd(N, d_dW, d_Vw, d_Vw, shift, T(wing::mom_fp));
@@ -169,12 +174,11 @@ namespace wing
     {
         int shiftdW = scaleVw + wing::mom_scale - scaledW;
         int shiftW = wing::lr_scale[epoch] + scaleVw - scaleW;
-        std::cout << "bin=" << bin << ", bout=" << bout << ", mom_scale=" << wing::mom_scale << ", shiftW=" << shiftW << std::endl;
         for (int i = 0; i < N; i++)
         {
             auto vw = h_masked_Vw[i] - h_mask_Vw[i];
             auto vw_ct = cpuArs((h_dW[i] << shiftdW) + T(wing::mom_fp) * h_Vw[i], bin, wing::mom_scale);
-            if(i < 10) printf("%lu %lu\n", u64(vw), u64(vw_ct));
+            // if(i < 10) printf("%lu %lu\n", u64(vw), u64(vw_ct));
             // assert(vw - vw_ct <= 1);
             auto w_ct = cpuArs((h_W[i] << shiftW) - T(wing::lr_fp) * vw_ct, bin, shiftW);
             // this is the new masked f
@@ -182,7 +186,7 @@ namespace wing
             // need to test this when the starting vf is non-zero
             auto diff = abs(static_cast<int64_t>(u64(w) - u64(w_ct)));
             if (i < 10)
-                printf("%lu %lu h_mask_Vw %lu %ld\n", u64(w), u64(w_ct), u64(h_mask_Vw[i]), diff);
+                printf("w %lu wct %lu h_mask_Vw %lu %ld\n", u64(w), u64(w_ct), u64(h_mask_Vw[i]), diff);
             // the two is important
             // assert(/*abs(static_cast<int64_t>(w - w_ct))*/ diff <= 2);
         }
