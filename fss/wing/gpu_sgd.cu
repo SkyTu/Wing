@@ -21,6 +21,7 @@
 
 #pragma once
 
+#include <cmath>
 #include <cassert>
 #include "utils/gpu_mem.h"
 
@@ -53,11 +54,11 @@ namespace wing
     // global::scale, Vw: 2 * global::scale, dW: 2 * global::scale
     template <typename T>
     void genGpuSGDWithMomentumKey(u8 **key_as_bytes, int party, int bin, int bout, int N, T *h_W, T *d_W,
-                                  T *h_Vw, T *d_dW, int scaleW, int scaleVw, int scaledW, TruncateType t, AESGlobalContext *gaes, int epoch)
+                                  T *h_Vw, T *d_dW, int scaleW, int scaleVw, int scaledW, TruncateType t, AESGlobalContext *gaes, int epoch, int extra_shift)
     {
         size_t memSizeW = N * sizeof(T);
         auto d_Vw = (T *)moveToGPU((u8 *)h_Vw, memSizeW, NULL);
-        int shift = wing::mom_scale + scaleVw - scaledW;
+        int shift = wing::mom_scale + scaleVw - scaledW + extra_shift;
         gpuLeftShiftAndAdd(N, d_dW, d_Vw, d_Vw, shift, T(wing::mom_fp));
         bool update_bias = (wing::lr_scale[epoch] + scaleVw - scaleW == 0);
         if(update_bias){
@@ -103,13 +104,12 @@ namespace wing
     template <typename T>
     void gpuSgdWithMomentum(int bin, int bout, int N, T *h_W, T *d_W,
                             T *h_Vw, T *d_dW, int scaleW, int scaleVw, int scaledW, wing::TruncateType t,
-                            wing::GPUTruncateKey<T> truncateKeyVw, GPUTruncateKey<T> truncateKeyW, int party, SigmaPeer *peer, AESGlobalContext *gaes, Stats *s, int epoch)
+                            wing::GPUTruncateKey<T> truncateKeyVw, GPUTruncateKey<T> truncateKeyW, int party, SigmaPeer *peer, AESGlobalContext *gaes, Stats *s, int epoch, int extra_shift)
     {
         size_t memSizeW = N * sizeof(T);
         auto d_Vw = (T *)moveToGPU((u8 *)h_Vw, memSizeW, s);
-        int shift = wing::mom_scale + scaleVw - scaledW;
+        int shift = wing::mom_scale + scaleVw - scaledW + extra_shift;
         bool update_bias = (wing::lr_scale[epoch] + scaleVw - scaleW == 0);
-        
         if (update_bias){
             gpuLeftShiftAndAdd(N, d_dW, d_Vw, d_Vw, shift, T(wing::mom_fp));
             wing::gpuTruncate(bin, bout, wing::TruncateType::RevealedStochasticTruncate, truncateKeyVw, wing::mom_scale, peer, party, N, d_Vw, gaes, s);
@@ -180,11 +180,11 @@ namespace wing
 
     template <typename T>
     void genGpuSGDKey(u8 **key_as_bytes, int party, int bin, int bout, int N, T *h_W, T *d_W,
-                      T *d_dW, int scaleW, int scaledW, TruncateType t, AESGlobalContext *gaes, int epoch)
+                      T *d_dW, int scaleW, int scaledW, TruncateType t, AESGlobalContext *gaes, int epoch, int extra_shift)
     {
         size_t memSizeW = N * sizeof(T);
         auto d_delta = gpuMultiplyByConstant(d_dW, -T(wing::lr_fp), N);
-        int rightShift = scaledW + wing::lr_scale[epoch] - scaleW;
+        int rightShift = scaledW + wing::lr_scale[epoch] - scaleW + extra_shift;
         bool dWWasNull = false;
         if (rightShift > 0)
         {
@@ -220,12 +220,12 @@ namespace wing
     template <typename T>
     void gpuSgd(int bin, int bout, int N, T *h_W, T *d_W,
                 T *d_dW, int scaleW, int scaledW, TruncateType t,
-                GPUTruncateKey<T> truncateKeyW, int party, SigmaPeer *peer, AESGlobalContext *gaes, Stats *s, int epoch)
+                GPUTruncateKey<T> truncateKeyW, int party, SigmaPeer *peer, AESGlobalContext *gaes, Stats *s, int epoch, int extra_shift)
     {
         size_t memSizeW = N * sizeof(T);
         // the d_dW mask got moved to the left by shift
         auto d_delta = gpuMultiplyByConstant(d_dW, -T(wing::lr_fp), N);
-        int rightShift = wing::lr_scale[epoch] + scaledW - scaleW;
+        int rightShift = wing::lr_scale[epoch] + scaledW - scaleW + extra_shift;
         bool dWWasNull = false;
         if (rightShift > 0)
         {
@@ -290,15 +290,15 @@ namespace wing
 
     template <typename T>
     void genOptimizerKey(u8 **key_as_bytes, int party, int bin, int bout, int N, T *h_W, T *d_W,
-                         T *h_Vw, T *d_dW, int scaleW, int scaleVw, int scaledW, TruncateType t, bool useMomentum, AESGlobalContext *gaes, int epoch)
+                         T *h_Vw, T *d_dW, int scaleW, int scaleVw, int scaledW, TruncateType t, bool useMomentum, AESGlobalContext *gaes, int epoch, int extra_shift)
     {
         if (useMomentum)
         {
-            genGpuSGDWithMomentumKey(key_as_bytes, party, bin, bout, N, h_W, d_W, h_Vw, d_dW, scaleW, scaleVw, scaledW, t, gaes, epoch);
+            genGpuSGDWithMomentumKey(key_as_bytes, party, bin, bout, N, h_W, d_W, h_Vw, d_dW, scaleW, scaleVw, scaledW, t, gaes, epoch, extra_shift);
         }
         else
         {
-            genGpuSGDKey(key_as_bytes, party, bin, bout, N, h_W, d_W, d_dW, scaleW, scaledW, t, gaes, epoch);
+            genGpuSGDKey(key_as_bytes, party, bin, bout, N, h_W, d_W, d_dW, scaleW, scaledW, t, gaes, epoch, extra_shift);
         }
     }
 
@@ -318,15 +318,15 @@ namespace wing
     template <typename T>
     void optimize(int bin, int bout, int N, T *h_W, T *d_W,
                   T *h_Vw, T *d_dW, int scaleW, int scaleVw, int scaledW, TruncateType t,
-                  GPUTruncateKey<T> truncateKeyVw, GPUTruncateKey<T> truncateKeyW, int party, SigmaPeer *peer, bool useMomentum, AESGlobalContext *gaes, Stats *s, int epoch)
+                  GPUTruncateKey<T> truncateKeyVw, GPUTruncateKey<T> truncateKeyW, int party, SigmaPeer *peer, bool useMomentum, AESGlobalContext *gaes, Stats *s, int epoch, int extra_shift)
     {
         if (useMomentum)
         {
-            gpuSgdWithMomentum(bin, bout, N, h_W, d_W, h_Vw, d_dW, scaleW, scaleVw, scaledW, t, truncateKeyVw, truncateKeyW, party, peer, gaes, s, epoch);
+            gpuSgdWithMomentum(bin, bout, N, h_W, d_W, h_Vw, d_dW, scaleW, scaleVw, scaledW, t, truncateKeyVw, truncateKeyW, party, peer, gaes, s, epoch, extra_shift);
         }
         else
         {
-            gpuSgd(bin, bout, N, h_W, d_W, d_dW, scaleW, scaledW, t, truncateKeyW, party, peer, gaes, s, epoch);
+            gpuSgd(bin, bout, N, h_W, d_W, d_dW, scaleW, scaledW, t, truncateKeyW, party, peer, gaes, s, epoch, extra_shift);
         }
     }
 

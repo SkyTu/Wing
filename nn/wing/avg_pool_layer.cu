@@ -61,11 +61,11 @@ namespace wing
     }
 
     template <typename T>
-    T *AvgPool2DLayer<T>::genBackwardKey(u8 **key_as_bytes, int party, T *d_incomingGradMask, AESGlobalContext *gaes, int epoch)
+    T *AvgPool2DLayer<T>::genBackwardKey(u8 **key_as_bytes, int party, T *d_incomingGradMask, AESGlobalContext *gaes, int epoch, int extra_shift)
     {
         auto d_mask_dI = gpuAddPoolBackProp(p, d_incomingGradMask, &(this->s));
         gpuFree(d_incomingGradMask);
-        auto d_mask_truncated_dI = wing::genGPUTruncateKey(key_as_bytes, party, tb, p.bw, p.bw, p.scaleDiv, inSz, d_mask_dI, gaes); /*, mask_truncated_C);*/
+        auto d_mask_truncated_dI = wing::genGPUTruncateKey(key_as_bytes, party, tb, p.bw, p.bw, p.scaleDiv+extra_shift, inSz, d_mask_dI, gaes); /*, mask_truncated_C);*/
         return d_mask_truncated_dI;
     }
 
@@ -91,11 +91,11 @@ namespace wing
     }
 
     template <typename T>
-    T *AvgPool2DLayer<T>::backward(SigmaPeer *peer, int party, T *d_incomingGrad, AESGlobalContext *g, int epoch)
+    T *AvgPool2DLayer<T>::backward(SigmaPeer *peer, int party, T *d_incomingGrad, AESGlobalContext *g, int epoch, int extra_shift)
     {
         auto d_dI = gpuAddPoolBackProp(p, d_incomingGrad, &(this->s));
         gpuFree(d_incomingGrad);
-        wing::gpuTruncate(p.bw, p.bw, tb, truncateKeyB, p.scaleDiv, peer, party, inSz, d_dI, g, &(this->s));
+        wing::gpuTruncate(p.bw, p.bw, tb, truncateKeyB, p.scaleDiv+extra_shift, peer, party, inSz, d_dI, g, &(this->s));
         return d_dI;
     }
 }

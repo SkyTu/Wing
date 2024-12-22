@@ -64,11 +64,11 @@ namespace wing
 
         FCLayer(int bin, int bout, int M, int N, int K, wing::TruncateType tf, wing::TruncateType tb, bool useBias, bool computedX, bool inputIsShares, bool nextBackExt = false);
         T *genForwardKey(uint8_t **key_as_bytes, int party, T *d_mask_X, AESGlobalContext *gaes);
-        T *genBackwardKey(uint8_t **key_as_bytes, int party, T *d_mask_grad, AESGlobalContext *gaes, int epoch);
+        T *genBackwardKey(uint8_t **key_as_bytes, int party, T *d_mask_grad, AESGlobalContext *gaes, int epoch, int extra_shift);
         void readForwardKey(uint8_t **key_as_bytes);
         void readBackwardKey(uint8_t **key_as_bytes, int epoch);
         T *forward(SigmaPeer *peer, int party, T *d_I, AESGlobalContext *gaes);
-        T *backward(SigmaPeer *peer, int party, T *d_incomingGrad, AESGlobalContext *gaes, int epoch);
+        T *backward(SigmaPeer *peer, int party, T *d_incomingGrad, AESGlobalContext *gaes, int epoch, int extra_shift);
         void initWeights(uint8_t **weights, bool floatWeights);
         void dumpWeights(std::ofstream &f);
         void printWeights();

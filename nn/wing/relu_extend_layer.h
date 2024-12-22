@@ -47,11 +47,11 @@ namespace wing
         ReluExtendLayer(int bin, int bout, int numRelus, bool nextBackExt);
         ~ReluExtendLayer();
         T *genForwardKey(uint8_t **key_as_bytes, int party, T *d_inputMask, AESGlobalContext *gaes);
-        T *genBackwardKey(uint8_t **key_as_bytes, int party, T *d_incomingGradMask, AESGlobalContext *gaes, int epoch);
+        T *genBackwardKey(uint8_t **key_as_bytes, int party, T *d_incomingGradMask, AESGlobalContext *gaes, int epoch, int extra_shift);
         void readForwardKey(uint8_t **key_as_bytes);
         void readBackwardKey(uint8_t **key_as_bytes, int epoch);
         T *forward(SigmaPeer *peer, int party, T *d_I, AESGlobalContext *g);
-        T *backward(SigmaPeer *peer, int party, T *d_incomingGrad, AESGlobalContext *g, int epoch);
+        T *backward(SigmaPeer *peer, int party, T *d_incomingGrad, AESGlobalContext *g, int epoch, int extra_shift);
     };
 }
 

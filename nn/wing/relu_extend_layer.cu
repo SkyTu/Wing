@@ -65,7 +65,7 @@ namespace wing
     }
 
     template <typename T>
-    T *ReluExtendLayer<T>::genBackwardKey(u8 **key_as_bytes, int party, T *d_incomingGradMask, AESGlobalContext *gaes, int epoch)
+    T *ReluExtendLayer<T>::genBackwardKey(u8 **key_as_bytes, int party, T *d_incomingGradMask, AESGlobalContext *gaes, int epoch, int extra_shift)
     {
         this->checkIfTrain();
         auto d_dreluMask = (u8 *)moveToGPU((u8 *)dReluMask, numRelus, NULL);
@@ -125,7 +125,7 @@ namespace wing
 
     // no memory leak
     template <typename T>
-    T *ReluExtendLayer<T>::backward(SigmaPeer *peer, int party, T *d_incomingGrad, AESGlobalContext *g, int epoch)
+    T *ReluExtendLayer<T>::backward(SigmaPeer *peer, int party, T *d_incomingGrad, AESGlobalContext *g, int epoch, int extra_shift)
     {
         this->checkIfTrain();
         auto d_drelu = (u32 *)moveToGPU((u8 *)drelu, ((numRelus - 1) / PACKING_SIZE + 1) * sizeof(PACK_TYPE), &(this->s));

@@ -59,11 +59,11 @@ namespace wing
         Conv2DLayer(int bin, int bout, int N, int H, int W, int CI, int FH, int FW, int CO,
                     int zPadHLeft, int zPadHRight, int zPadWLeft, int zPadWRight, int strideH, int strideW, bool useBias, wing::TruncateType tf, wing::TruncateType tb, bool computedI, bool inputIsShares, bool nextBackExt = false);
         T *genForwardKey(u8 **key_as_bytes, int party, T *mask_I, AESGlobalContext *gaes);
-        T *genBackwardKey(u8 **key_as_bytes, int party, T *mask_grad, AESGlobalContext *gaes, int epoch);
+        T *genBackwardKey(u8 **key_as_bytes, int party, T *mask_grad, AESGlobalContext *gaes, int epoch, int extra_shift = 0);
         void readForwardKey(u8 **key_as_bytes);
         void readBackwardKey(u8 **key_as_bytes, int epoch);
         T *forward(SigmaPeer *peer, int party, T *d_I, AESGlobalContext *gaes);
-        T *backward(SigmaPeer *peer, int party, T *d_incomingGrad, AESGlobalContext *gaes, int epoch);
+        T *backward(SigmaPeer *peer, int party, T *d_incomingGrad, AESGlobalContext *gaes, int epoch, int extra_shift = 0);
         void initWeights(u8 **weights, bool floatWeights);
         void dumpWeights(std::ofstream &f);
     };

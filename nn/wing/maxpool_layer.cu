@@ -95,7 +95,7 @@
     }
 
     template <typename T>
-    T *MaxPool2DLayer<T>::genBackwardKey(uint8_t **key_as_bytes, int party, T *d_incomingGradMask, AESGlobalContext *gaes, int epoch)
+    T *MaxPool2DLayer<T>::genBackwardKey(uint8_t **key_as_bytes, int party, T *d_incomingGradMask, AESGlobalContext *gaes, int epoch, int extra_shift)
     {
         this->checkIfTrain();
         size_t oneHotSize = p.N * p.H * p.W * p.C * p.FH * p.FW;
@@ -159,7 +159,7 @@
 
     // no memory leak
     template <typename T>
-    T *MaxPool2DLayer<T>::backward(SigmaPeer *peer, int party, T *d_incomingGrad, AESGlobalContext *g, int epoch)
+    T *MaxPool2DLayer<T>::backward(SigmaPeer *peer, int party, T *d_incomingGrad, AESGlobalContext *g, int epoch, int extra_shift)
     {
 
         this->checkIfTrain();

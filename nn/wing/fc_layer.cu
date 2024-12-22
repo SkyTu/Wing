@@ -139,7 +139,7 @@ namespace wing
     }
 
     template <typename T>
-    T *FCLayer<T>::genBackwardKey(u8 **key_as_bytes, int party, T *d_mask_grad, AESGlobalContext *gaes, int epoch)
+    T *FCLayer<T>::genBackwardKey(u8 **key_as_bytes, int party, T *d_mask_grad, AESGlobalContext *gaes, int epoch, int extra_shift)
     {
         this->checkIfTrain();
 
@@ -169,11 +169,11 @@ namespace wing
             else
                 d_mask_truncated_dX = genGPUTruncateKey(key_as_bytes, party, tb, p.bw, p.bw, global::scale, p.size_A, d_mask_dX, gaes);
         }
-        genOptimizerKey(key_as_bytes, party, p.bw, p.bw, p.size_B, mask_W, d_mask_W, mask_Vw, d_mask_dW, global::scale, 2 * global::scale, 2 * global::scale, tf, this->useMomentum, gaes, epoch);
+        genOptimizerKey(key_as_bytes, party, p.bw, p.bw, p.size_B, mask_W, d_mask_W, mask_Vw, d_mask_dW, global::scale, 2 * global::scale, 2 * global::scale, tf, this->useMomentum, gaes, epoch, extra_shift);
         if (useBias)
         {
             auto d_mask_dY = getBiasGrad(p.M, p.N, p.bw, d_mask_grad);
-            genOptimizerKey(key_as_bytes, party, p.bw, p.bw, p.N, mask_Y, (T *)NULL, mask_Vy, d_mask_dY, 2 * global::scale, 2 * global::scale - lr_scale[epoch], global::scale, tf, this->useMomentum, gaes, epoch);
+            genOptimizerKey(key_as_bytes, party, p.bw, p.bw, p.N, mask_Y, (T *)NULL, mask_Vy, d_mask_dY, 2 * global::scale, 2 * global::scale - lr_scale[epoch], global::scale, tf, this->useMomentum, gaes, epoch, extra_shift);
             gpuFree(d_mask_dY);
         }
         gpuFree(d_mask_W);
@@ -263,7 +263,7 @@ namespace wing
     }
 
     template <typename T>
-    T *FCLayer<T>::backward(SigmaPeer *peer, int party, T *d_incomingGrad, AESGlobalContext *gaes, int epoch)
+    T *FCLayer<T>::backward(SigmaPeer *peer, int party, T *d_incomingGrad, AESGlobalContext *gaes, int epoch, int extra_shift)
     {
 
         this->checkIfTrain();
@@ -291,9 +291,9 @@ namespace wing
         gpuFree(d_X);
         gpuFree(d_mask_X);
 
-        std::cout << "---------Before optimize weights---------" << std::endl;
-        optimize(p.bw, p.bw, p.size_B, W, d_W, Vw, d_dW, global::scale, 2 * global::scale, 2 * global::scale, tf, truncateKeyVw, truncateKeyW, party, peer, this->useMomentum, gaes, &(this->s), epoch);
-        std::cout << "---------After optimize weights---------" << std::endl;
+        // std::cout << "---------Before optimize weights---------" << std::endl;
+        optimize(p.bw, p.bw, p.size_B, W, d_W, Vw, d_dW, global::scale, 2 * global::scale, 2 * global::scale, tf, truncateKeyVw, truncateKeyW, party, peer, this->useMomentum, gaes, &(this->s), epoch, extra_shift);
+        // std::cout << "---------After optimize weights---------" << std::endl;
 
         gpuFree(d_W);
         gpuFree(d_dW);
@@ -301,7 +301,7 @@ namespace wing
         {
             auto d_dY = getBiasGrad(p.M, p.N, p.bw, d_incomingGrad);
             optimize(p.bw, p.bw, p.N, Y, (T *)NULL, Vy, d_dY, 2 * global::scale, 2 * global::scale - lr_scale[epoch], global::scale, tf, truncateKeyVy, truncateKeyY,
-                    party, peer, this->useMomentum, gaes, &(this->s), epoch);
+                    party, peer, this->useMomentum, gaes, &(this->s), epoch, extra_shift);
             gpuFree(d_dY);
         }
         gpuFree(d_incomingGrad);

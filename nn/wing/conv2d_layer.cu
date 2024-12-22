@@ -144,7 +144,7 @@ namespace wing
 
     // need to truncate dI
     template <typename T>
-    T *Conv2DLayer<T>::genBackwardKey(u8 **key_as_bytes, int party, /*T**/ T *d_mask_grad, AESGlobalContext *gaes, int epoch)
+    T *Conv2DLayer<T>::genBackwardKey(u8 **key_as_bytes, int party, /*T**/ T *d_mask_grad, AESGlobalContext *gaes, int epoch, int extra_shift)
     { // T* mask_truncated_dI) {
         this->checkIfTrain();
         // need to free all the leaked memory
@@ -174,13 +174,13 @@ namespace wing
             // d_mask_truncated_dI = genGPUTruncateKey<T>(key_as_bytes, party, tf, p.bin, p.bout, global::scale, p.size_I, d_mask_dI, gaes);
         }
 
-        genOptimizerKey<T>(key_as_bytes, party, p.bin, p.bout, p.size_F, mask_F, d_mask_F, mask_Vf, d_mask_dF, global::scale, 2 * global::scale, 2 * global::scale, tf, this->useMomentum, gaes, epoch);
+        genOptimizerKey<T>(key_as_bytes, party, p.bin, p.bout, p.size_F, mask_F, d_mask_F, mask_Vf, d_mask_dF, global::scale, 2 * global::scale, 2 * global::scale, tf, this->useMomentum, gaes, epoch, extra_shift);
 
         if (useBias)
         {
             auto d_mask_db = getBiasGrad<T>(p.size_O / p.CO, p.CO, p.bin, d_mask_grad);
             // printf("Old Mask b=%ld, %ld, %ld\n", b[0], b[1], b[2]);
-            genOptimizerKey<T>(key_as_bytes, party, p.bin, p.bout, p.CO, mask_b, NULL, mask_Vb, d_mask_db, 2 * global::scale, 2 * global::scale - lr_scale[epoch], global::scale, tf, this->useMomentum, gaes, epoch);
+            genOptimizerKey<T>(key_as_bytes, party, p.bin, p.bout, p.CO, mask_b, NULL, mask_Vb, d_mask_db, 2 * global::scale, 2 * global::scale - lr_scale[epoch], global::scale, tf, this->useMomentum, gaes, epoch, extra_shift);
             // printf("New Mask b=%ld, %ld, %ld\n", b[0], b[1], b[2]);
             gpuFree(d_mask_db);
         }
@@ -267,7 +267,7 @@ namespace wing
     }
 
     template <typename T>
-    T *Conv2DLayer<T>::backward(SigmaPeer *peer, int party, T *d_incomingGrad, AESGlobalContext *gaes, int epoch)
+    T *Conv2DLayer<T>::backward(SigmaPeer *peer, int party, T *d_incomingGrad, AESGlobalContext *gaes, int epoch, int extra_shift)
     {
         this->checkIfTrain();
 
@@ -291,13 +291,13 @@ namespace wing
         auto d_dF = gpuConv2DBeaver(convKeydF, party, d_incomingGrad, d_I, d_mask_incomingGrad, d_mask_I, (T *)NULL, &(this->s), 2);
         // peer->reconstructInPlace(d_dF, p.bin, p.size_F, &(this->s));
 
-        optimize(p.bin, p.bout, p.size_F, F, d_F, Vf, d_dF, global::scale, 2 * global::scale, 2 * global::scale, tf, truncateKeyVf, truncateKeyF, party, peer, this->useMomentum, gaes, &(this->s), epoch);
+        optimize(p.bin, p.bout, p.size_F, F, d_F, Vf, d_dF, global::scale, 2 * global::scale, 2 * global::scale, tf, truncateKeyVf, truncateKeyF, party, peer, this->useMomentum, gaes, &(this->s), epoch, extra_shift);
 
         if (useBias)
         {
             auto d_db = getBiasGrad<T>(p.size_O / p.CO, p.CO, p.bout, d_incomingGrad);
             optimize(p.bin, p.bout, p.CO, b, (T *)NULL, Vb, d_db, 2 * global::scale, 2 * global::scale - lr_scale[epoch], global::scale, tf, truncateKeyVb, truncateKeyb,
-                        party, peer, this->useMomentum, gaes, &(this->s), epoch);
+                        party, peer, this->useMomentum, gaes, &(this->s), epoch, extra_shift);
             gpuFree(d_db);
         }
 

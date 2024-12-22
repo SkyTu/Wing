@@ -176,7 +176,7 @@ void evaluatorE2E(std::string modelName, std::string dataset, int party, std::st
         secfloat_init(party + 1, ip);
     
     std::string keyFile = keyDir + modelName + "_training_key" + std::to_string(party);
-    dropOSPageCache();
+    // dropOSPageCache();
     std::chrono::duration<int64_t, std::milli> onlineTime = std::chrono::duration<int64_t, std::milli>::zero();
     std::chrono::duration<int64_t, std::milli> computeTime = std::chrono::duration<int64_t, std::milli>::zero();
     uint64_t keyReadTime = 0;
@@ -270,10 +270,10 @@ int main(int argc, char *argv[])
     using T = u64;
     // Neha: need to fix this later 
     int epochs = 1;
-    int blocks = 5;   // 46
+    int blocks = 46;
     int blockSz = 10; // 600
     int batchSz = 128;
-    evaluatorE2E("CNN2", "mnist", party, ip, "weights/CNN2.dat", false, epochs, blocks, blockSz, batchSz, 28, 28, 1, false, true, keyDir);
+    evaluatorE2E("CNN2", "mnist", party, ip, "weights/CNN2.dat", false, epochs, blocks, blockSz, batchSz, 28, 28, 1, true, true, keyDir);
     // evaluatorE2E("P-SecureML", "mnist", party, ip, "weights/PSecureMlNoRelu.dat", false, epochs, blocks, blockSz, batchSz, 28, 28, 1, false, true, keyDir);
     return 0;
 }
