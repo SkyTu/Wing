@@ -148,14 +148,14 @@ namespace wing
                               T *h_W, T *h_Vw, T *h_dW,
                               T *h_masked_W, T *h_masked_Vw,
                               T *h_mask_W, T *h_mask_Vw,
-                              int scaleW, int scaleVw, int scaledW, int epoch)
+                              int scaleW, int scaleVw, int scaledW, int epoch, int extra_shift)
     {
-        int shiftdW = scaleVw + wing::mom_scale - scaledW;
+        int shiftdW = scaleVw + wing::mom_scale - scaledW + extra_shift;
         int shiftW = wing::lr_scale[epoch] + scaleVw - scaleW;
         for (int i = 0; i < N; i++)
         {
             auto vw = h_masked_Vw[i] - h_mask_Vw[i];
-            auto vw_ct = cpuArs((h_dW[i] << shiftdW) + T(wing::mom_fp) * h_Vw[i], bin, wing::mom_scale);
+            auto vw_ct = cpuArs((h_dW[i] << shiftdW) + T(wing::mom_fp) * h_Vw[i], bin, wing::mom_scale + extra_shift);
             // if(i < 10) printf("%lu %lu\n", u64(vw), u64(vw_ct));
             // assert(vw - vw_ct <= 1);
             auto w_ct = cpuArs((h_W[i] << shiftW) - T(wing::lr_fp) * vw_ct, bin, shiftW);
@@ -335,11 +335,11 @@ namespace wing
                         T *h_W, T *h_Vw, T *h_dW,
                         T *h_masked_W, T *h_masked_Vw,
                         T *h_mask_W, T *h_mask_Vw,
-                        int scaleW, int scaleVw, int scaledW, bool useMomentum, int epoch)
+                        int scaleW, int scaleVw, int scaledW, bool useMomentum, int epoch, int extra_shift)
     {
         if (useMomentum)
         {
-            checkSgdWithMomentum(bin, bout, N, h_W, h_Vw, h_dW, h_masked_W, h_masked_Vw, h_mask_W, h_mask_Vw, scaleW, scaleVw, scaledW, epoch);
+            checkSgdWithMomentum(bin, bout, N, h_W, h_Vw, h_dW, h_masked_W, h_masked_Vw, h_mask_W, h_mask_Vw, scaleW, scaleVw, scaledW, epoch, extra_shift);
         }
         else
         {

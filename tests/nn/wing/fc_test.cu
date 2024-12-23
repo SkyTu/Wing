@@ -47,6 +47,7 @@ int main(int argc, char *argv[])
     int bin = 64, bout = 64, M = 100, N = 10, K = 64;
     bool useMomentum = true;
     int epoch = 0;
+    int extra_shift = 6;
 
     int party = atoi(argv[1]);
     auto peer = new GpuPeer(false);
@@ -87,7 +88,7 @@ int main(int argc, char *argv[])
 
     auto d_mask_Z = fc_layer.genForwardKey(&curPtr, party, d_mask_X, &g);
     auto h_mask_Z = (T *)moveToCPU((u8 *)d_mask_Z, fc_layer.mmKey.mem_size_C, NULL);
-    auto d_mask_dX = fc_layer.genBackwardKey(&curPtr, party, d_mask_grad, &g, epoch);
+    auto d_mask_dX = fc_layer.genBackwardKey(&curPtr, party, d_mask_grad, &g, epoch, extra_shift);
     auto h_mask_dX = (T *)moveToCPU((u8 *)d_mask_dX, fc_layer.mmKey.mem_size_A, NULL);
 
     auto h_mask_new_Vw = (T *)cpuMalloc(fc_layer.p.size_B * sizeof(T));
@@ -113,7 +114,7 @@ int main(int argc, char *argv[])
     // uncommment for bias
     memcpy(fc_layer.Vy, h_masked_Vy, N * sizeof(T));
 
-    auto d_masked_dX = fc_layer.backward(peer, party, d_masked_grad, &g, epoch);
+    auto d_masked_dX = fc_layer.backward(peer, party, d_masked_grad, &g, epoch, extra_shift);
 
     auto h_masked_Z = (T *)moveToCPU((u8 *)d_masked_Z, fc_layer.mmKey.mem_size_C, NULL);
     auto h_masked_dX = (T *)moveToCPU((u8 *)d_masked_dX, fc_layer.mmKey.mem_size_A, NULL);
@@ -130,10 +131,10 @@ int main(int argc, char *argv[])
     
     printf("Checking sgd for W, momentum=%d\n", useMomentum);
     checkOptimizer<T>(bin, bout, fc_layer.p.size_B, h_W, h_Vw, h_dW_ct, fc_layer.W, h_masked_Vw_Rec,
-                      h_mask_new_W, h_mask_new_Vw, global::scale, 2 * global::scale, 2 * global::scale, useMomentum, epoch);
+                      h_mask_new_W, h_mask_new_Vw, global::scale, 2 * global::scale, 2 * global::scale, useMomentum, epoch, extra_shift);
 
     auto h_dY_ct = getBiasGradWrapper<T>(M, N, bout, h_grad);
     printf("Checking sgd for Y, momentum=%d\n", useMomentum);
-    checkOptimizer<T>(bin, bout, N, h_Y, h_Vy, h_dY_ct, fc_layer.Y, fc_layer.Vy, h_mask_new_Y, h_mask_new_Vy, 2 * global::scale, 2 * global::scale - lr_scale[epoch], global::scale, useMomentum, epoch);
+    checkOptimizer<T>(bin, bout, N, h_Y, h_Vy, h_dY_ct, fc_layer.Y, fc_layer.Vy, h_mask_new_Y, h_mask_new_Vy, 2 * global::scale, 2 * global::scale - lr_scale[epoch], global::scale, useMomentum, epoch, extra_shift);
     return 0;
 }

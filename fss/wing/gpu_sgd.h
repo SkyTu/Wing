@@ -49,7 +49,7 @@ namespace wing
                         T *h_W, T *h_Vw, T *h_dW,
                         T *h_masked_W, T *h_masked_Vw,
                         T *h_mask_W, T *h_mask_Vw,
-                        int scaleW, int scaleVw, int scaledW, bool useMomentum, int epoch);
+                        int scaleW, int scaleVw, int scaledW, bool useMomentum, int epoch, int extra_shift);
 
 }
 
