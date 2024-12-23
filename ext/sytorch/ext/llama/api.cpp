@@ -4902,7 +4902,7 @@ void ElemWiseSecretSharedVectorMult(int32_t size, MASK_PAIR(GroupElement *inArr)
     std::cerr << ">> ElemWise Mult - end" << std::endl;
 }
 
-void PiranhaSoftmax(int32_t s1, int32_t s2, MASK_PAIR(GroupElement *inArr), MASK_PAIR(GroupElement *outArr), int32_t sf)
+void PiranhaSoftmax(int32_t s1, int32_t s2, MASK_PAIR(GroupElement *inArr), MASK_PAIR(GroupElement *outArr), int32_t sf, bool extra_shift)
 {
     // s1 = batch size
     // s2 = number of classes
@@ -4993,11 +4993,13 @@ void PiranhaSoftmax(int32_t s1, int32_t s2, MASK_PAIR(GroupElement *inArr), MASK
 
     ElemWiseSecretSharedVectorMult(s1 * s2, expandedDenominator, expandedDenominator, MASK_PAIR(outArr), MASK_PAIR(outArr));
     always_assert((s1 & (s1 - 1)) == 0);
-    // auto logs1 = osuCrypto::log2ceil(s1);
+    auto logs1 = osuCrypto::log2ceil(s1);
     
     // 截断以后出去要减去label的share，这里不reveal
-
-    ScaleDown(s1 * s2, MASK_PAIR(outArr), sf);
+    if (extra_shift)
+        ScaleDown(s1 * s2, MASK_PAIR(outArr), sf);
+    else
+        ScaleDown(s1 * s2, MASK_PAIR(outArr), sf + logs1);
     // else{
     //     for (int i = 0; i < s1 * s2; ++i)
     //     {
