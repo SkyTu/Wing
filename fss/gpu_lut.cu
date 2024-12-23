@@ -28,7 +28,7 @@ TOut *gpuKeyGenLUT(uint8_t **key_as_bytes, int party, int bin, int bout, int N,
                    TIn *d_rin, AESGlobalContext *gaes)
 {
     writeInt(key_as_bytes, bout);
-    gpuKeyGenDPF(key_as_bytes, party, bin, N, d_rin, gaes, true);
+    dpf::gpuKeyGenDPF(key_as_bytes, party, bin, N, d_rin, gaes, true);
     auto d_maskU = randomGEOnGpu<TOut>(N, 1);
     // checkCudaErrors(cudaMemset(d_maskU, 0, N * sizeof(TOut)));
     writeShares<TOut, TOut>(key_as_bytes, party, N, d_maskU, 1);
@@ -97,7 +97,7 @@ __global__ void dpfLUT(int party, int bin, int N, TIn *X, TOut *tab, AESBlock *s
                 //     l0[threadIdx.x / 32][depth - 1][threadIdx.x & 31] = l0_g[threadId];
                 //     l1[threadIdx.x / 32][depth - 1][threadIdx.x & 31] = l1_g[threadId];
                 // }
-                auto lastBlock = expandDPFTreeNode(bin, party,
+                auto lastBlock = dpf::expandDPFTreeNode(bin, party,
                                                    seed,
                                                    0,
                                                    l0_cw,
@@ -138,7 +138,7 @@ __global__ void dpfLUT(int party, int bin, int N, TIn *X, TOut *tab, AESBlock *s
                 // manipulate the seed depending on the bit
                 // aren't storing the first cw because it sees no reuse
                 auto tR_l = (tR >> (depth - 1)) & 1;
-                auto newSeed = expandDPFTreeNode(bin, party,
+                auto newSeed = dpf::expandDPFTreeNode(bin, party,
                                                  seed,
                                                  loadAESBlock(scw_g, depth, N, threadId),
                                                  //   scw[][depth - 1][],

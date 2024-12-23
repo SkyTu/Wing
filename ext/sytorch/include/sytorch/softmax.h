@@ -71,7 +71,7 @@ void softmax(const Tensor4D<T> &in, Tensor4D<T> &out)
     }
 }
 
-inline void pirhana_softmax(const Tensor4D<u64> &in, Tensor4D<u64> &out, u64 scale, bool extra_shift = false)
+inline void pirhana_softmax(const Tensor4D<u64> &in, Tensor4D<u64> &out, u64 scale, int extra_shift)
 {
     PiranhaSoftmax(in.d1, in.d2, in.data, in.data, out.data, out.data, scale, extra_shift);
 }

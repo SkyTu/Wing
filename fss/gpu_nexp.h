@@ -30,7 +30,7 @@ template <typename T>
 struct GPUNExpKey
 {
     int N;
-    GPUReluKey<u16> reluKey;
+    dpf::GPUReluKey<u16> reluKey;
     GPULUTKey<T> lsbLutKey;
     GPUTruncateKey<u8> trKey;
     GPULUTKey<T> msbLutKey;
@@ -42,7 +42,7 @@ template <typename T>
 GPUNExpKey<T> readGPUNExpKey(u8 **key_as_bytes)
 {
     GPUNExpKey<T> k;
-    k.reluKey = readReluKey<u16>(key_as_bytes);
+    k.reluKey = dpf::readReluKey<u16>(key_as_bytes);
     printf("##Reading Relu key=%d\n", k.reluKey.bout);
     k.N = k.reluKey.numRelus;
     k.lsbLutKey = readGPULUTKey<T>(key_as_bytes);

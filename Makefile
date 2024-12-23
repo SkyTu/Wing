@@ -65,6 +65,9 @@ secfloat_softmax: tests/fss/secfloat_softmax.cu
 piranha_softmax: tests/fss/piranha_softmax.cu
 	$(CXX) $(FLAGS) $(INCLUDES) $^ $(UTIL_FILES) $(LIBS) -o tests/fss/piranha_softmax
 
+wing_softmax: tests/nn/wing/wing_softmax.cu
+	$(CXX) $(FLAGS) $(INCLUDES) $^ $(UTIL_FILES) $(LIBS) -o tests/nn/wing/wing_softmax
+
 orca_dealer: experiments/orca/orca_dealer.cu
 	$(CXX) $(FLAGS) $(INCLUDES) $^ $(UTIL_FILES) $(LIBS) $(SECFLOAT_LIBS) -o experiments/orca/orca_dealer
 

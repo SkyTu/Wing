@@ -34,7 +34,7 @@ T *gpuKeygenNExp(u8 **key_as_bytes, int party, int bw, int bin, int scale, int N
     // this is wrong, can't arbitrarily do bin + 1 whenever you please
     // the input is a 39 bit input
     printf("Input to nExp=%d\n", N);
-    auto d_clipMask = gpuGenReluKey<T, u16, p, p, true>(key_as_bytes, party, bin, 16, N, d_mask_X, gaes);
+    auto d_clipMask = dpf::gpuGenReluKey<T, u16, p, p, true>(key_as_bytes, party, bin, 16, N, d_mask_X, gaes);
     // generate the output in the full bw and scale
     auto d_lsbLutMask = gpuKeyGenLUT<u16, T>(key_as_bytes, party, 8, bw, N, d_clipMask, gaes);
     auto d_msbMask = genGPUTruncateKey<u16, u8>(key_as_bytes, party, TruncateType::TrWithSlack, 16, 8, 8, N, d_clipMask, gaes);
@@ -55,7 +55,7 @@ template <typename T>
 T *gpuNExp(SigmaPeer* peer, int party, int bw, int bin, int scale, int N, GPUNExpKey<T> k, T *d_X, T* d_nExpMsbTab, T* d_nExpLsbTab, AESGlobalContext *gaes, Stats *s)
 {
     const u64 p = (1ULL << 16) - 1;
-    auto d_clippedX = gpuRelu<T, u16, p, p, true>(peer, party, k.reluKey, d_X, gaes, s);
+    auto d_clippedX = dpf::gpuRelu<T, u16, p, p, true>(peer, party, k.reluKey, d_X, gaes, s);
     // printf("Starting LSB LUT=%d, %d\n", N, k.N);
     auto d_lsbLookup = gpuDpfLUT<u16, T>(k.lsbLutKey, peer, party, d_clippedX, d_nExpLsbTab, gaes, s);
     auto d_msb = gpuTruncate<u16, u8>(16, 8, TruncateType::TrWithSlack, k.trKey, 8, peer, party, k.N, d_clippedX, gaes, s);
