@@ -254,15 +254,15 @@ namespace wing
         d_F = (T *)moveToGPU((u8 *)F, convKey.mem_size_F, &(this->s));
         d_mask_F = (T *)moveToGPU((u8 *)convKey.F, convKey.mem_size_F, &(this->s));
         auto d_C = gpuConv2DBeaver(convKey, party, d_I, d_F, d_mask_I, d_mask_F, useBias && party == SERVER0 ? b : (T*) NULL, &(this->s), 0);
-
         // should not be freeing d_I who knows where else it is being used
         // gpuFree(d_I);
         gpuFree(d_F);
         gpuFree(d_mask_I);
         gpuFree(d_mask_F);
 
+        std::cout << "Before Truncate" << std::endl;
         wing::gpuTruncate(p.bin, p.bout, tf, truncateKeyC, global::scale, peer, party, p.size_O, d_C, gaes, &(this->s));
-
+        std::cout << "After Truncate" << std::endl;
         return d_C;
     }
 

@@ -251,8 +251,11 @@ namespace wing
     void gpuTRe(GPUTReKey<T> k, int party, SigmaPeer *peer, T *d_I, AESGlobalContext *g, Stats *s, bool reconstruct = true)
     {   
         TReKernel<<<(k.N - 1) / 128 + 1, 128>>>(party, k.bin, k.bout, k.shift, k.N, d_I);
-        if (reconstruct)
+        if (reconstruct){
+            std::cout << "Reconstructing TRe" << std::endl;
+            std::cout << k.bout << " " << k.N << std::endl;
             peer->reconstructInPlace(d_I, k.bout, k.N, s);
+        }
     }
 
     template <typename T>

@@ -235,7 +235,7 @@ namespace wing
         auto d_mask_X = (T *)moveToGPU((u8 *)mmKey.A, mmKey.mem_size_A, &(this->s));
         if (inputIsShares)
         {
-            gpuLinearComb(p.bw, p.size_A, d_X, T(1), d_X, T(1), d_mask_X);
+            gpuLinearComb(p.bw, p.size_A, d_X, T(1), d_X, T(1), d_mask_X);   
             peer->reconstructInPlace(d_X, p.bw, p.size_A, &(this->s));
         }
         if (this->train)
