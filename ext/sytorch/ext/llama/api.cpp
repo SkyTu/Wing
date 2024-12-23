@@ -648,7 +648,7 @@ void ars_threads_helper(int thread_idx, int32_t size, GroupElement *inArr, Group
         evalMicroseconds += (reconstruct_time + compute_time);
         lolEvalMicroseconds += (reconstruct_time + compute_time);
 */
-void ARS(int32_t size, MASK_PAIR(GroupElement *inArr), MASK_PAIR(GroupElement *outArr), int32_t shift)
+void ARS(int32_t size, MASK_PAIR(GroupElement *inArr), MASK_PAIR(GroupElement *outArr), int32_t shift, bool doReconstruct)
 {
     std::cerr << ">> Truncate" << (LlamaConfig::stochasticT ? " (stochastic)" : "") << " - Start" << std::endl;
     if (party == DEALER)
@@ -703,7 +703,8 @@ void ARS(int32_t size, MASK_PAIR(GroupElement *inArr), MASK_PAIR(GroupElement *o
             thread_pool[i].join();
         }
         uint64_t onlineComm0 = peer->bytesReceived() + peer->bytesSent();
-        // reconstruct(size, outArr, bitlength);
+        if (doReconstruct)
+            reconstruct(size, outArr, bitlength);
         uint64_t onlineComm1 = peer->bytesReceived() + peer->bytesSent();
         arsOnlineComm += (onlineComm1 - onlineComm0);
         auto mid = std::chrono::high_resolution_clock::now();
@@ -723,7 +724,7 @@ void ARS(int32_t size, MASK_PAIR(GroupElement *inArr), MASK_PAIR(GroupElement *o
     std::cerr << ">> Truncate - End" << std::endl;
 }
 
-void ScaleDown(int32_t size, MASK_PAIR(GroupElement *inArr), int32_t sf)
+void ScaleDown(int32_t size, MASK_PAIR(GroupElement *inArr), int32_t sf, bool doReconstruct)
 {
     std::cerr << ">> ScaleDown - Start " << std::endl;
 
@@ -761,7 +762,7 @@ void ScaleDown(int32_t size, MASK_PAIR(GroupElement *inArr), int32_t sf)
     }
     else
     {
-        ARS(size, inArr, inArr_mask, inArr, inArr_mask, sf);
+        ARS(size, inArr, inArr_mask, inArr, inArr_mask, sf, doReconstruct);
     }
     std::cerr << ">> ScaleDown - End " << std::endl;
 }
@@ -4996,7 +4997,7 @@ void PiranhaSoftmax(int32_t s1, int32_t s2, MASK_PAIR(GroupElement *inArr), MASK
     auto logs1 = osuCrypto::log2ceil(s1);
     
     // 截断以后出去要减去label的share，这里不reveal
-    ScaleDown(s1 * s2, MASK_PAIR(outArr), sf + logs1 - extra_shift);
+    ScaleDown(s1 * s2, MASK_PAIR(outArr), sf + logs1 - extra_shift, false);
     // else{
     //     for (int i = 0; i < s1 * s2; ++i)
     //     {
