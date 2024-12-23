@@ -69,7 +69,7 @@ int main(int argc, char *argv[])
     int party = atoi(argv[1]);
 
     auto peer = new GpuPeer(true);
-    peer->connect(party, argv[4]);
+    peer->connect(party, argv[2]);
     
     // printf("Here\n");
     int inSz = getInSz(p);
