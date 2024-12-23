@@ -253,7 +253,7 @@ namespace wing
         TReKernel<<<(k.N - 1) / 128 + 1, 128>>>(party, k.bin, k.bout, k.shift, k.N, d_I);
         if (reconstruct){
             std::cout << "Reconstructing TRe" << std::endl;
-            std::cout << k.bout << " " << k.N << std::endl;
+            std::cout << k.shift << " " << k.N << std::endl;
             peer->reconstructInPlace(d_I, k.bout, k.N, s);
         }
     }
