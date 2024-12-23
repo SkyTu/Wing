@@ -263,6 +263,13 @@ T cpuArs(T x, int bin, int shift)
     return x;
 }
 
+inline int log2(int x){
+    int y = 0;
+    while (x >>= 1)
+        y++;
+    return y;
+}
+
 inline double asFloat(u64 x, int bw, int scale)
 {
     return ((i64)cpuArs(x << (64 - bw), 64, 64 - bw)) / (double)(   1ULL << scale);
