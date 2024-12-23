@@ -4939,18 +4939,27 @@ void PiranhaSoftmax(int32_t s1, int32_t s2, MASK_PAIR(GroupElement *inArr), MASK
     // step 3 - exponentiate each element in each image in batch
     // e^x = RT((x+2), 1) for negative x
     // ReluTruncate(s1 * s2, MASK_PAIR(outArr), MASK_PAIR(outArr), 1, nullptr); // Q: can we do this in place? can be a source of bug in future
-    Relu2Round(s1 * s2, MASK_PAIR(outArr), MASK_PAIR(outArr), nullptr, 64);
-    for (int i = 0; i < s1 * s2; ++i)
-    {
-        if (party == DEALER)
-        {
-            outArr_mask[i] = outArr_mask[i] / 2;
-        }
-        else
-        {
-            outArr[i] = outArr[i] / 2;
-        }
+    // Relu2Round(s1 * s2, MASK_PAIR(outArr), MASK_PAIR(outArr), nullptr, 64);
+    // for (int i = 0; i < s1 * s2; ++i)
+    // {
+    //     if (party == DEALER)
+    //     {
+    //         outArr_mask[i] = outArr_mask[i] / 2;
+    //     }
+    //     else
+    //     {
+    //         outArr[i] = outArr[i] / 2;
+    //     }
+    // }
+
+    int iter = 5;
+
+    ScaleDown(s1 * s2, MASK_PAIR(outArr), iter, true);
+    for (int i = 0; i < iter; i++){
+        ElemWiseMul(s1 * s2, outArr, outArr, outArr, "Softmax::ElemWiseMul");
+        ScaleDown(s1 * s2, MASK_PAIR(outArr), sf, true);
     }
+    
 
     GroupElement *denominators = max; // reuse the array
     // // step 4 - calculate sum of exponentiated elements for each image in batch
