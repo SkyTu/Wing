@@ -46,21 +46,21 @@ int main(int argc, char *argv[])
     p.scale = 12;
     p.scaleDiv = 0;
     p.bwBackprop = 0;
-    p.N = 12;
-    p.imgH = 128 * 10;
-    p.imgW = 128;
+    p.N = 128; // batch_size
+    p.H = 1;
+    p.W = 1;
     p.C = 1;
-    p.FH = 1;
-    p.FW = p.imgW;
-    p.strideH = 1;
-    p.strideW = p.FW;
+    p.FH = 10; // class
+    p.FW = 1; 
     p.zPadHLeft = 0;
     p.zPadHRight = 0;
     p.zPadWLeft = 0;
     p.zPadWRight = 0;
-    p.H = ((p.imgH - p.FH + (p.zPadHLeft + p.zPadHRight)) / p.strideH) + 1;
-    p.W = ((p.imgW - p.FW + (p.zPadWLeft + p.zPadWRight)) / p.strideW) + 1;
-    p.isLowerTriangular = true;
+    p.strideH = 1;
+    p.strideW = 1;
+    p.imgH = 10;
+    p.imgW = 1;
+    p.isLowerTriangular = false;
     printf("Output H=%d, output W=%d\n", p.H, p.W);
     auto d_nExpMsbTab = genLUT<T, nExpMsb<T>>(8, 4, p.scale);
     auto d_nExpLsbTab = genLUT<T, nExpLsb<T>>(8, 12, p.scale);
@@ -69,7 +69,7 @@ int main(int argc, char *argv[])
     int party = atoi(argv[1]);
 
     auto peer = new GpuPeer(true);
-    peer->connect(party, argv[2]);
+    peer->connect(party, argv[4]);
     
     // printf("Here\n");
     int inSz = getInSz(p);
@@ -126,7 +126,7 @@ int main(int argc, char *argv[])
         if (T(t2.data[i]) != h_O[i])
         {
             printf("Index %d=%ld, %ld, %lf\n", i, t2.data[i], h_O[i], asFloat(h_eI[i], p.bw, p.scale));
-            // assert(0);
+            assert(0);
         }
     }
     return 0;
