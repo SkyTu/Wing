@@ -62,10 +62,10 @@ namespace wing
         gpuLeftShiftAndAdd(N, d_dW, d_Vw, d_Vw, shift, T(wing::mom_fp));
         bool update_bias = (wing::lr_scale[epoch] + scaleVw - scaleW == 0);
         if(update_bias){
-            d_Vw = genGPUTruncateKey(key_as_bytes, party, wing::TruncateType::RevealedStochasticTruncate, bin, bout, wing::mom_scale, N, d_Vw, gaes);
+            d_Vw = genGPUTruncateKey(key_as_bytes, party, wing::TruncateType::RevealedStochasticTruncate, bin, bout, wing::mom_scale + extra_shift, N, d_Vw, gaes);
         }
         else{
-            d_Vw = genGPUTruncateKey(key_as_bytes, party, wing::TruncateType::StochasticTruncate, bin, bout, wing::mom_scale, N, d_Vw, gaes);
+            d_Vw = genGPUTruncateKey(key_as_bytes, party, wing::TruncateType::StochasticTruncate, bin, bout, wing::mom_scale + extra_shift, N, d_Vw, gaes);
         }
         moveIntoCPUMem((u8 *)h_Vw, (u8 *)d_Vw /*d_dW*/, memSizeW, NULL);
         bool dWWasNull = false;
@@ -112,11 +112,11 @@ namespace wing
         bool update_bias = (wing::lr_scale[epoch] + scaleVw - scaleW == 0);
         if (update_bias){
             gpuLeftShiftAndAdd(N, d_dW, d_Vw, d_Vw, shift, T(wing::mom_fp));
-            wing::gpuTruncate(bin, bout, wing::TruncateType::RevealedStochasticTruncate, truncateKeyVw, wing::mom_scale, peer, party, N, d_Vw, gaes, s);
+            wing::gpuTruncate(bin, bout, wing::TruncateType::RevealedStochasticTruncate, truncateKeyVw, wing::mom_scale + extra_shift, peer, party, N, d_Vw, gaes, s);
         }
         else{
             gpuLeftShiftAndAdd(N, d_dW, d_Vw, d_Vw, shift, T(wing::mom_fp));
-            wing::gpuTruncate(bin, bout, wing::TruncateType::StochasticTruncate, truncateKeyVw, wing::mom_scale, peer, party, N, d_Vw, gaes, s, false);
+            wing::gpuTruncate(bin, bout, wing::TruncateType::StochasticTruncate, truncateKeyVw, wing::mom_scale + extra_shift, peer, party, N, d_Vw, gaes, s, false);
         }
         moveIntoCPUMem((u8 *)h_Vw, (u8 *)d_Vw /*d_dW*/, memSizeW, s);
         bool dWWasNull = false;
