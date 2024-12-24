@@ -5099,7 +5099,7 @@ void PiranhaSoftmax(int32_t s1, int32_t s2, MASK_PAIR(GroupElement *inArr), MASK
 
     ScaleDown(s1 * s2, MASK_PAIR(outArr), iter, true);
 
-    if (party == DEALER)
+    if (party != DEALER)
     {
         for (int i = 0; i < s1 * s2; ++i)
         {
