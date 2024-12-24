@@ -5054,17 +5054,40 @@ void PiranhaSoftmax(int32_t s1, int32_t s2, MASK_PAIR(GroupElement *inArr), MASK
     GroupElement *max = make_array<GroupElement>(s1);
     // step 1 - calculate max for each image in batch
     GroupElement *oneHot = make_array<GroupElement>(s1 * (s2 - 1));
-    MaxPool(s1, 1, 1, 1, s2, 1, 0, 0, 0, 0, 1, 1, s1, s2, 1, 1, MASK_PAIR(inArr), max, max, oneHot);
+    GroupElement *inArrTR = make_array<GroupElement>(s1 * s2);
+    GroupElement *inArrTR_mask = make_array<GroupElement>(s1 * s2);
+    if (party == DEALER){
+        for (int i = 0; i < s1; ++i)
+        {
+            for (int j = 0; j < s2; ++j)
+            {
+                Arr2DIdx(inArrTR_mask, s1, s2, i, j) =  Arr2DIdx(inArr_mask, s1, s2, i, j) & ((uint64_t(1) << (bitlength - sf)) - 1);
+            }
+        }
+    }
+    else{
+        for (int i = 0; i < s1; ++i)
+        {
+            for (int j = 0; j < s2; ++j)
+            {
+                Arr2DIdx(inArrTR, s1, s2, i, j) =  Arr2DIdx(inArr, s1, s2, i, j) & ((uint64_t(1) << (bitlength - sf)) - 1);
+            }
+        }
+    }
+    bitlength -= sf;
+    MaxPool(s1, 1, 1, 1, s2, 1, 0, 0, 0, 0, 1, 1, s1, s2, 1, 1, MASK_PAIR(inArrTR), max, max, oneHot);
     delete[] oneHot; // TODO: support passing oneHot as nullptr
+    bitlength += sf;
 
-    // step 2 - subtract max from each element in each image in batch
+    // step 2 - subtract max and get the select bit
     if (party == DEALER)
     {
         for (int i = 0; i < s1; ++i)
         {
             for (int j = 0; j < s2; ++j)
             {
-                Arr2DIdx(outArr_mask, s1, s2, i, j) = Arr2DIdx(inArr_mask, s1, s2, i, j) - max[i];
+                Arr2DIdx(inArrTR_mask, s1, s2, i, j) = Arr2DIdx(inArrTR_mask, s1, s2, i, j) - max[i];
+
             }
         }
     }
@@ -5074,15 +5097,42 @@ void PiranhaSoftmax(int32_t s1, int32_t s2, MASK_PAIR(GroupElement *inArr), MASK
         {
             for (int j = 0; j < s2; ++j)
             {
+                uint64_t epsilon = sf > 19 ? 1ULL : (1ULL << (sf - 19));
+                Arr2DIdx(inArrTR, s1, s2, i, j) = Arr2DIdx(inArrTR, s1, s2, i, j) - max[i] - epsilon - 14 * (1ULL << sf);
+            }
+        }
+    }
+    GroupElement *drelu = new GroupElement[s1 * s2];
+    SlothDrelu(s1 * s2, bitlength - sf, inArrTR, drelu, "Softmax::SlothDrelu");
+
+    // step 2 - subtract max
+    SignExtend2(s1, bitlength - sf, bitlength, max, max);
+    if (party == DEALER)
+    {
+        for (int i = 0; i < s1; ++i)
+        {
+            for (int j = 0; j < s2; ++j)
+            {
+                Arr2DIdx(outArr_mask, s1, s2, i, j) = Arr2DIdx(inArr_mask, s1, s2, i, j) - max[i];
+
+            }
+        }
+    }
+    else
+    {
+        for (int i = 0; i < s1; ++i)
+        {
+            for (int j = 0; j < s2; ++j)
+            {
+                uint64_t epsilon = sf > 19 ? 1ULL : (1ULL << (sf - 19));
                 Arr2DIdx(outArr, s1, s2, i, j) = Arr2DIdx(inArr, s1, s2, i, j) - max[i];
             }
         }
     }
 
+     // step 2 - calculate exp
     int iter = 5;
-
     ScaleDown(s1 * s2, MASK_PAIR(outArr), iter, true);
-
     if (party != DEALER)
     {
         for (int i = 0; i < s1 * s2; ++i)
@@ -5103,6 +5153,13 @@ void PiranhaSoftmax(int32_t s1, int32_t s2, MASK_PAIR(GroupElement *inArr), MASK
             ScaleDown(s1 * s2, MASK_PAIR(outArr), sf, true);
         }
     }
+    if (party == DEALER)
+    {
+        Select(s1 * s2, drelu, outArr_mask, outArr_mask, "Softmax::Select", true);
+    }
+    else{
+        Select(s1 * s2, drelu, outArr, outArr, "Softmax::Select", true);
+    }
     // if (party == DEALER)
     // {
     //     Square(s1, s2, sf, outArr_mask, outArr_mask, "Softmax::Square", true, true);
@@ -5122,7 +5179,7 @@ void PiranhaSoftmax(int32_t s1, int32_t s2, MASK_PAIR(GroupElement *inArr), MASK
     // }
     
     
-
+    // calculate inverse
     GroupElement *denominators = max; // reuse the array
     // // step 4 - calculate sum of exponentiated elements for each image in batch
     if (party == DEALER)
