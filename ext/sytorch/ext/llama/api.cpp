@@ -3335,7 +3335,7 @@ void SlothMaxpoolTriangular(int s1, int s2, int bin, GroupElement *x, GroupEleme
 }
 
 // 如果sf>0表示truncate reduce，输入是恢复了的结果，输出是截断后的结果
-void Square(int s1, int s2, int sf, GroupElement *in, GroupElement *out, std::string prefix, bool doReconstruct){
+void Square(int s1, int s2, int sf, GroupElement *in, GroupElement *out, std::string prefix, bool doReconstruct, bool truncate_reduce){
     int size = s1 * s2;
     if (party == DEALER)
     {
@@ -3346,7 +3346,12 @@ void Square(int s1, int s2, int sf, GroupElement *in, GroupElement *out, std::st
         {
             auto rout = random_ge(bitlength);
             keys[i] = keyGenSquare(in[i], rout);
-            out[i] = (rout >> sf);
+            if (truncate_reduce){
+                out[i] = (rout >> sf);
+            }
+            else{
+                out[i] = rout;
+            }
         }
 
         for (int i = 0; i < size; ++i)
@@ -3374,7 +3379,13 @@ void Square(int s1, int s2, int sf, GroupElement *in, GroupElement *out, std::st
                                             {
 #pragma omp parallel for
             for(int i = 0; i < size; ++i) {
-                out[i] = (evalSquare(party - SERVER, in[i], keys[i])>>sf);
+                if (truncate_reduce){
+                    out[i] = (evalSquare(party - SERVER, in[i], keys[i])>>sf);
+                }
+                else{
+                    out[i] = evalSquare(party - SERVER, in[i], keys[i]);
+                }
+                
             }
 
         });
@@ -3382,8 +3393,13 @@ void Square(int s1, int s2, int sf, GroupElement *in, GroupElement *out, std::st
 
         auto reconstruction_stats = time_comm_this_block([&]()
         { 
-            if(doReconstruct)
-                reconstruct(size, out, bitlength-sf); 
+            if(doReconstruct){
+                if(truncate_reduce)
+                    reconstruct(size, out, bitlength-sf); 
+                else
+                    reconstruct(size, out, bitlength); 
+            }
+                
         });
 
         Llama::stat_t stat = {prefix + "Square", keyread_time, compute_time, reconstruction_stats.first, reconstruction_stats.second, dealer->bytesReceived() - keysize_start};
@@ -5083,12 +5099,17 @@ void PiranhaSoftmax(int32_t s1, int32_t s2, MASK_PAIR(GroupElement *inArr), MASK
     int iter = 5;
 
     ScaleDown(s1 * s2, MASK_PAIR(outArr), iter, true);
-    Square(s1, s2, sf, outArr, outArr, "Softmax::Square", true);
+    
+    // for (int i = 0; i < iter; i++){
+    //     ElemWiseSquareWingOpt(s1 * s2, outArr, outArr, bitlength, sf, "Softmax::OptSquare", true);
+    // }
+    // ElemWiseSquareWingOpt(s1 * s2, outArr, outArr, bitlength, sf, "Softmax::OptSquare", false);
+
     for (int i = 0; i < iter; i++){
-        ElemWiseSquareWingOpt(s1 * s2, outArr, outArr, bitlength, sf, "Softmax::OptSquare", true);
+        Square(s1, s2, sf, outArr, outArr, "Softmax::Square", true, false);
+        ScaleDown(s1 * s2, MASK_PAIR(outArr), sf, true);
     }
-    ElemWiseSquareWingOpt(s1 * s2, outArr, outArr, bitlength, sf, "Softmax::OptSquare", false);
-    ScaleDown(s1 * s2, MASK_PAIR(outArr), sf, true);
+    
     
 
     GroupElement *denominators = max; // reuse the array
