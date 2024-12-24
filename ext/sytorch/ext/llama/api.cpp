@@ -5051,6 +5051,7 @@ void PiranhaSoftmax(int32_t s1, int32_t s2, MASK_PAIR(GroupElement *inArr), MASK
     // s1 = batch size
     // s2 = number of classes
     std::cerr << ">> Softmax - start" << " s1 = " << s1 << " s2 = " << s2 << " sf = " << sf << std::endl;
+    int iter = 5;
     GroupElement *max = make_array<GroupElement>(s1);
     // step 1 - calculate max for each image in batch
     GroupElement *oneHot = make_array<GroupElement>(s1 * (s2 - 1));
@@ -5089,7 +5090,7 @@ void PiranhaSoftmax(int32_t s1, int32_t s2, MASK_PAIR(GroupElement *inArr), MASK
             for (int j = 0; j < s2; ++j)
             {
                 Arr2DIdx(inArrTR_mask, s1, s2, i, j) = Arr2DIdx(inArrTR_mask, s1, s2, i, j) - max[i];
-
+                mod(Arr2DIdx(inArrTR_mask, s1, s2, i, j), bitlength-sf);
             }
         }
     }
@@ -5100,11 +5101,12 @@ void PiranhaSoftmax(int32_t s1, int32_t s2, MASK_PAIR(GroupElement *inArr), MASK
             for (int j = 0; j < s2; ++j)
             {
                 uint64_t epsilon = sf > 19 ? 1ULL : (1ULL << (sf - 19));
-                Arr2DIdx(inArrTR, s1, s2, i, j) = Arr2DIdx(inArrTR, s1, s2, i, j) - max[i] - epsilon + (14ULL * (1ULL << sf));
+                Arr2DIdx(inArrTR, s1, s2, i, j) = Arr2DIdx(inArrTR, s1, s2, i, j) - max[i] - epsilon + (14ULL << sf);
+                mod(Arr2DIdx(inArrTR, s1, s2, i, j), bitlength-sf);
             }
         }
     }
-
+    
     GroupElement *drelu = new GroupElement[s1 * s2];
     if (party == DEALER)
     {
@@ -5140,7 +5142,6 @@ void PiranhaSoftmax(int32_t s1, int32_t s2, MASK_PAIR(GroupElement *inArr), MASK
     }
 
      // step 2 - calculate exp
-    int iter = 5;
     ScaleDown(s1 * s2, MASK_PAIR(outArr), iter, true);
     if (party != DEALER)
     {
