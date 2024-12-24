@@ -727,7 +727,6 @@ void ARS(int32_t size, MASK_PAIR(GroupElement *inArr), MASK_PAIR(GroupElement *o
 void ScaleDown(int32_t size, MASK_PAIR(GroupElement *inArr), int32_t sf, bool doReconstruct)
 {
     std::cerr << ">> ScaleDown - Start " << std::endl;
-
     if (localTruncation)
     {
         uint64_t m = ((1L << sf) - 1) << (bitlength - sf);
@@ -5096,7 +5095,7 @@ void PiranhaSoftmax(int32_t s1, int32_t s2, MASK_PAIR(GroupElement *inArr), MASK
     //     }
     // }
 
-    int iter = 5;
+    int iter = 2;
 
     ScaleDown(s1 * s2, MASK_PAIR(outArr), iter, true);
     
