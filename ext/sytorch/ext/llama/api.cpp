@@ -1184,6 +1184,7 @@ void AvgPool(int32_t N, int32_t H, int32_t W, int32_t C, int32_t ksizeH,
 
 // 传进来的是bit_length - sf的已经reconstruct的数值
 void ElemWiseSquareWingOpt(int32_t size, GroupElement *inArr, GroupElement *outputArr, int32_t bw, int32_t sf, std::string prefix, bool truncate_reduce){
+    std::cerr << ">> ElemWiseSquareWing - Start" << std::endl;
     if (party == DEALER)
     {
         pair<SquareWingOptKey> *keys = new pair<SquareWingOptKey>[size];
@@ -1208,7 +1209,6 @@ void ElemWiseSquareWingOpt(int32_t size, GroupElement *inArr, GroupElement *outp
     }
     else
     {
-        std::cerr << ">> ElemWiseSquareWing - Start" << std::endl;
         SquareWingOptKey *keys = new SquareWingOptKey[size];
 
         uint64_t keysize_start = dealer->bytesReceived();
@@ -1245,9 +1245,9 @@ void ElemWiseSquareWingOpt(int32_t size, GroupElement *inArr, GroupElement *outp
         Llama::stat_t stat = {prefix + "ElemWiseSquare", keyread_time, compute_time, reconstruction_stats.first, reconstruction_stats.second, dealer->bytesReceived() - keysize_start};
         stat.print();
         Llama::push_stats(stat);
-        std::cerr << ">> ElemWiseSquareWing - End" << std::endl;
         delete[] keys;
     }
+    std::cerr << ">> ElemWiseSquareWing - End" << std::endl;
 }
 
 void ElemWiseMul(int32_t size, GroupElement *inArr, GroupElement *multArrVec, GroupElement *outputArr, std::string prefix)
