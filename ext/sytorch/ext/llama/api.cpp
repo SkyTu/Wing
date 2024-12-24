@@ -5079,7 +5079,7 @@ void PiranhaSoftmax(int32_t s1, int32_t s2, MASK_PAIR(GroupElement *inArr), MASK
         }
     }
 
-    int iter = 2;
+    int iter = 4;
 
     ScaleDown(s1 * s2, MASK_PAIR(outArr), iter, true);
 
@@ -5106,7 +5106,7 @@ void PiranhaSoftmax(int32_t s1, int32_t s2, MASK_PAIR(GroupElement *inArr), MASK
     if (party == DEALER)
     {
         Square(s1, s2, sf, outArr_mask, outArr_mask, "Softmax::Square", true, true);
-        for (int i = 1; i < iter; i++){
+        for (int i = 1; i < iter-1; i++){
             ElemWiseSquareWingOpt(s1 * s2, outArr_mask, outArr_mask, bitlength, sf, "Softmax::OptSquare", true);
         }
         ElemWiseSquareWingOpt(s1 * s2, outArr_mask, outArr_mask, bitlength, sf, "Softmax::OptSquare", false);
@@ -5114,7 +5114,7 @@ void PiranhaSoftmax(int32_t s1, int32_t s2, MASK_PAIR(GroupElement *inArr), MASK
     }
     else{
         Square(s1, s2, sf, outArr, outArr, "Softmax::Square", true, true);
-        for (int i = 1; i < iter; i++){
+        for (int i = 1; i < iter-1; i++){
             ElemWiseSquareWingOpt(s1 * s2, outArr, outArr, bitlength, sf, "Softmax::OptSquare", true);
         }
         ElemWiseSquareWingOpt(s1 * s2, outArr, outArr, bitlength, sf, "Softmax::OptSquare", false);
