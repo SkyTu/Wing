@@ -5057,7 +5057,7 @@ void PiranhaSoftmax(int32_t s1, int32_t s2, MASK_PAIR(GroupElement *inArr), MASK
     MaxPool(s1, 1, 1, 1, s2, 1, 0, 0, 0, 0, 1, 1, s1, s2, 1, 1, MASK_PAIR(inArr), max, max, oneHot);
     delete[] oneHot; // TODO: support passing oneHot as nullptr
 
-    // step 2 - subtract max from each element in each image in batch and add 2
+    // step 2 - subtract max from each element in each image in batch
     if (party == DEALER)
     {
         for (int i = 0; i < s1; ++i)
@@ -5074,7 +5074,7 @@ void PiranhaSoftmax(int32_t s1, int32_t s2, MASK_PAIR(GroupElement *inArr), MASK
         {
             for (int j = 0; j < s2; ++j)
             {
-                Arr2DIdx(outArr, s1, s2, i, j) = Arr2DIdx(inArr, s1, s2, i, j) - max[i] + (1 << (sf + 1));
+                Arr2DIdx(outArr, s1, s2, i, j) = Arr2DIdx(inArr, s1, s2, i, j) - max[i];
             }
         }
     }
