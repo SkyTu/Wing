@@ -2533,14 +2533,10 @@ void InverseLUTWing(int size, GroupElement *x, GroupElement *y, int scale, int b
     std::vector<GroupElement> lut(1LL << 16);
     for (int i = 1; i < (1LL << 16); ++i)
     {
-        lut[i] = GroupElement(double(1LL << (16 - intbw)) / i);
+        lut[i] = GroupElement(double(1LL << (scale + 16 - intbw)) / i);
     }
     // 出来的结果应该是bitlength-(16-intbw)
-    LUT_dpf(size, 16, 16, lut, y, y, prefix + "Inverse::");
-    for (int i = 0; i < size; ++i)
-    {
-        y[i] = y[i] << (scale-(16-intbw));
-    }
+    LUT_dpf(size, 16, bw, lut, y, y, prefix + "Inverse::");
 }
 
 void InverseLUT(int size, GroupElement *x, GroupElement *y, int scale, int bw, std::string prefix = "", int remove_int = 0)
@@ -5223,7 +5219,6 @@ void PiranhaSoftmax(int32_t s1, int32_t s2, MASK_PAIR(GroupElement *inArr), MASK
     }
     // step 5 - calculate inverse of all the denominators
     InverseLUTWing(s1, denominators, denominators, sf, bitlength, logs1, "");
-    SignExtend2(s1, logs1+sf+1, bitlength, denominators, denominators);
 
     // step 6 - multiply each element in each image in batch by the inverse of the denominator
     GroupElement *expandedDenominator = make_array<GroupElement>(s1 * s2);
