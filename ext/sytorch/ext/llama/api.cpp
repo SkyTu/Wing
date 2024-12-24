@@ -5098,7 +5098,13 @@ void PiranhaSoftmax(int32_t s1, int32_t s2, MASK_PAIR(GroupElement *inArr), MASK
     int iter = 2;
 
     ScaleDown(s1 * s2, MASK_PAIR(outArr), iter, true);
-    
+    for (int i = 0; i < s1 * s2; ++i)
+    {
+        if (party != DEALER)
+        {
+            outArr[i] = outArr[i] + 1;
+        }
+    }
     // for (int i = 0; i < iter; i++){
     //     ElemWiseSquareWingOpt(s1 * s2, outArr, outArr, bitlength, sf, "Softmax::OptSquare", true);
     // }
