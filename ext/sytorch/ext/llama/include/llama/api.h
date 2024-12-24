@@ -105,6 +105,8 @@ void ScaleUp(int32_t size, MASK_PAIR(GroupElement *inArr), int32_t sf);
 
 void ElemWiseMul(int32_t size, GroupElement *inArr, GroupElement *multArrVec, GroupElement *outputArr, std::string prefix = "");
 
+void ElemWiseMulWingOpt(int32_t size, GroupElement *inArr, GroupElement *outputArr, int32_t bw, int32_t sf, std::string prefix, bool truncate_reduce = true);
+
 void Floor(int32_t s1, MASK_PAIR(GroupElement *inArr), MASK_PAIR(GroupElement *outArr), int32_t sf);
 
 void PiranhaSoftmax(int32_t s1, int32_t s2, MASK_PAIR(GroupElement *inArr), MASK_PAIR(GroupElement *outArr), int32_t sf, int extra_shift = 0);
@@ -181,6 +183,8 @@ void SlothClip(int size, int bin, int maxbw, int bout, GroupElement *x, GroupEle
 void SlothMaxpool(int s1, int s2, int bin, GroupElement *x, GroupElement *y, std::string prefix = "");
 void SlothMaxpoolTriangular(int s1, int s2, int bin, GroupElement *x, GroupElement *y, std::string prefix = "");
 void SumOfSquare(int s1, int s2, GroupElement *x, GroupElement *y, std::string prefix = "");
+void Square(int s1, int s2, int sf, GroupElement *in, GroupElement *out, std::string prefix = "", bool doReconstruct = true);
+void ElemWiseSquareWingOpt(int32_t size, GroupElement *inArr, GroupElement *outputArr, int32_t bw, int32_t sf, std::string prefix="", bool truncate_reduce = true);
 void SlothLayerNorm(int s1, int s2, GroupElement *x, GroupElement *A, GroupElement *B, GroupElement *y, int scale);
 void SlothRMSNorm(int s1, int s2, GroupElement *x, GroupElement *A, GroupElement *B, GroupElement *y, int scale);
 void SlothGemm(int s1, int s2, int s3, GroupElement *x, GroupElement *A, GroupElement *y, int scale);

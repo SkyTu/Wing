@@ -70,6 +70,41 @@ std::pair<MultKey, MultKey> MultGen(GroupElement rin1, GroupElement rin2, GroupE
     return std::make_pair(k1, k2);
 }
 
+std::pair<SquareWingOptKey, SquareWingOptKey> SquareGenOptWing(GroupElement rin, GroupElement rout, int32_t bitlength, int32_t sf)
+{
+    SquareWingOptKey k1, k2;
+    k1.Bin = bitlength; k2.Bin = bitlength;
+    k1.Bout = bitlength; k2.Bout= bitlength;
+
+    GroupElement t = msb(rin, bitlength-sf) * (1ULL << (bitlength-sf));
+    GroupElement q  = rin + (1ULL << (bitlength-sf)) + rout;
+    GroupElement qt = t * (rin + (1ULL << (bitlength-sf)));
+    GroupElement t2 = t * t;
+    GroupElement q2 = q * q;
+    auto t_split = splitShare(t, bitlength);
+    auto q_split = splitShare(q, bitlength);
+    auto qt_split = splitShare(qt, bitlength);
+    auto t2_split = splitShare(t2, bitlength);
+    auto q2_split = splitShare(q2, bitlength);
+    k1.t = (t_split.first);
+    k1.q = (q_split.first);
+    k1.qt = (qt_split.first);
+    k1.t2 = (t2_split.first);
+    k1.q2 = (q2_split.first);
+    k2.t = (t_split.second);
+    k2.q = (q_split.second);
+    k2.qt = (qt_split.second);
+    k2.t2 = (t2_split.second);
+    k2.q2 = (q2_split.second);
+    return std::make_pair(k1, k2);
+}
+
+GroupElement SquareEvalOptWing(int party, const SquareWingOptKey &k, const GroupElement &xhat, int32_t sf)
+{
+    GroupElement msbx = msb(xhat, k.Bin-sf);
+    return party * (xhat * xhat) + k.q2 + k.t2 * msbx * msbx - 2 * xhat * k.q - 2 * xhat * k.t * msbx - 2 * k.qt * msbx;
+}
+
 GroupElement MultEval(int party, const MultKey &k, const GroupElement &l, const GroupElement &r)
 {
     return party * (l * r) - l * k.b - r * k.a + k.c;

@@ -346,6 +346,12 @@ void Peer::send_mult_key(const MultKey &k)
     this->keyBuf->write(buf, sizeof(MultKey));
 }
 
+void Peer::send_square_opt_key(const SquareWingOptKey &k)
+{
+    char *buf = (char *)(&k);
+    this->keyBuf->write(buf, sizeof(SquareWingOptKey));
+}
+
 void Peer::send_square_key(const SquareKey &k)
 {
     send_ge(k.b, 64);
@@ -911,6 +917,14 @@ MultKey Dealer::recv_mult_key()
     char buf[sizeof(MultKey)];
     this->keyBuf->read(buf, sizeof(MultKey));
     MultKey k(*(MultKey *)buf);
+    return k;
+}
+
+SquareWingOptKey Dealer::recv_square_opt_key()
+{
+    char buf[sizeof(SquareWingOptKey)];
+    this->keyBuf->read(buf, sizeof(SquareWingOptKey));
+    SquareWingOptKey k(*(SquareWingOptKey *)buf);
     return k;
 }
 

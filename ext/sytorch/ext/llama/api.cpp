@@ -1182,6 +1182,73 @@ void AvgPool(int32_t N, int32_t H, int32_t W, int32_t C, int32_t ksizeH,
     std::cerr << ">> AvgPool - End" << std::endl;
 }
 
+// 传进来的是bit_length - sf的已经reconstruct的数值
+void ElemWiseSquareWingOpt(int32_t size, GroupElement *inArr, GroupElement *outputArr, int32_t bw, int32_t sf, std::string prefix, bool truncate_reduce){
+    if (party == DEALER)
+    {
+        pair<SquareWingOptKey> *keys = new pair<SquareWingOptKey>[size];
+#pragma omp parallel for
+        for (int i = 0; i < size; ++i)
+        {
+            auto rout = random_ge(bitlength);
+            keys[i] = SquareGenOptWing(inArr[i], rout, bitlength, sf);
+            if(truncate_reduce){
+                outputArr[i] = (rout >> sf);
+            }
+            else{
+                outputArr[i] = rout;
+            }
+        }
+        for (int i = 0; i < size; ++i)
+        {
+            server->send_square_opt_key(keys[i].first);
+            client->send_square_opt_key(keys[i].second);
+        }
+        delete[] keys;
+    }
+    else
+    {
+        SquareWingOptKey *keys = new SquareWingOptKey[size];
+
+        uint64_t keysize_start = dealer->bytesReceived();
+        auto keyread_time = time_this_block([&]()
+                                            {
+            for(int i = 0; i < size; ++i) {
+                keys[i] = dealer->recv_square_opt_key();
+            } });
+
+        peer->sync();
+
+        auto compute_time = time_this_block([&]()
+                                            {
+#pragma omp parallel for
+            for(int i = 0; i < size; ++i) {
+                if (truncate_reduce){
+                    outputArr[i] = (SquareEvalOptWing(party - SERVER, keys[i], inArr[i], sf)>>sf);
+                }
+                else{
+                    outputArr[i] = SquareEvalOptWing(party - SERVER, keys[i], inArr[i], sf);
+                }
+            } });
+
+        auto reconstruction_stats = time_comm_this_block([&]()
+                                                         { 
+                                                            if(truncate_reduce){
+                                                                reconstruct(size, outputArr, bw-sf);
+                                                            }
+                                                            else{
+                                                                reconstruct(size, outputArr, bw);
+                                                            }
+                                                    });
+
+        Llama::stat_t stat = {prefix + "ElemWisePow", keyread_time, compute_time, reconstruction_stats.first, reconstruction_stats.second, dealer->bytesReceived() - keysize_start};
+        stat.print();
+        Llama::push_stats(stat);
+
+        delete[] keys;
+    }
+}
+
 void ElemWiseMul(int32_t size, GroupElement *inArr, GroupElement *multArrVec, GroupElement *outputArr, std::string prefix)
 {
     if (party == DEALER)
@@ -3266,6 +3333,66 @@ void SlothMaxpoolTriangular(int s1, int s2, int bin, GroupElement *x, GroupEleme
     delete[] res;
 }
 
+// 如果sf>0表示truncate reduce，输入是恢复了的结果，输出是截断后的结果
+void Square(int s1, int s2, int sf, GroupElement *in, GroupElement *out, std::string prefix, bool doReconstruct){
+    int size = s1 * s2;
+    if (party == DEALER)
+    {
+        pair<SquareKey> *keys = new pair<SquareKey>[size];
+
+#pragma omp parallel for
+        for (int i = 0; i < size; ++i)
+        {
+            auto rout = random_ge(bitlength);
+            keys[i] = keyGenSquare(in[i], rout);
+            out[i] = (rout >> sf);
+        }
+
+        for (int i = 0; i < size; ++i)
+        {
+            server->send_square_key(keys[i].first);
+            client->send_square_key(keys[i].second);
+        }
+
+        delete[] keys;
+    }
+    else
+    {
+        SquareKey *keys = new SquareKey[size];
+
+        uint64_t keysize_start = dealer->bytesReceived();
+        auto keyread_time = time_this_block([&]()
+                                            {
+            for(int i = 0; i < size; ++i) {
+                keys[i] = dealer->recv_square_key();
+            } });
+
+        peer->sync();
+
+        auto compute_time = time_this_block([&]()
+                                            {
+#pragma omp parallel for
+            for(int i = 0; i < size; ++i) {
+                out[i] = (evalSquare(party - SERVER, in[i], keys[i])>>sf);
+            }
+
+        });
+
+
+        auto reconstruction_stats = time_comm_this_block([&]()
+        { 
+            if(doReconstruct)
+                reconstruct(size, out, bitlength-sf); 
+        });
+
+        Llama::stat_t stat = {prefix + "Square", keyread_time, compute_time, reconstruction_stats.first, reconstruction_stats.second, dealer->bytesReceived() - keysize_start};
+        stat.print();
+        Llama::push_stats(stat);
+
+        delete[] keys;
+    }
+}
+
 void SumOfSquare(int s1, int s2, GroupElement *x, GroupElement *y, std::string prefix)
 {
     int size = s1 * s2;
@@ -4955,10 +5082,12 @@ void PiranhaSoftmax(int32_t s1, int32_t s2, MASK_PAIR(GroupElement *inArr), MASK
     int iter = 5;
 
     ScaleDown(s1 * s2, MASK_PAIR(outArr), iter, true);
-    for (int i = 0; i < iter; i++){
-        ElemWiseMul(s1 * s2, outArr, outArr, outArr, "Softmax::ElemWiseMul");
-        ScaleDown(s1 * s2, MASK_PAIR(outArr), sf, true);
+    Square(s1, s2, sf, outArr, outArr, "Softmax::Square", true);
+    for (int i = 0; i < iter - 1; i++){
+        ElemWiseSquareWingOpt(s1 * s2, outArr, outArr, bitlength, sf, "Softmax::OptSquare", true);
     }
+    ElemWiseSquareWingOpt(s1 * s2, outArr, outArr, bitlength, sf, "Softmax::OptSquare", false);
+    ScaleDown(s1 * s2, MASK_PAIR(outArr), sf, true);
     
 
     GroupElement *denominators = max; // reuse the array

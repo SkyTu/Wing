@@ -79,6 +79,11 @@ struct MultKey{
     GroupElement a, b, c;
 };
 
+struct SquareWingOptKey{
+    int Bin, Bout;
+    GroupElement t, q, qt, t2, q2;
+};
+
 struct MatMulKey{
     int Bin, Bout;
     int s1, s2, s3;

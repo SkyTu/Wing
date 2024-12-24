@@ -251,6 +251,8 @@ public:
 
     void send_mult_key(const MultKey &k);
 
+    void send_square_opt_key(const SquareWingOptKey &k);
+
     void send_square_key(const SquareKey &k);
 
     void send_matmul_key(const MatMulKey &k);
@@ -377,6 +379,8 @@ public:
     GroupElement recv_mask();
 
     MultKey recv_mult_key();
+
+    SquareWingOptKey recv_square_opt_key();
 
     SquareKey recv_square_key();
 
