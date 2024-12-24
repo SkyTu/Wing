@@ -1208,6 +1208,7 @@ void ElemWiseSquareWingOpt(int32_t size, GroupElement *inArr, GroupElement *outp
     }
     else
     {
+        std::cerr << ">> ElemWiseSquareWing - Start" << std::endl;
         SquareWingOptKey *keys = new SquareWingOptKey[size];
 
         uint64_t keysize_start = dealer->bytesReceived();
@@ -1241,10 +1242,10 @@ void ElemWiseSquareWingOpt(int32_t size, GroupElement *inArr, GroupElement *outp
                                                             }
                                                     });
 
-        Llama::stat_t stat = {prefix + "ElemWisePow", keyread_time, compute_time, reconstruction_stats.first, reconstruction_stats.second, dealer->bytesReceived() - keysize_start};
+        Llama::stat_t stat = {prefix + "ElemWiseSquare", keyread_time, compute_time, reconstruction_stats.first, reconstruction_stats.second, dealer->bytesReceived() - keysize_start};
         stat.print();
         Llama::push_stats(stat);
-
+        std::cerr << ">> ElemWiseSquareWing - End" << std::endl;
         delete[] keys;
     }
 }
@@ -2522,7 +2523,7 @@ void Select(int32_t size, GroupElement *s, GroupElement *x, GroupElement *out, s
     Select(size, bitlength, s, x, out, prefix, doReconstruct);
 }
 
-void InverseLUT(int size, GroupElement *x, GroupElement *y, int scale, int bw, std::string prefix = "")
+void InverseLUT(int size, GroupElement *x, GroupElement *y, int scale, int bw, std::string prefix = "", int remove_int = 0)
 {
 
     // for (int i = 0; i < size; ++i)
@@ -5083,7 +5084,7 @@ void PiranhaSoftmax(int32_t s1, int32_t s2, MASK_PAIR(GroupElement *inArr), MASK
 
     ScaleDown(s1 * s2, MASK_PAIR(outArr), iter, true);
     Square(s1, s2, sf, outArr, outArr, "Softmax::Square", true);
-    for (int i = 0; i < iter - 1; i++){
+    for (int i = 0; i < iter; i++){
         ElemWiseSquareWingOpt(s1 * s2, outArr, outArr, bitlength, sf, "Softmax::OptSquare", true);
     }
     ElemWiseSquareWingOpt(s1 * s2, outArr, outArr, bitlength, sf, "Softmax::OptSquare", false);
@@ -5118,7 +5119,7 @@ void PiranhaSoftmax(int32_t s1, int32_t s2, MASK_PAIR(GroupElement *inArr), MASK
     }
     // step 5 - calculate inverse of all the denominators
     InsecureInverse(s1, denominators, denominators, sf, s2 * s1);
-
+    // InverseLUT(s1, denominators, denominators, sf, bitlength-sf, "");
     // step 6 - multiply each element in each image in batch by the inverse of the denominator
     GroupElement *expandedDenominator = make_array<GroupElement>(s1 * s2);
     for (int i = 0; i < s1; ++i)
