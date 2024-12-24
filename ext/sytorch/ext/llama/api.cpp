@@ -5079,22 +5079,6 @@ void PiranhaSoftmax(int32_t s1, int32_t s2, MASK_PAIR(GroupElement *inArr), MASK
         }
     }
 
-    // step 3 - exponentiate each element in each image in batch
-    // e^x = RT((x+2), 1) for negative x
-    // ReluTruncate(s1 * s2, MASK_PAIR(outArr), MASK_PAIR(outArr), 1, nullptr); // Q: can we do this in place? can be a source of bug in future
-    // Relu2Round(s1 * s2, MASK_PAIR(outArr), MASK_PAIR(outArr), nullptr, 64);
-    // for (int i = 0; i < s1 * s2; ++i)
-    // {
-    //     if (party == DEALER)
-    //     {
-    //         outArr_mask[i] = outArr_mask[i] / 2;
-    //     }
-    //     else
-    //     {
-    //         outArr[i] = outArr[i] / 2;
-    //     }
-    // }
-
     int iter = 2;
 
     ScaleDown(s1 * s2, MASK_PAIR(outArr), iter, true);
@@ -5106,22 +5090,35 @@ void PiranhaSoftmax(int32_t s1, int32_t s2, MASK_PAIR(GroupElement *inArr), MASK
             outArr[i] = outArr[i] + (1ULL << sf);
         }
     }
-    // for (int i = 0; i < iter; i++){
-    //     ElemWiseSquareWingOpt(s1 * s2, outArr, outArr, bitlength, sf, "Softmax::OptSquare", true);
+    // if (party == DEALER)
+    // {
+    //     for (int i = 0; i < iter; i++){
+    //         Square(s1, s2, sf, outArr_mask, outArr_mask, "Softmax::Square", true, false);
+    //         ScaleDown(s1 * s2, MASK_PAIR(outArr), sf, true);
+    //     }
     // }
-    // ElemWiseSquareWingOpt(s1 * s2, outArr, outArr, bitlength, sf, "Softmax::OptSquare", false);
+    // else{
+    //     for (int i = 0; i < iter; i++){
+    //         Square(s1, s2, sf, outArr, outArr, "Softmax::Square", true, false);
+    //         ScaleDown(s1 * s2, MASK_PAIR(outArr), sf, true);
+    //     }
+    // }
     if (party == DEALER)
     {
-        for (int i = 0; i < iter; i++){
-            Square(s1, s2, sf, outArr_mask, outArr_mask, "Softmax::Square", true, false);
-            ScaleDown(s1 * s2, MASK_PAIR(outArr), sf, true);
+        Square(s1, s2, sf, outArr_mask, outArr_mask, "Softmax::Square", true, true);
+        for (int i = 1; i < iter; i++){
+            ElemWiseSquareWingOpt(s1 * s2, outArr_mask, outArr_mask, bitlength, sf, "Softmax::OptSquare", true);
         }
+        ElemWiseSquareWingOpt(s1 * s2, outArr_mask, outArr_mask, bitlength, sf, "Softmax::OptSquare", false);
+        ScaleDown(s1 * s2, MASK_PAIR(outArr), sf, true);
     }
     else{
-        for (int i = 0; i < iter; i++){
-            Square(s1, s2, sf, outArr, outArr, "Softmax::Square", true, false);
-            ScaleDown(s1 * s2, MASK_PAIR(outArr), sf, true);
+        Square(s1, s2, sf, outArr, outArr, "Softmax::Square", true, true);
+        for (int i = 1; i < iter; i++){
+            ElemWiseSquareWingOpt(s1 * s2, outArr, outArr, bitlength, sf, "Softmax::OptSquare", true);
         }
+        ElemWiseSquareWingOpt(s1 * s2, outArr, outArr, bitlength, sf, "Softmax::OptSquare", false);
+        ScaleDown(s1 * s2, MASK_PAIR(outArr), sf, true);
     }
     
     
