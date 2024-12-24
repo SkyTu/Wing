@@ -2522,15 +2522,36 @@ void Select(int32_t size, GroupElement *s, GroupElement *x, GroupElement *out, s
     Select(size, bitlength, s, x, out, prefix, doReconstruct);
 }
 
+void InverseLUTWing(int size, GroupElement *x, GroupElement *y, int scale, int bw, int intbw, std::string prefix)
+{
+    // 去掉没有必要的整数位，保留部分小数。符号位没用，因为是正数，intbw位整数位，还有16-intbw小数位
+    for (int i = 0; i < size; ++i)
+    {
+        y[i] = (x[i] << (scale + (bw - 2 * scale - intbw))) >> (bw - 16);
+    }
+
+    std::vector<GroupElement> lut(1LL << 16);
+    for (int i = 1; i < (1LL << 16); ++i)
+    {
+        lut[i] = GroupElement(double(1LL << (16 - intbw)) / i);
+    }
+    // 出来的结果应该是bitlength-(16-intbw)
+    LUT_dpf(size, 16, bitlength-(scale-(16-intbw)), lut, y, y, prefix + "Inverse::");
+    for (int i = 0; i < size; ++i)
+    {
+        y[i] = y[i] << (scale-(16-intbw));
+    }
+}
+
 void InverseLUT(int size, GroupElement *x, GroupElement *y, int scale, int bw, std::string prefix = "", int remove_int = 0)
 {
 
-    for (int i = 0; i < size; ++i)
-    {
-        y[i] = x[i] >> (bw - 16);
-    }
+    // for (int i = 0; i < size; ++i)
+    // {
+    //     y[i] = x[i] >> (bw - 16);
+    // }
     // ARS(size, x, x, y, y, bw - 16);
-    // TruncateReduce(size, bw, x, y, bw - 16, prefix + "Inverse::");
+    TruncateReduce(size, bw, x, y, bw - 16, prefix + "Inverse::");
 
     std::vector<GroupElement> lut(1LL << 16);
     for (int i = 1; i < (1LL << 16); ++i)
@@ -5182,7 +5203,7 @@ void PiranhaSoftmax(int32_t s1, int32_t s2, MASK_PAIR(GroupElement *inArr), MASK
             denominators[i] = 0;
             for (int j = 0; j < s2; ++j)
             {
-                denominators[i] = denominators[i] + (Arr2DIdx(outArr_mask, s1, s2, i, j) << (bitlength-(bitlength-sf*2-logs1+3)));
+                denominators[i] = denominators[i] + (Arr2DIdx(outArr_mask, s1, s2, i, j));
             }
             // denominators[i] = denominators[i] * s1;
         }
@@ -5194,7 +5215,7 @@ void PiranhaSoftmax(int32_t s1, int32_t s2, MASK_PAIR(GroupElement *inArr), MASK
             denominators[i] = 0;
             for (int j = 0; j < s2; ++j)
             {
-                denominators[i] = denominators[i] + (Arr2DIdx(outArr, s1, s2, i, j) << (bitlength-(bitlength-sf*2-logs1+3)));
+                denominators[i] = denominators[i] + (Arr2DIdx(outArr, s1, s2, i, j));
             }
             denominators[i] = denominators[i] + (1 << (sf - 10));
             // denominators[i] = denominators[i] * s1;
@@ -5202,7 +5223,8 @@ void PiranhaSoftmax(int32_t s1, int32_t s2, MASK_PAIR(GroupElement *inArr), MASK
     }
     // step 5 - calculate inverse of all the denominators
     // InsecureInverse(s1, denominators, denominators, sf, s2 * s1);
-    InverseLUT(s1, denominators, denominators, sf, bitlength, "");
+    // InverseLUT(s1, denominators, denominators, sf, bitlength-sf, "");
+    InverseLUTWing(s1, denominators, denominators, sf, bitlength, logs1, "");
     // step 6 - multiply each element in each image in batch by the inverse of the denominator
     GroupElement *expandedDenominator = make_array<GroupElement>(s1 * s2);
     for (int i = 0; i < s1; ++i)

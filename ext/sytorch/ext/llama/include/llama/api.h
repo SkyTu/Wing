@@ -198,5 +198,5 @@ void SlothTR(int size, int bin, GroupElement *x, GroupElement *y, int scale, std
 void SlothGelu(int size, int bin, GroupElement *x, GroupElement *out, int scale);
 void SlothSilu(int size, int bin, GroupElement *x, GroupElement *out, int scale);
 void SlothFaithfulARS(int size, int bin, GroupElement *x, GroupElement *y, int scale, std::string prefix = "");
-
+void InverseLUTWing(int size, GroupElement *x, GroupElement *y, int scale, int bw, int intbw, std::string prefix = "");
 void reconstruct(int32_t size, GroupElement *arr, int bw);
