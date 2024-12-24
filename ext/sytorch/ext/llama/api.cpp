@@ -5102,7 +5102,7 @@ void PiranhaSoftmax(int32_t s1, int32_t s2, MASK_PAIR(GroupElement *inArr), MASK
     {
         if (party != DEALER)
         {
-            outArr[i] = outArr[i] + 1;
+            outArr[i] = outArr[i] + (1ULL << sf);
         }
     }
     // for (int i = 0; i < iter; i++){
