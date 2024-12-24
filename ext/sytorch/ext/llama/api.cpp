@@ -5116,7 +5116,7 @@ void PiranhaSoftmax(int32_t s1, int32_t s2, MASK_PAIR(GroupElement *inArr), MASK
         SlothDrelu(s1 * s2, bitlength - sf, inArrTR, drelu, "Softmax::SlothDrelu");
     }
 
-    // step 2 - subtract max
+    // step 2 - extend max
     SignExtend2(s1, bitlength - sf, bitlength, max, max);
     if (party == DEALER)
     {
@@ -5125,7 +5125,6 @@ void PiranhaSoftmax(int32_t s1, int32_t s2, MASK_PAIR(GroupElement *inArr), MASK
             for (int j = 0; j < s2; ++j)
             {
                 Arr2DIdx(outArr_mask, s1, s2, i, j) = Arr2DIdx(inArr_mask, s1, s2, i, j) - max[i];
-
             }
         }
     }
@@ -5196,7 +5195,7 @@ void PiranhaSoftmax(int32_t s1, int32_t s2, MASK_PAIR(GroupElement *inArr), MASK
             {
                 denominators[i] = denominators[i] + Arr2DIdx(outArr, s1, s2, i, j);
             }
-            denominators[i] = denominators[i] + 1;
+            denominators[i] = denominators[i] + (1 << (sf - 10));
             // denominators[i] = denominators[i] * s1;
         }
     }
