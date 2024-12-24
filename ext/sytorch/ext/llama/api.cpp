@@ -2525,12 +2525,12 @@ void Select(int32_t size, GroupElement *s, GroupElement *x, GroupElement *out, s
 void InverseLUT(int size, GroupElement *x, GroupElement *y, int scale, int bw, std::string prefix = "", int remove_int = 0)
 {
 
-    // for (int i = 0; i < size; ++i)
-    // {
-    //     y[i] = x[i] >> (bw - 16);
-    // }
+    for (int i = 0; i < size; ++i)
+    {
+        y[i] = x[i] >> (bw - 16);
+    }
     // ARS(size, x, x, y, y, bw - 16);
-    TruncateReduce(size, bw, x, y, bw - 16, prefix + "Inverse::");
+    // TruncateReduce(size, bw, x, y, bw - 16, prefix + "Inverse::");
 
     std::vector<GroupElement> lut(1LL << 16);
     for (int i = 1; i < (1LL << 16); ++i)
@@ -5052,6 +5052,7 @@ void PiranhaSoftmax(int32_t s1, int32_t s2, MASK_PAIR(GroupElement *inArr), MASK
     // s2 = number of classes
     std::cerr << ">> Softmax - start" << " s1 = " << s1 << " s2 = " << s2 << " sf = " << sf << std::endl;
     int iter = 5;
+    auto logs1 = osuCrypto::log2ceil(s1);
     GroupElement *max = make_array<GroupElement>(s1);
     // step 1 - calculate max for each image in batch
     GroupElement *oneHot = make_array<GroupElement>(s1 * (s2 - 1));
@@ -5181,7 +5182,7 @@ void PiranhaSoftmax(int32_t s1, int32_t s2, MASK_PAIR(GroupElement *inArr), MASK
             denominators[i] = 0;
             for (int j = 0; j < s2; ++j)
             {
-                denominators[i] = denominators[i] + Arr2DIdx(outArr_mask, s1, s2, i, j);
+                denominators[i] = denominators[i] + (Arr2DIdx(outArr_mask, s1, s2, i, j) << (bitlength-(bitlength-sf*2-logs1+3)));
             }
             // denominators[i] = denominators[i] * s1;
         }
@@ -5193,15 +5194,15 @@ void PiranhaSoftmax(int32_t s1, int32_t s2, MASK_PAIR(GroupElement *inArr), MASK
             denominators[i] = 0;
             for (int j = 0; j < s2; ++j)
             {
-                denominators[i] = denominators[i] + Arr2DIdx(outArr, s1, s2, i, j);
+                denominators[i] = denominators[i] + (Arr2DIdx(outArr, s1, s2, i, j) << (bitlength-(bitlength-sf*2-logs1+3)));
             }
             denominators[i] = denominators[i] + (1 << (sf - 10));
             // denominators[i] = denominators[i] * s1;
         }
     }
     // step 5 - calculate inverse of all the denominators
-    InsecureInverse(s1, denominators, denominators, sf, s2 * s1);
-    // InverseLUT(s1, denominators, denominators, sf, bitlength-sf, "");
+    // InsecureInverse(s1, denominators, denominators, sf, s2 * s1);
+    InverseLUT(s1, denominators, denominators, sf, bitlength, "");
     // step 6 - multiply each element in each image in batch by the inverse of the denominator
     GroupElement *expandedDenominator = make_array<GroupElement>(s1 * s2);
     for (int i = 0; i < s1; ++i)
@@ -5215,7 +5216,7 @@ void PiranhaSoftmax(int32_t s1, int32_t s2, MASK_PAIR(GroupElement *inArr), MASK
 
     ElemWiseSecretSharedVectorMult(s1 * s2, expandedDenominator, expandedDenominator, MASK_PAIR(outArr), MASK_PAIR(outArr));
     always_assert((s1 & (s1 - 1)) == 0);
-    auto logs1 = osuCrypto::log2ceil(s1);
+    
     
     // 截断以后出去要减去label的share，这里不reveal
     ScaleDown(s1 * s2, MASK_PAIR(outArr), sf + logs1 - extra_shift, false);
