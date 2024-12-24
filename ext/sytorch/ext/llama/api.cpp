@@ -5075,9 +5075,11 @@ void PiranhaSoftmax(int32_t s1, int32_t s2, MASK_PAIR(GroupElement *inArr), MASK
         }
     }
     bitlength -= sf;
+    std::cerr << ">> bitlength" << " = " << bitlength << std::endl;
     MaxPool(s1, 1, 1, 1, s2, 1, 0, 0, 0, 0, 1, 1, s1, s2, 1, 1, MASK_PAIR(inArrTR), max, max, oneHot);
     delete[] oneHot; // TODO: support passing oneHot as nullptr
     bitlength += sf;
+    std::cerr << ">> bitlength" << " = " << bitlength << std::endl;
 
     // step 2 - subtract max and get the select bit
     if (party == DEALER)
@@ -5102,8 +5104,15 @@ void PiranhaSoftmax(int32_t s1, int32_t s2, MASK_PAIR(GroupElement *inArr), MASK
             }
         }
     }
+
     GroupElement *drelu = new GroupElement[s1 * s2];
-    SlothDrelu(s1 * s2, bitlength - sf, inArrTR, drelu, "Softmax::SlothDrelu");
+    if (party == DEALER)
+    {
+        SlothDrelu(s1 * s2, bitlength - sf, inArrTR_mask, drelu, "Softmax::SlothDrelu");
+    }
+    else{
+        SlothDrelu(s1 * s2, bitlength - sf, inArrTR, drelu, "Softmax::SlothDrelu");
+    }
 
     // step 2 - subtract max
     SignExtend2(s1, bitlength - sf, bitlength, max, max);
@@ -5160,23 +5169,6 @@ void PiranhaSoftmax(int32_t s1, int32_t s2, MASK_PAIR(GroupElement *inArr), MASK
     else{
         Select(s1 * s2, drelu, outArr, outArr, "Softmax::Select", true);
     }
-    // if (party == DEALER)
-    // {
-    //     Square(s1, s2, sf, outArr_mask, outArr_mask, "Softmax::Square", true, true);
-    //     for (int i = 1; i < iter-1; i++){
-    //         ElemWiseSquareWingOpt(s1 * s2, outArr_mask, outArr_mask, bitlength, sf, "Softmax::OptSquare", true);
-    //     }
-    //     ElemWiseSquareWingOpt(s1 * s2, outArr_mask, outArr_mask, bitlength, sf, "Softmax::OptSquare", false);
-    //     ScaleDown(s1 * s2, MASK_PAIR(outArr), sf, true);
-    // }
-    // else{
-    //     Square(s1, s2, sf, outArr, outArr, "Softmax::Square", true, true);
-    //     for (int i = 1; i < iter-1; i++){
-    //         ElemWiseSquareWingOpt(s1 * s2, outArr, outArr, bitlength, sf, "Softmax::OptSquare", true);
-    //     }
-    //     ElemWiseSquareWingOpt(s1 * s2, outArr, outArr, bitlength, sf, "Softmax::OptSquare", false);
-    //     ScaleDown(s1 * s2, MASK_PAIR(outArr), sf, true);
-    // }
     
     
     // calculate inverse
