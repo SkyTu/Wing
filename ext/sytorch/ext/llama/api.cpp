@@ -5079,7 +5079,7 @@ void PiranhaSoftmax(int32_t s1, int32_t s2, MASK_PAIR(GroupElement *inArr), MASK
         }
     }
 
-    int iter = 4;
+    int iter = 5;
 
     ScaleDown(s1 * s2, MASK_PAIR(outArr), iter, true);
 
@@ -5090,36 +5090,36 @@ void PiranhaSoftmax(int32_t s1, int32_t s2, MASK_PAIR(GroupElement *inArr), MASK
             outArr[i] = outArr[i] + (1ULL << sf);
         }
     }
-    // if (party == DEALER)
-    // {
-    //     for (int i = 0; i < iter; i++){
-    //         Square(s1, s2, sf, outArr_mask, outArr_mask, "Softmax::Square", true, false);
-    //         ScaleDown(s1 * s2, MASK_PAIR(outArr), sf, true);
-    //     }
-    // }
-    // else{
-    //     for (int i = 0; i < iter; i++){
-    //         Square(s1, s2, sf, outArr, outArr, "Softmax::Square", true, false);
-    //         ScaleDown(s1 * s2, MASK_PAIR(outArr), sf, true);
-    //     }
-    // }
     if (party == DEALER)
     {
-        Square(s1, s2, sf, outArr_mask, outArr_mask, "Softmax::Square", true, true);
-        for (int i = 1; i < iter-1; i++){
-            ElemWiseSquareWingOpt(s1 * s2, outArr_mask, outArr_mask, bitlength, sf, "Softmax::OptSquare", true);
+        for (int i = 0; i < iter; i++){
+            Square(s1, s2, sf, outArr_mask, outArr_mask, "Softmax::Square", true, false);
+            ScaleDown(s1 * s2, MASK_PAIR(outArr), sf, true);
         }
-        ElemWiseSquareWingOpt(s1 * s2, outArr_mask, outArr_mask, bitlength, sf, "Softmax::OptSquare", false);
-        ScaleDown(s1 * s2, MASK_PAIR(outArr), sf, true);
     }
     else{
-        Square(s1, s2, sf, outArr, outArr, "Softmax::Square", true, true);
-        for (int i = 1; i < iter-1; i++){
-            ElemWiseSquareWingOpt(s1 * s2, outArr, outArr, bitlength, sf, "Softmax::OptSquare", true);
+        for (int i = 0; i < iter; i++){
+            Square(s1, s2, sf, outArr, outArr, "Softmax::Square", true, false);
+            ScaleDown(s1 * s2, MASK_PAIR(outArr), sf, true);
         }
-        ElemWiseSquareWingOpt(s1 * s2, outArr, outArr, bitlength, sf, "Softmax::OptSquare", false);
-        ScaleDown(s1 * s2, MASK_PAIR(outArr), sf, true);
     }
+    // if (party == DEALER)
+    // {
+    //     Square(s1, s2, sf, outArr_mask, outArr_mask, "Softmax::Square", true, true);
+    //     for (int i = 1; i < iter-1; i++){
+    //         ElemWiseSquareWingOpt(s1 * s2, outArr_mask, outArr_mask, bitlength, sf, "Softmax::OptSquare", true);
+    //     }
+    //     ElemWiseSquareWingOpt(s1 * s2, outArr_mask, outArr_mask, bitlength, sf, "Softmax::OptSquare", false);
+    //     ScaleDown(s1 * s2, MASK_PAIR(outArr), sf, true);
+    // }
+    // else{
+    //     Square(s1, s2, sf, outArr, outArr, "Softmax::Square", true, true);
+    //     for (int i = 1; i < iter-1; i++){
+    //         ElemWiseSquareWingOpt(s1 * s2, outArr, outArr, bitlength, sf, "Softmax::OptSquare", true);
+    //     }
+    //     ElemWiseSquareWingOpt(s1 * s2, outArr, outArr, bitlength, sf, "Softmax::OptSquare", false);
+    //     ScaleDown(s1 * s2, MASK_PAIR(outArr), sf, true);
+    // }
     
     
 
