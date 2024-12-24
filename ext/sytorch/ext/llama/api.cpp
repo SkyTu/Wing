@@ -5100,7 +5100,7 @@ void PiranhaSoftmax(int32_t s1, int32_t s2, MASK_PAIR(GroupElement *inArr), MASK
             for (int j = 0; j < s2; ++j)
             {
                 uint64_t epsilon = sf > 19 ? 1ULL : (1ULL << (sf - 19));
-                Arr2DIdx(inArrTR, s1, s2, i, j) = Arr2DIdx(inArrTR, s1, s2, i, j) - max[i] - epsilon - 14 * (1ULL << sf);
+                Arr2DIdx(inArrTR, s1, s2, i, j) = Arr2DIdx(inArrTR, s1, s2, i, j) - max[i] - epsilon + (14ULL * (1ULL << sf));
             }
         }
     }
