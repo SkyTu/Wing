@@ -5213,7 +5213,6 @@ void PiranhaSoftmax(int32_t s1, int32_t s2, MASK_PAIR(GroupElement *inArr), MASK
             {
                 denominators[i] = denominators[i] + (Arr2DIdx(outArr, s1, s2, i, j));
             }
-            denominators[i] = denominators[i] + (1 << (sf - 10));
             // denominators[i] = denominators[i] * s1;
         }
     }
