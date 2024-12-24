@@ -5098,9 +5098,10 @@ void PiranhaSoftmax(int32_t s1, int32_t s2, MASK_PAIR(GroupElement *inArr), MASK
     int iter = 2;
 
     ScaleDown(s1 * s2, MASK_PAIR(outArr), iter, true);
-    for (int i = 0; i < s1 * s2; ++i)
+
+    if (party == DEALER)
     {
-        if (party != DEALER)
+        for (int i = 0; i < s1 * s2; ++i)
         {
             outArr[i] = outArr[i] + (1ULL << sf);
         }
@@ -5109,10 +5110,18 @@ void PiranhaSoftmax(int32_t s1, int32_t s2, MASK_PAIR(GroupElement *inArr), MASK
     //     ElemWiseSquareWingOpt(s1 * s2, outArr, outArr, bitlength, sf, "Softmax::OptSquare", true);
     // }
     // ElemWiseSquareWingOpt(s1 * s2, outArr, outArr, bitlength, sf, "Softmax::OptSquare", false);
-
-    for (int i = 0; i < iter; i++){
-        Square(s1, s2, sf, outArr, outArr, "Softmax::Square", true, false);
-        ScaleDown(s1 * s2, MASK_PAIR(outArr), sf, true);
+    if (party == DEALER)
+    {
+        for (int i = 0; i < iter; i++){
+            Square(s1, s2, sf, outArr_mask, outArr_mask, "Softmax::Square", true, false);
+            ScaleDown(s1 * s2, MASK_PAIR(outArr), sf, true);
+        }
+    }
+    else{
+        for (int i = 0; i < iter; i++){
+            Square(s1, s2, sf, outArr, outArr, "Softmax::Square", true, false);
+            ScaleDown(s1 * s2, MASK_PAIR(outArr), sf, true);
+        }
     }
     
     
@@ -5163,19 +5172,6 @@ void PiranhaSoftmax(int32_t s1, int32_t s2, MASK_PAIR(GroupElement *inArr), MASK
     
     // 截断以后出去要减去label的share，这里不reveal
     ScaleDown(s1 * s2, MASK_PAIR(outArr), sf + logs1 - extra_shift, false);
-    // else{
-    //     for (int i = 0; i < s1 * s2; ++i)
-    //     {
-    //         if (party == DEALER)
-    //         {
-    //             outArr_mask[i] = outArr_mask[i] >> (sf + logs1);
-    //         }
-    //         else
-    //         {
-    //             outArr[i] = outArr[i] >> (sf + logs1);
-    //         }
-    //     }
-    // }
     
     std::cerr << ">> Softmax - end" << std::endl;
 
