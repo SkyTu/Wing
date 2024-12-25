@@ -5189,7 +5189,7 @@ void PiranhaSoftmax(int32_t s1, int32_t s2, MASK_PAIR(GroupElement *inArr), MASK
         {
             for (int j = 0; j < s2; ++j)
             {
-                Arr2DIdx(inArrTR_mask, s1, s2, i, j) =  Arr2DIdx(inArr_mask, s1, s2, i, j) & ((uint64_t(1) << (bitlength - sf)) - 1);
+                Arr2DIdx(inArrTR_mask, s1, s2, i, j) =  ((Arr2DIdx(inArr_mask, s1, s2, i, j) << (bitlength - sf)) >> (bitlength - sf));
             }
         }
     }
@@ -5198,7 +5198,7 @@ void PiranhaSoftmax(int32_t s1, int32_t s2, MASK_PAIR(GroupElement *inArr), MASK
         {
             for (int j = 0; j < s2; ++j)
             {
-                Arr2DIdx(inArrTR, s1, s2, i, j) =  Arr2DIdx(inArr, s1, s2, i, j) & ((uint64_t(1) << (bitlength - sf)) - 1);
+                Arr2DIdx(inArrTR, s1, s2, i, j) =  ((Arr2DIdx(inArr, s1, s2, i, j) << (bitlength - sf)) >> (bitlength - sf));
             }
         }
     }
@@ -5227,8 +5227,7 @@ void PiranhaSoftmax(int32_t s1, int32_t s2, MASK_PAIR(GroupElement *inArr), MASK
         {
             for (int j = 0; j < s2; ++j)
             {
-                uint64_t epsilon = sf > 19 ? 1ULL : (1ULL << (sf - 19));
-                Arr2DIdx(inArrTR, s1, s2, i, j) = Arr2DIdx(inArrTR, s1, s2, i, j) - max[i] - epsilon + (14ULL << sf);
+                Arr2DIdx(inArrTR, s1, s2, i, j) = Arr2DIdx(inArrTR, s1, s2, i, j) - max[i] + (14ULL << sf);
                 mod(Arr2DIdx(inArrTR, s1, s2, i, j), bitlength-sf);
             }
         }
@@ -5252,6 +5251,7 @@ void PiranhaSoftmax(int32_t s1, int32_t s2, MASK_PAIR(GroupElement *inArr), MASK
             for (int j = 0; j < s2; ++j)
             {
                 Arr2DIdx(outArr_mask, s1, s2, i, j) = Arr2DIdx(inArr_mask, s1, s2, i, j) - max[i];
+                mod(Arr2DIdx(outArr_mask, s1, s2, i, j), bitlength);
             }
         }
     }
@@ -5263,6 +5263,7 @@ void PiranhaSoftmax(int32_t s1, int32_t s2, MASK_PAIR(GroupElement *inArr), MASK
             {
                 uint64_t epsilon = sf > 19 ? 1ULL : (1ULL << (sf - 19));
                 Arr2DIdx(outArr, s1, s2, i, j) = Arr2DIdx(inArr, s1, s2, i, j) - max[i] - epsilon;
+                mod(Arr2DIdx(outArr, s1, s2, i, j), bitlength);
             }
         }
     }
@@ -5274,6 +5275,7 @@ void PiranhaSoftmax(int32_t s1, int32_t s2, MASK_PAIR(GroupElement *inArr), MASK
         for (int i = 0; i < s1 * s2; ++i)
         {
             outArr[i] = outArr[i] + (1ULL << sf);
+            mod(outArr[i], bitlength);
         }
     }
     if (party == DEALER)
@@ -5324,6 +5326,7 @@ void PiranhaSoftmax(int32_t s1, int32_t s2, MASK_PAIR(GroupElement *inArr), MASK
             }
             // denominators[i] = denominators[i] * s1;
         }
+        
     }
     // step 5 - calculate inverse of all the denominators
     InsecureInverse(s1, denominators, denominators, sf, (1ULL << (bitlength - 2 * sf)));
