@@ -112,12 +112,12 @@ namespace wing
         int shift = wing::mom_scale + scaleVw - scaledW;
         bool update_bias = (wing::lr_scale[epoch] + scaleVw - scaleW == 0);
         
-        gpuLeftShiftAndAdd(N, d_dW, d_Vw, d_Vw, shift, T(wing::mom_fp << wing::global::extra_shift));
+        gpuLeftShiftAndAdd(N, d_dW, d_Vw, d_Vw, shift, T(wing::mom_fp));
         if (update_bias){
-            wing::gpuTruncate(bin, bout, wing::TruncateType::RevealedStochasticTruncate, truncateKeyVw, wing::mom_scale + extra_shift, peer, party, N, d_Vw, gaes, s);
+            wing::gpuTruncate(bin, bout, wing::TruncateType::RevealedStochasticTruncate, truncateKeyVw, wing::mom_scale, peer, party, N, d_Vw, gaes, s);
         }
         else{
-            wing::gpuTruncate(bin, bout, wing::TruncateType::StochasticTruncate, truncateKeyVw, wing::mom_scale + extra_shift, peer, party, N, d_Vw, gaes, s, false);
+            wing::gpuTruncate(bin, bout, wing::TruncateType::StochasticTruncate, truncateKeyVw, wing::mom_scale, peer, party, N, d_Vw, gaes, s, false);
         }
         moveIntoCPUMem((u8 *)h_Vw, (u8 *)d_Vw /*d_dW*/, memSizeW, s);
         bool dWWasNull = false;
