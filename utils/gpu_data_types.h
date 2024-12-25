@@ -48,40 +48,12 @@ typedef unsigned __int128 AESBlock;
 
 using orcaTemplateClass = u64;
 
-struct replicated_secret_share64{
-    u64 * share_0;
-    u64 * share_1;
-    static const int bw = 64;
-    static const int scale = 24;
-};
-
-namespace dcf
-{
-    namespace orca
-    {
-        namespace global
-        {
-            static const int bw = 64;
-            static const int scale = 24;
-        }
-    }
-}
-
-namespace orca_o
-{
-    namespace global
-    {
-        static const int bw = 64;
-        static const int scale = 24;
-    }
-}
-
 namespace wing
 {
     namespace global
     {
         static const int bw = 64;
-        static const int scale = 20;
+        static const int scale = 19;
         static const int extra_shift = 7;
     }
 }
