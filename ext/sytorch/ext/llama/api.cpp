@@ -5068,40 +5068,13 @@ void PiranhaSoftmax(int32_t s1, int32_t s2, MASK_PAIR(GroupElement *inArr), MASK
     // s1 = batch size
     // s2 = number of classes
     std::cerr << ">> Softmax - start" << " s1 = " << s1 << " s2 = " << s2 << " sf = " << sf << std::endl;
-    int iter = 5;
-    auto logs1 = osuCrypto::log2ceil(s1);
     GroupElement *max = make_array<GroupElement>(s1);
     // step 1 - calculate max for each image in batch
     GroupElement *oneHot = make_array<GroupElement>(s1 * (s2 - 1));
-    GroupElement *inArrTR = make_array<GroupElement>(s1 * s2);
-    GroupElement *inArrTR_mask = make_array<GroupElement>(s1 * s2);
-    if (party == DEALER){
-        for (int i = 0; i < s1; ++i)
-        {
-            for (int j = 0; j < s2; ++j)
-            {
-                Arr2DIdx(inArrTR_mask, s1, s2, i, j) =  Arr2DIdx(inArr_mask, s1, s2, i, j) & ((uint64_t(1) << (bitlength - sf)) - 1);
-            }
-        }
-    }
-    else{
-        for (int i = 0; i < s1; ++i)
-        {
-            for (int j = 0; j < s2; ++j)
-            {
-                Arr2DIdx(inArrTR, s1, s2, i, j) =  Arr2DIdx(inArr, s1, s2, i, j) & ((uint64_t(1) << (bitlength - sf)) - 1);
-            }
-        }
-    }
-    bitlength -= sf;
-    std::cerr << ">> bitlength" << " = " << bitlength << std::endl;
-    MaxPool(s1, 1, 1, 1, s2, 1, 0, 0, 0, 0, 1, 1, s1, s2, 1, 1, MASK_PAIR(inArrTR), max, max, oneHot);
+    MaxPool(s1, 1, 1, 1, s2, 1, 0, 0, 0, 0, 1, 1, s1, s2, 1, 1, MASK_PAIR(inArr), max, max, oneHot);
     delete[] oneHot; // TODO: support passing oneHot as nullptr
-    bitlength += sf;
-    std::cerr << ">> bitlength" << " = " << bitlength << std::endl;
 
-    // step 2 - extend max
-    SignExtend2(s1, bitlength - sf, bitlength, max, max);
+    // step 2 - subtract max from each element in each image in batch and add 2
     if (party == DEALER)
     {
         for (int i = 0; i < s1; ++i)
@@ -5123,6 +5096,9 @@ void PiranhaSoftmax(int32_t s1, int32_t s2, MASK_PAIR(GroupElement *inArr), MASK
         }
     }
 
+    // step 3 - exponentiate each element in each image in batch
+    // e^x = RT((x+2), 1) for negative x
+    // ReluTruncate(s1 * s2, MASK_PAIR(outArr), MASK_PAIR(outArr), 1, nullptr); // Q: can we do this in place? can be a source of bug in future
     Relu2Round(s1 * s2, MASK_PAIR(outArr), MASK_PAIR(outArr), nullptr, 64);
     for (int i = 0; i < s1 * s2; ++i)
     {
@@ -5134,9 +5110,8 @@ void PiranhaSoftmax(int32_t s1, int32_t s2, MASK_PAIR(GroupElement *inArr), MASK
         {
             outArr[i] = outArr[i] / 2;
         }
-    }   
-    
-    // calculate inverse
+    }
+
     GroupElement *denominators = max; // reuse the array
     // // step 4 - calculate sum of exponentiated elements for each image in batch
     if (party == DEALER)
@@ -5146,7 +5121,7 @@ void PiranhaSoftmax(int32_t s1, int32_t s2, MASK_PAIR(GroupElement *inArr), MASK
             denominators[i] = 0;
             for (int j = 0; j < s2; ++j)
             {
-                denominators[i] = denominators[i] + (Arr2DIdx(outArr_mask, s1, s2, i, j));
+                denominators[i] = denominators[i] + Arr2DIdx(outArr_mask, s1, s2, i, j);
             }
             // denominators[i] = denominators[i] * s1;
         }
@@ -5158,7 +5133,7 @@ void PiranhaSoftmax(int32_t s1, int32_t s2, MASK_PAIR(GroupElement *inArr), MASK
             denominators[i] = 0;
             for (int j = 0; j < s2; ++j)
             {
-                denominators[i] = denominators[i] + (Arr2DIdx(outArr, s1, s2, i, j));
+                denominators[i] = denominators[i] + Arr2DIdx(outArr, s1, s2, i, j);
             }
             // denominators[i] = denominators[i] * s1;
         }
@@ -5179,10 +5154,9 @@ void PiranhaSoftmax(int32_t s1, int32_t s2, MASK_PAIR(GroupElement *inArr), MASK
 
     ElemWiseSecretSharedVectorMult(s1 * s2, expandedDenominator, expandedDenominator, MASK_PAIR(outArr), MASK_PAIR(outArr));
     always_assert((s1 & (s1 - 1)) == 0);
-    
+    auto logs1 = osuCrypto::log2ceil(s1);
     
     // 截断以后出去要减去label的share，这里不reveal
-    std::cerr << ">> sf + logs1 - extra_shift = " << sf + logs1 - extra_shift << std::endl;
     ScaleDown(s1 * s2, MASK_PAIR(outArr), sf + logs1 - extra_shift, false);
     
     std::cerr << ">> Softmax - end" << std::endl;
