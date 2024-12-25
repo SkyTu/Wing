@@ -5326,7 +5326,7 @@ void PiranhaSoftmax(int32_t s1, int32_t s2, MASK_PAIR(GroupElement *inArr), MASK
         }
     }
     // step 5 - calculate inverse of all the denominators
-    InverseLUTWing(s1, denominators, denominators, sf, bitlength, logs1, "");
+    InsecureInverse(s1, denominators, denominators, sf, s2 * s1);
 
     // step 6 - multiply each element in each image in batch by the inverse of the denominator
     GroupElement *expandedDenominator = make_array<GroupElement>(s1 * s2);
