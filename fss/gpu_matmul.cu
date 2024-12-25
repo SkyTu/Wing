@@ -122,7 +122,7 @@ T *cutlassMatmul(MatmulParams p, T *d_A, T *d_B, T *d_C, bool cIsBias = false)
 }
 
 template <typename T>
-T *cutlassMatmulWrapper(MatmulParams p, T *d_A, T *d_B, T *d_C, bool cIsBias = false, bool reduceBw = false)
+T *cutlassMatmulWrapper(MatmulParams p, T *d_A, T *d_B, T *d_C, bool cIsBias = false, bool reduceBw = true)
 {
     T *d_O;
     if (p.batchSz == 1)

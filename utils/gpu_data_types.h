@@ -80,7 +80,7 @@ namespace wing
 {
     namespace global
     {
-        static const int bw = 64;
+        static const int bw = 48;
         static const int scale = 20;
         static const int iteration_threshold = 0;
         static const int extra_shift = 7;
