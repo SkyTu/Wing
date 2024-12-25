@@ -98,7 +98,7 @@ void gpuAddBiasWrapper(int batchSz, int M, int N, int bw, T *h_A, T *h_b)
 template <typename T>
 T *getBiasGrad(int N, int M, int bw, T *d_A)
 {
-    assert(bw == sizeof(T) * 8);
+    // assert(bw == sizeof(T) * 8);
     T *d_b = (T *)gpuMalloc(M * sizeof(T));
     const int kV = 1;
     using TensorReduction = cutlass::reduction::device::TensorReduction<
