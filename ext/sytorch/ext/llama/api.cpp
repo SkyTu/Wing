@@ -5118,8 +5118,7 @@ void PiranhaSoftmax(int32_t s1, int32_t s2, MASK_PAIR(GroupElement *inArr), MASK
         {
             for (int j = 0; j < s2; ++j)
             {
-                uint64_t epsilon = sf > 19 ? 1ULL : (1ULL << (sf - 19));
-                Arr2DIdx(inArrTR, s1, s2, i, j) = Arr2DIdx(inArrTR, s1, s2, i, j) - max[i] - epsilon + (14ULL << sf);
+                Arr2DIdx(inArrTR, s1, s2, i, j) = Arr2DIdx(inArrTR, s1, s2, i, j) - max[i] + (1 << (sf + 1));
                 mod(Arr2DIdx(inArrTR, s1, s2, i, j), bitlength-sf);
             }
         }
@@ -5152,42 +5151,23 @@ void PiranhaSoftmax(int32_t s1, int32_t s2, MASK_PAIR(GroupElement *inArr), MASK
         {
             for (int j = 0; j < s2; ++j)
             {
-                uint64_t epsilon = sf > 19 ? 1ULL : (1ULL << (sf - 19));
-                Arr2DIdx(outArr, s1, s2, i, j) = Arr2DIdx(inArr, s1, s2, i, j) - max[i] - epsilon;
+                Arr2DIdx(outArr, s1, s2, i, j) = Arr2DIdx(inArr, s1, s2, i, j) - max[i];
             }
         }
     }
 
-     // step 2 - calculate exp
-    ScaleDown(s1 * s2, MASK_PAIR(outArr), iter, true);
-    if (party != DEALER)
+    Relu2Round(s1 * s2, MASK_PAIR(outArr), MASK_PAIR(outArr), nullptr, 64);
+    for (int i = 0; i < s1 * s2; ++i)
     {
-        for (int i = 0; i < s1 * s2; ++i)
+        if (party == DEALER)
         {
-            outArr[i] = outArr[i] + (1ULL << sf);
+            outArr_mask[i] = outArr_mask[i] / 2;
         }
-    }
-    if (party == DEALER)
-    {
-        for (int i = 0; i < iter; i++){
-            Square(s1, s2, sf, outArr_mask, outArr_mask, "Softmax::Square", true, false);
-            ScaleDown(s1 * s2, MASK_PAIR(outArr), sf, true);
+        else
+        {
+            outArr[i] = outArr[i] / 2;
         }
-    }
-    else{
-        for (int i = 0; i < iter; i++){
-            Square(s1, s2, sf, outArr, outArr, "Softmax::Square", true, false);
-            ScaleDown(s1 * s2, MASK_PAIR(outArr), sf, true);
-        }
-    }
-    if (party == DEALER)
-    {
-        Select(s1 * s2, drelu, outArr_mask, outArr_mask, "Softmax::Select", true);
-    }
-    else{
-        Select(s1 * s2, drelu, outArr, outArr, "Softmax::Select", true);
-    }
-    
+    }   
     
     // calculate inverse
     GroupElement *denominators = max; // reuse the array
@@ -5217,7 +5197,7 @@ void PiranhaSoftmax(int32_t s1, int32_t s2, MASK_PAIR(GroupElement *inArr), MASK
         }
     }
     // step 5 - calculate inverse of all the denominators
-    InverseLUTWing(s1, denominators, denominators, sf, bitlength, logs1, "");
+    InsecureInverse(s1, denominators, denominators, sf, s2 * s1);
 
     // step 6 - multiply each element in each image in batch by the inverse of the denominator
     GroupElement *expandedDenominator = make_array<GroupElement>(s1 * s2);
@@ -5235,9 +5215,192 @@ void PiranhaSoftmax(int32_t s1, int32_t s2, MASK_PAIR(GroupElement *inArr), MASK
     
     
     // 截断以后出去要减去label的share，这里不reveal
+    std::cerr << ">> sf + logs1 - extra_shift = " << sf + logs1 - extra_shift << std::endl;
     ScaleDown(s1 * s2, MASK_PAIR(outArr), sf + logs1 - extra_shift, false);
     
     std::cerr << ">> Softmax - end" << std::endl;
 
     delete[] expandedDenominator;
 }
+
+
+// 新的Softmax
+// void PiranhaSoftmax(int32_t s1, int32_t s2, MASK_PAIR(GroupElement *inArr), MASK_PAIR(GroupElement *outArr), int32_t sf, int extra_shift)
+// {
+//     // s1 = batch size
+//     // s2 = number of classes
+//     std::cerr << ">> Softmax - start" << " s1 = " << s1 << " s2 = " << s2 << " sf = " << sf << std::endl;
+//     int iter = 5;
+//     auto logs1 = osuCrypto::log2ceil(s1);
+//     GroupElement *max = make_array<GroupElement>(s1);
+//     // step 1 - calculate max for each image in batch
+//     GroupElement *oneHot = make_array<GroupElement>(s1 * (s2 - 1));
+//     GroupElement *inArrTR = make_array<GroupElement>(s1 * s2);
+//     GroupElement *inArrTR_mask = make_array<GroupElement>(s1 * s2);
+//     if (party == DEALER){
+//         for (int i = 0; i < s1; ++i)
+//         {
+//             for (int j = 0; j < s2; ++j)
+//             {
+//                 Arr2DIdx(inArrTR_mask, s1, s2, i, j) =  Arr2DIdx(inArr_mask, s1, s2, i, j) & ((uint64_t(1) << (bitlength - sf)) - 1);
+//             }
+//         }
+//     }
+//     else{
+//         for (int i = 0; i < s1; ++i)
+//         {
+//             for (int j = 0; j < s2; ++j)
+//             {
+//                 Arr2DIdx(inArrTR, s1, s2, i, j) =  Arr2DIdx(inArr, s1, s2, i, j) & ((uint64_t(1) << (bitlength - sf)) - 1);
+//             }
+//         }
+//     }
+//     bitlength -= sf;
+//     std::cerr << ">> bitlength" << " = " << bitlength << std::endl;
+//     MaxPool(s1, 1, 1, 1, s2, 1, 0, 0, 0, 0, 1, 1, s1, s2, 1, 1, MASK_PAIR(inArrTR), max, max, oneHot);
+//     delete[] oneHot; // TODO: support passing oneHot as nullptr
+//     bitlength += sf;
+//     std::cerr << ">> bitlength" << " = " << bitlength << std::endl;
+
+//     // step 2 - subtract max and get the select bit
+//     if (party == DEALER)
+//     {
+//         for (int i = 0; i < s1; ++i)
+//         {
+//             for (int j = 0; j < s2; ++j)
+//             {
+//                 Arr2DIdx(inArrTR_mask, s1, s2, i, j) = Arr2DIdx(inArrTR_mask, s1, s2, i, j) - max[i];
+//                 mod(Arr2DIdx(inArrTR_mask, s1, s2, i, j), bitlength-sf);
+//             }
+//         }
+//     }
+//     else
+//     {
+//         for (int i = 0; i < s1; ++i)
+//         {
+//             for (int j = 0; j < s2; ++j)
+//             {
+//                 uint64_t epsilon = sf > 19 ? 1ULL : (1ULL << (sf - 19));
+//                 Arr2DIdx(inArrTR, s1, s2, i, j) = Arr2DIdx(inArrTR, s1, s2, i, j) - max[i] - epsilon + (14ULL << sf);
+//                 mod(Arr2DIdx(inArrTR, s1, s2, i, j), bitlength-sf);
+//             }
+//         }
+//     }
+    
+//     GroupElement *drelu = new GroupElement[s1 * s2];
+//     if (party == DEALER)
+//     {
+//         SlothDrelu(s1 * s2, bitlength - sf, inArrTR_mask, drelu, "Softmax::SlothDrelu");
+//     }
+//     else{
+//         SlothDrelu(s1 * s2, bitlength - sf, inArrTR, drelu, "Softmax::SlothDrelu");
+//     }
+
+//     // step 2 - extend max
+//     SignExtend2(s1, bitlength - sf, bitlength, max, max);
+//     if (party == DEALER)
+//     {
+//         for (int i = 0; i < s1; ++i)
+//         {
+//             for (int j = 0; j < s2; ++j)
+//             {
+//                 Arr2DIdx(outArr_mask, s1, s2, i, j) = Arr2DIdx(inArr_mask, s1, s2, i, j) - max[i];
+//             }
+//         }
+//     }
+//     else
+//     {
+//         for (int i = 0; i < s1; ++i)
+//         {
+//             for (int j = 0; j < s2; ++j)
+//             {
+//                 uint64_t epsilon = sf > 19 ? 1ULL : (1ULL << (sf - 19));
+//                 Arr2DIdx(outArr, s1, s2, i, j) = Arr2DIdx(inArr, s1, s2, i, j) - max[i] - epsilon;
+//             }
+//         }
+//     }
+
+//      // step 2 - calculate exp
+//     ScaleDown(s1 * s2, MASK_PAIR(outArr), iter, true);
+//     if (party != DEALER)
+//     {
+//         for (int i = 0; i < s1 * s2; ++i)
+//         {
+//             outArr[i] = outArr[i] + (1ULL << sf);
+//         }
+//     }
+//     if (party == DEALER)
+//     {
+//         for (int i = 0; i < iter; i++){
+//             Square(s1, s2, sf, outArr_mask, outArr_mask, "Softmax::Square", true, false);
+//             ScaleDown(s1 * s2, MASK_PAIR(outArr), sf, true);
+//         }
+//     }
+//     else{
+//         for (int i = 0; i < iter; i++){
+//             Square(s1, s2, sf, outArr, outArr, "Softmax::Square", true, false);
+//             ScaleDown(s1 * s2, MASK_PAIR(outArr), sf, true);
+//         }
+//     }
+//     if (party == DEALER)
+//     {
+//         Select(s1 * s2, drelu, outArr_mask, outArr_mask, "Softmax::Select", true);
+//     }
+//     else{
+//         Select(s1 * s2, drelu, outArr, outArr, "Softmax::Select", true);
+//     }
+    
+    
+//     // calculate inverse
+//     GroupElement *denominators = max; // reuse the array
+//     // // step 4 - calculate sum of exponentiated elements for each image in batch
+//     if (party == DEALER)
+//     {
+//         for (int i = 0; i < s1; ++i)
+//         {
+//             denominators[i] = 0;
+//             for (int j = 0; j < s2; ++j)
+//             {
+//                 denominators[i] = denominators[i] + (Arr2DIdx(outArr_mask, s1, s2, i, j));
+//             }
+//             // denominators[i] = denominators[i] * s1;
+//         }
+//     }
+//     else
+//     {
+//         for (int i = 0; i < s1; ++i)
+//         {
+//             denominators[i] = 0;
+//             for (int j = 0; j < s2; ++j)
+//             {
+//                 denominators[i] = denominators[i] + (Arr2DIdx(outArr, s1, s2, i, j));
+//             }
+//             // denominators[i] = denominators[i] * s1;
+//         }
+//     }
+//     // step 5 - calculate inverse of all the denominators
+//     InverseLUTWing(s1, denominators, denominators, sf, bitlength, logs1, "");
+
+//     // step 6 - multiply each element in each image in batch by the inverse of the denominator
+//     GroupElement *expandedDenominator = make_array<GroupElement>(s1 * s2);
+//     for (int i = 0; i < s1; ++i)
+//     {
+//         for (int j = 0; j < s2; ++j)
+//         {
+//             Arr2DIdx(expandedDenominator, s1, s2, i, j) = denominators[i];
+//         }
+//     }
+//     delete[] max;
+
+//     ElemWiseSecretSharedVectorMult(s1 * s2, expandedDenominator, expandedDenominator, MASK_PAIR(outArr), MASK_PAIR(outArr));
+//     always_assert((s1 & (s1 - 1)) == 0);
+    
+    
+//     // 截断以后出去要减去label的share，这里不reveal
+//     std::cerr << ">> sf + logs1 - extra_shift = " << sf + logs1 - extra_shift << std::endl;
+//     ScaleDown(s1 * s2, MASK_PAIR(outArr), sf + logs1 - extra_shift, false);
+    
+//     std::cerr << ">> Softmax - end" << std::endl;
+
+//     delete[] expandedDenominator;
+// }
