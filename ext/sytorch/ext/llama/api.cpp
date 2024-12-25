@@ -648,7 +648,7 @@ void ars_threads_helper(int thread_idx, int32_t size, GroupElement *inArr, Group
         evalMicroseconds += (reconstruct_time + compute_time);
         lolEvalMicroseconds += (reconstruct_time + compute_time);
 */
-void ARS(int32_t size, MASK_PAIR(GroupElement *inArr), MASK_PAIR(GroupElement *outArr), int32_t shift)
+void ARS(int32_t size, MASK_PAIR(GroupElement *inArr), MASK_PAIR(GroupElement *outArr), int32_t shift, bool doReconstruct)
 {
     std::cerr << ">> Truncate" << (LlamaConfig::stochasticT ? " (stochastic)" : "") << " - Start" << std::endl;
     if (party == DEALER)
@@ -703,7 +703,8 @@ void ARS(int32_t size, MASK_PAIR(GroupElement *inArr), MASK_PAIR(GroupElement *o
             thread_pool[i].join();
         }
         uint64_t onlineComm0 = peer->bytesReceived() + peer->bytesSent();
-        // reconstruct(size, outArr, bitlength);
+        if (doReconstruct)
+            reconstruct(size, outArr, bitlength);
         uint64_t onlineComm1 = peer->bytesReceived() + peer->bytesSent();
         arsOnlineComm += (onlineComm1 - onlineComm0);
         auto mid = std::chrono::high_resolution_clock::now();
@@ -723,10 +724,9 @@ void ARS(int32_t size, MASK_PAIR(GroupElement *inArr), MASK_PAIR(GroupElement *o
     std::cerr << ">> Truncate - End" << std::endl;
 }
 
-void ScaleDown(int32_t size, MASK_PAIR(GroupElement *inArr), int32_t sf)
+void ScaleDown(int32_t size, MASK_PAIR(GroupElement *inArr), int32_t sf, bool doReconstruct)
 {
     std::cerr << ">> ScaleDown - Start " << std::endl;
-
     if (localTruncation)
     {
         uint64_t m = ((1L << sf) - 1) << (bitlength - sf);
@@ -761,7 +761,7 @@ void ScaleDown(int32_t size, MASK_PAIR(GroupElement *inArr), int32_t sf)
     }
     else
     {
-        ARS(size, inArr, inArr_mask, inArr, inArr_mask, sf);
+        ARS(size, inArr, inArr_mask, inArr, inArr_mask, sf, doReconstruct);
     }
     std::cerr << ">> ScaleDown - End " << std::endl;
 }
@@ -1180,6 +1180,74 @@ void AvgPool(int32_t N, int32_t H, int32_t W, int32_t C, int32_t ksizeH,
     }
     std::cerr << ">> AvgPool - End" << std::endl;
 }
+
+// 传进来的是bit_length - sf的已经reconstruct的数值
+// void ElemWiseSquareWingOpt(int32_t size, GroupElement *inArr, GroupElement *outputArr, int32_t bw, int32_t sf, std::string prefix, bool truncate_reduce){
+//     std::cerr << ">> ElemWiseSquareWing - Start" << std::endl;
+//     if (party == DEALER)
+//     {
+//         pair<SquareWingOptKey> *keys = new pair<SquareWingOptKey>[size];
+// #pragma omp parallel for
+//         for (int i = 0; i < size; ++i)
+//         {
+//             auto rout = random_ge(bitlength);
+//             keys[i] = SquareGenOptWing(inArr[i], rout, bitlength, sf);
+//             if(truncate_reduce){
+//                 outputArr[i] = (rout >> sf);
+//             }
+//             else{
+//                 outputArr[i] = rout;
+//             }
+//         }
+//         for (int i = 0; i < size; ++i)
+//         {
+//             server->send_square_opt_key(keys[i].first);
+//             client->send_square_opt_key(keys[i].second);
+//         }
+//         delete[] keys;
+//     }
+//     else
+//     {
+//         SquareWingOptKey *keys = new SquareWingOptKey[size];
+
+//         uint64_t keysize_start = dealer->bytesReceived();
+//         auto keyread_time = time_this_block([&]()
+//                                             {
+//             for(int i = 0; i < size; ++i) {
+//                 keys[i] = dealer->recv_square_opt_key();
+//             } });
+
+//         peer->sync();
+
+//         auto compute_time = time_this_block([&]()
+//                                             {
+// #pragma omp parallel for
+//             for(int i = 0; i < size; ++i) {
+//                 if (truncate_reduce){
+//                     outputArr[i] = (SquareEvalOptWing(party - SERVER, keys[i], inArr[i], sf)>>sf);
+//                 }
+//                 else{
+//                     outputArr[i] = SquareEvalOptWing(party - SERVER, keys[i], inArr[i], sf);
+//                 }
+//             } });
+
+//         auto reconstruction_stats = time_comm_this_block([&]()
+//                                                          { 
+//                                                             if(truncate_reduce){
+//                                                                 reconstruct(size, outputArr, bw-sf);
+//                                                             }
+//                                                             else{
+//                                                                 reconstruct(size, outputArr, bw);
+//                                                             }
+//                                                     });
+
+//         Llama::stat_t stat = {prefix + "ElemWiseSquare", keyread_time, compute_time, reconstruction_stats.first, reconstruction_stats.second, dealer->bytesReceived() - keysize_start};
+//         stat.print();
+//         Llama::push_stats(stat);
+//         delete[] keys;
+//     }
+//     std::cerr << ">> ElemWiseSquareWing - End" << std::endl;
+// }
 
 void ElemWiseMul(int32_t size, GroupElement *inArr, GroupElement *multArrVec, GroupElement *outputArr, std::string prefix)
 {
@@ -2454,7 +2522,24 @@ void Select(int32_t size, GroupElement *s, GroupElement *x, GroupElement *out, s
     Select(size, bitlength, s, x, out, prefix, doReconstruct);
 }
 
-void InverseLUT(int size, GroupElement *x, GroupElement *y, int scale, int bw, std::string prefix = "")
+void InverseLUTWing(int size, GroupElement *x, GroupElement *y, int scale, int bw, int intbw, std::string prefix)
+{
+    // 去掉没有必要的整数位，保留部分小数。符号位没用，因为是正数，intbw位整数位，还有16-intbw小数位
+    for (int i = 0; i < size; ++i)
+    {
+        y[i] = (x[i] << (scale + (bw - 2 * scale - intbw))) >> (bw - 16);
+    }
+
+    std::vector<GroupElement> lut(1LL << 16);
+    for (int i = 1; i < (1LL << 16); ++i)
+    {
+        lut[i] = GroupElement(double(1LL << (scale + 16 - intbw)) / i);
+    }
+    // 出来的结果应该是bitlength-(16-intbw)
+    LUT_dpf(size, 16, bw, lut, y, y, prefix + "Inverse::");
+}
+
+void InverseLUT(int size, GroupElement *x, GroupElement *y, int scale, int bw, std::string prefix = "", int remove_int = 0)
 {
 
     // for (int i = 0; i < size; ++i)
@@ -3263,6 +3348,82 @@ void SlothMaxpoolTriangular(int s1, int s2, int bin, GroupElement *x, GroupEleme
     delete[] left;
     delete[] right;
     delete[] res;
+}
+
+// 如果sf>0表示truncate reduce，输入是恢复了的结果，输出是截断后的结果
+void Square(int s1, int s2, int sf, GroupElement *in, GroupElement *out, std::string prefix, bool doReconstruct, bool truncate_reduce){
+    int size = s1 * s2;
+    if (party == DEALER)
+    {
+        pair<SquareKey> *keys = new pair<SquareKey>[size];
+
+#pragma omp parallel for
+        for (int i = 0; i < size; ++i)
+        {
+            auto rout = random_ge(bitlength);
+            keys[i] = keyGenSquare(in[i], rout);
+            if (truncate_reduce){
+                out[i] = (rout >> sf);
+            }
+            else{
+                out[i] = rout;
+            }
+        }
+
+        for (int i = 0; i < size; ++i)
+        {
+            server->send_square_key(keys[i].first);
+            client->send_square_key(keys[i].second);
+        }
+
+        delete[] keys;
+    }
+    else
+    {
+        SquareKey *keys = new SquareKey[size];
+
+        uint64_t keysize_start = dealer->bytesReceived();
+        auto keyread_time = time_this_block([&]()
+                                            {
+            for(int i = 0; i < size; ++i) {
+                keys[i] = dealer->recv_square_key();
+            } });
+
+        peer->sync();
+
+        auto compute_time = time_this_block([&]()
+                                            {
+#pragma omp parallel for
+            for(int i = 0; i < size; ++i) {
+                if (truncate_reduce){
+                    out[i] = (evalSquare(party - SERVER, in[i], keys[i])>>sf);
+                }
+                else{
+                    out[i] = evalSquare(party - SERVER, in[i], keys[i]);
+                }
+                
+            }
+
+        });
+
+
+        auto reconstruction_stats = time_comm_this_block([&]()
+        { 
+            if(doReconstruct){
+                if(truncate_reduce)
+                    reconstruct(size, out, bitlength-sf); 
+                else
+                    reconstruct(size, out, bitlength); 
+            }
+                
+        });
+
+        Llama::stat_t stat = {prefix + "Square", keyread_time, compute_time, reconstruction_stats.first, reconstruction_stats.second, dealer->bytesReceived() - keysize_start};
+        stat.print();
+        Llama::push_stats(stat);
+
+        delete[] keys;
+    }
 }
 
 void SumOfSquare(int s1, int s2, GroupElement *x, GroupElement *y, std::string prefix)
@@ -4902,18 +5063,188 @@ void ElemWiseSecretSharedVectorMult(int32_t size, MASK_PAIR(GroupElement *inArr)
     std::cerr << ">> ElemWise Mult - end" << std::endl;
 }
 
+// void PiranhaSoftmax(int32_t s1, int32_t s2, MASK_PAIR(GroupElement *inArr), MASK_PAIR(GroupElement *outArr), int32_t sf, int extra_shift)
+// {
+//     // s1 = batch size
+//     // s2 = number of classes
+//     std::cerr << ">> Softmax - start" << " s1 = " << s1 << " s2 = " << s2 << " sf = " << sf << std::endl;
+//     GroupElement *max = make_array<GroupElement>(s1);
+//     // step 1 - calculate max for each image in batch
+//     GroupElement *oneHot = make_array<GroupElement>(s1 * (s2 - 1));
+//     MaxPool(s1, 1, 1, 1, s2, 1, 0, 0, 0, 0, 1, 1, s1, s2, 1, 1, MASK_PAIR(inArr), max, max, oneHot);
+//     delete[] oneHot; // TODO: support passing oneHot as nullptr
+//     std::cerr << "bitlength:" << bitlength << std::endl;
+//     // step 2 - subtract max from each element in each image in batch and add 2
+//     if (party == DEALER)
+//     {
+//         for (int i = 0; i < s1; ++i)
+//         {
+//             for (int j = 0; j < s2; ++j)
+//             {
+//                 Arr2DIdx(outArr_mask, s1, s2, i, j) = Arr2DIdx(inArr_mask, s1, s2, i, j) - max[i];
+//                 mod(Arr2DIdx(outArr_mask, s1, s2, i, j), bitlength);
+//             }
+//         }
+//     }
+//     else
+//     {
+//         for (int i = 0; i < s1; ++i)
+//         {
+//             for (int j = 0; j < s2; ++j)
+//             {
+//                 Arr2DIdx(outArr, s1, s2, i, j) = Arr2DIdx(inArr, s1, s2, i, j) - max[i] + (1 << (sf + 1));
+//                 mod(Arr2DIdx(outArr, s1, s2, i, j), bitlength);
+//             }
+//         }
+//     }
+
+//     // step 3 - exponentiate each element in each image in batch
+//     // e^x = RT((x+2), 1) for negative x
+//     // ReluTruncate(s1 * s2, MASK_PAIR(outArr), MASK_PAIR(outArr), 1, nullptr); // Q: can we do this in place? can be a source of bug in future
+//     Relu2Round(s1 * s2, MASK_PAIR(outArr), MASK_PAIR(outArr), nullptr, 64);
+//     for (int i = 0; i < s1 * s2; ++i)
+//     {
+//         if (party == DEALER)
+//         {
+//             outArr_mask[i] = outArr_mask[i] / 2;
+//         }
+//         else
+//         {
+//             outArr[i] = outArr[i] / 2;
+//         }
+//     }
+
+//     GroupElement *denominators = max; // reuse the array
+//     // // step 4 - calculate sum of exponentiated elements for each image in batch
+//     if (party == DEALER)
+//     {
+//         for (int i = 0; i < s1; ++i)
+//         {
+//             denominators[i] = 0;
+//             for (int j = 0; j < s2; ++j)
+//             {
+//                 denominators[i] = denominators[i] + Arr2DIdx(outArr_mask, s1, s2, i, j);
+//                 mod(Arr2DIdx(outArr, s1, s2, i, j), bitlength);
+//             }
+//             // denominators[i] = denominators[i] * s1;
+//         }
+//     }
+//     else
+//     {
+//         for (int i = 0; i < s1; ++i)
+//         {
+//             denominators[i] = 0;
+//             for (int j = 0; j < s2; ++j)
+//             {
+//                 denominators[i] = denominators[i] + Arr2DIdx(outArr, s1, s2, i, j);
+//                 mod(Arr2DIdx(outArr, s1, s2, i, j), bitlength);
+//             }
+//             // denominators[i] = denominators[i] * s1;
+//         }
+//     }
+//     // step 5 - calculate inverse of all the denominators
+//     // InsecureInverse(s1, denominators, denominators, sf, s2 * s1);
+//     auto logs1 = osuCrypto::log2ceil(s1);
+//     InverseLUTWing(s1, denominators, denominators, sf, bitlength, logs1, "");
+
+//     // step 6 - multiply each element in each image in batch by the inverse of the denominator
+//     GroupElement *expandedDenominator = make_array<GroupElement>(s1 * s2);
+//     for (int i = 0; i < s1; ++i)
+//     {
+//         for (int j = 0; j < s2; ++j)
+//         {
+//             Arr2DIdx(expandedDenominator, s1, s2, i, j) = denominators[i];
+//         }
+//     }
+//     delete[] max;
+
+//     ElemWiseSecretSharedVectorMult(s1 * s2, expandedDenominator, expandedDenominator, MASK_PAIR(outArr), MASK_PAIR(outArr));
+//     always_assert((s1 & (s1 - 1)) == 0);
+    
+    
+//     // 截断以后出去要减去label的share，这里不reveal
+//     ScaleDown(s1 * s2, MASK_PAIR(outArr), sf + logs1 - extra_shift, false);
+    
+//     std::cerr << ">> Softmax - end" << std::endl;
+
+//     delete[] expandedDenominator;
+// }
+
+
+// 新的Softmax
 void PiranhaSoftmax(int32_t s1, int32_t s2, MASK_PAIR(GroupElement *inArr), MASK_PAIR(GroupElement *outArr), int32_t sf, int extra_shift)
 {
     // s1 = batch size
     // s2 = number of classes
     std::cerr << ">> Softmax - start" << " s1 = " << s1 << " s2 = " << s2 << " sf = " << sf << std::endl;
+    int iter = 5;
+    auto logs1 = osuCrypto::log2ceil(s1);
     GroupElement *max = make_array<GroupElement>(s1);
     // step 1 - calculate max for each image in batch
     GroupElement *oneHot = make_array<GroupElement>(s1 * (s2 - 1));
-    MaxPool(s1, 1, 1, 1, s2, 1, 0, 0, 0, 0, 1, 1, s1, s2, 1, 1, MASK_PAIR(inArr), max, max, oneHot);
+    GroupElement *inArrTR = make_array<GroupElement>(s1 * s2);
+    GroupElement *inArrTR_mask = make_array<GroupElement>(s1 * s2);
+    if (party == DEALER){
+        for (int i = 0; i < s1; ++i)
+        {
+            for (int j = 0; j < s2; ++j)
+            {
+                Arr2DIdx(inArrTR_mask, s1, s2, i, j) =  Arr2DIdx(inArr_mask, s1, s2, i, j) & ((uint64_t(1) << (bitlength - sf)) - 1);
+            }
+        }
+    }
+    else{
+        for (int i = 0; i < s1; ++i)
+        {
+            for (int j = 0; j < s2; ++j)
+            {
+                Arr2DIdx(inArrTR, s1, s2, i, j) =  Arr2DIdx(inArr, s1, s2, i, j) & ((uint64_t(1) << (bitlength - sf)) - 1);
+            }
+        }
+    }
+    bitlength -= sf;
+    std::cerr << ">> bitlength" << " = " << bitlength << std::endl;
+    MaxPool(s1, 1, 1, 1, s2, 1, 0, 0, 0, 0, 1, 1, s1, s2, 1, 1, MASK_PAIR(inArrTR), max, max, oneHot);
     delete[] oneHot; // TODO: support passing oneHot as nullptr
+    bitlength += sf;
+    std::cerr << ">> bitlength" << " = " << bitlength << std::endl;
 
-    // step 2 - subtract max from each element in each image in batch and add 2
+    // step 2 - subtract max and get the select bit
+    if (party == DEALER)
+    {
+        for (int i = 0; i < s1; ++i)
+        {
+            for (int j = 0; j < s2; ++j)
+            {
+                Arr2DIdx(inArrTR_mask, s1, s2, i, j) = Arr2DIdx(inArrTR_mask, s1, s2, i, j) - max[i];
+                mod(Arr2DIdx(inArrTR_mask, s1, s2, i, j), bitlength-sf);
+            }
+        }
+    }
+    else
+    {
+        for (int i = 0; i < s1; ++i)
+        {
+            for (int j = 0; j < s2; ++j)
+            {
+                uint64_t epsilon = sf > 19 ? 1ULL : (1ULL << (sf - 19));
+                Arr2DIdx(inArrTR, s1, s2, i, j) = Arr2DIdx(inArrTR, s1, s2, i, j) - max[i] - epsilon + (14ULL << sf);
+                mod(Arr2DIdx(inArrTR, s1, s2, i, j), bitlength-sf);
+            }
+        }
+    }
+    
+    GroupElement *drelu = new GroupElement[s1 * s2];
+    if (party == DEALER)
+    {
+        SlothDrelu(s1 * s2, bitlength - sf, inArrTR_mask, drelu, "Softmax::SlothDrelu");
+    }
+    else{
+        SlothDrelu(s1 * s2, bitlength - sf, inArrTR, drelu, "Softmax::SlothDrelu");
+    }
+
+    // step 2 - extend max
+    SignExtend2(s1, bitlength - sf, bitlength, max, max);
     if (party == DEALER)
     {
         for (int i = 0; i < s1; ++i)
@@ -4930,27 +5261,44 @@ void PiranhaSoftmax(int32_t s1, int32_t s2, MASK_PAIR(GroupElement *inArr), MASK
         {
             for (int j = 0; j < s2; ++j)
             {
-                Arr2DIdx(outArr, s1, s2, i, j) = Arr2DIdx(inArr, s1, s2, i, j) - max[i] + (1 << (sf + 1));
+                uint64_t epsilon = sf > 19 ? 1ULL : (1ULL << (sf - 19));
+                Arr2DIdx(outArr, s1, s2, i, j) = Arr2DIdx(inArr, s1, s2, i, j) - max[i] - epsilon;
             }
         }
     }
 
-    // step 3 - exponentiate each element in each image in batch
-    // e^x = RT((x+2), 1) for negative x
-    // ReluTruncate(s1 * s2, MASK_PAIR(outArr), MASK_PAIR(outArr), 1, nullptr); // Q: can we do this in place? can be a source of bug in future
-    Relu2Round(s1 * s2, MASK_PAIR(outArr), MASK_PAIR(outArr), nullptr, 64);
-    for (int i = 0; i < s1 * s2; ++i)
+     // step 2 - calculate exp
+    ScaleDown(s1 * s2, MASK_PAIR(outArr), iter, true);
+    if (party != DEALER)
     {
-        if (party == DEALER)
+        for (int i = 0; i < s1 * s2; ++i)
         {
-            outArr_mask[i] = outArr_mask[i] / 2;
-        }
-        else
-        {
-            outArr[i] = outArr[i] / 2;
+            outArr[i] = outArr[i] + (1ULL << sf);
         }
     }
-
+    if (party == DEALER)
+    {
+        for (int i = 0; i < iter; i++){
+            Square(s1, s2, sf, outArr_mask, outArr_mask, "Softmax::Square", true, false);
+            ScaleDown(s1 * s2, MASK_PAIR(outArr), sf, true);
+        }
+    }
+    else{
+        for (int i = 0; i < iter; i++){
+            Square(s1, s2, sf, outArr, outArr, "Softmax::Square", true, false);
+            ScaleDown(s1 * s2, MASK_PAIR(outArr), sf, true);
+        }
+    }
+    if (party == DEALER)
+    {
+        Select(s1 * s2, drelu, outArr_mask, outArr_mask, "Softmax::Select", true);
+    }
+    else{
+        Select(s1 * s2, drelu, outArr, outArr, "Softmax::Select", true);
+    }
+    
+    
+    // calculate inverse
     GroupElement *denominators = max; // reuse the array
     // // step 4 - calculate sum of exponentiated elements for each image in batch
     if (party == DEALER)
@@ -4960,7 +5308,7 @@ void PiranhaSoftmax(int32_t s1, int32_t s2, MASK_PAIR(GroupElement *inArr), MASK
             denominators[i] = 0;
             for (int j = 0; j < s2; ++j)
             {
-                denominators[i] = denominators[i] + Arr2DIdx(outArr_mask, s1, s2, i, j);
+                denominators[i] = denominators[i] + (Arr2DIdx(outArr_mask, s1, s2, i, j));
             }
             // denominators[i] = denominators[i] * s1;
         }
@@ -4972,13 +5320,13 @@ void PiranhaSoftmax(int32_t s1, int32_t s2, MASK_PAIR(GroupElement *inArr), MASK
             denominators[i] = 0;
             for (int j = 0; j < s2; ++j)
             {
-                denominators[i] = denominators[i] + Arr2DIdx(outArr, s1, s2, i, j);
+                denominators[i] = denominators[i] + (Arr2DIdx(outArr, s1, s2, i, j));
             }
             // denominators[i] = denominators[i] * s1;
         }
     }
     // step 5 - calculate inverse of all the denominators
-    InsecureInverse(s1, denominators, denominators, sf, s2 * s1);
+    InverseLUTWing(s1, denominators, denominators, sf, bitlength, logs1, "");
 
     // step 6 - multiply each element in each image in batch by the inverse of the denominator
     GroupElement *expandedDenominator = make_array<GroupElement>(s1 * s2);
@@ -4993,24 +5341,11 @@ void PiranhaSoftmax(int32_t s1, int32_t s2, MASK_PAIR(GroupElement *inArr), MASK
 
     ElemWiseSecretSharedVectorMult(s1 * s2, expandedDenominator, expandedDenominator, MASK_PAIR(outArr), MASK_PAIR(outArr));
     always_assert((s1 & (s1 - 1)) == 0);
-    auto logs1 = osuCrypto::log2ceil(s1);
+    
     
     // 截断以后出去要减去label的share，这里不reveal
-
-    ScaleDown(s1 * s2, MASK_PAIR(outArr), sf+logs1-extra_shift);
-    // else{
-    //     for (int i = 0; i < s1 * s2; ++i)
-    //     {
-    //         if (party == DEALER)
-    //         {
-    //             outArr_mask[i] = outArr_mask[i] >> (sf + logs1);
-    //         }
-    //         else
-    //         {
-    //             outArr[i] = outArr[i] >> (sf + logs1);
-    //         }
-    //     }
-    // }
+    std::cerr << ">> sf + logs1 - extra_shift = " << sf + logs1 - extra_shift << std::endl;
+    ScaleDown(s1 * s2, MASK_PAIR(outArr), sf + logs1 - extra_shift, false);
     
     std::cerr << ">> Softmax - end" << std::endl;
 
