@@ -35,8 +35,12 @@ namespace wing
         int i = blockIdx.x * blockDim.x + threadIdx.x;
         if (i < N)
         {
-            assert(shift > 0 || alpha > 0);
-            C[i] = (A[i] << shift) + alpha * B[i];
+            if(shift > 0){
+                C[i] = (A[i] << shift) + alpha * B[i];
+            }
+            else{
+                C[i] = (A[i] >> shift) + alpha * B[i];
+            }
             gpuMod(C[i], wing::global::bw);          
         }
     }
