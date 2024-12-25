@@ -44,7 +44,7 @@ int main(int argc, char *argv[])
     AESGlobalContext g;
     initAESContext(&g);
     initGPURandomness();
-    int bin = 64, bout = 64, M = 100, N = 10, K = 64;
+    int bin = global::bw, bout = global::bw, M = 100, N = 10, K = 64;
     bool useMomentum = true;
     int epoch = 0;
     int extra_shift = 6;

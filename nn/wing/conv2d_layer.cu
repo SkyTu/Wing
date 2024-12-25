@@ -316,14 +316,18 @@ namespace wing
     {
         if (floatWeights)
         {
-            for (int i = 0; i < p.size_F; i++)
+            for (int i = 0; i < p.size_F; i++){
                 F[i] = T(((float *)*weights)[i] * (1ULL << global::scale));
+                mod(F[i], global::bw);
+            }
             // printf("F[%d]=%lu\n", p.size_F - 1, F[p.size_F - 1]);
             *weights += (p.size_F * sizeof(float));
             if (useBias)
             {
-                for (int i = 0; i < p.CO; i++)
+                for (int i = 0; i < p.CO; i++){
                     b[i] = T(((float *)*weights)[i] * (1ULL << (2 * global::scale)));
+                    mod(b[i], global::bw);
+                }
                 *weights += (p.CO * sizeof(float));
             }
         }

@@ -317,13 +317,17 @@ namespace wing
     {
         if (floatWeights)
         {
-            for (int i = 0; i < p.size_B; i++)
+            for (int i = 0; i < p.size_B; i++){
                 W[i] = T(((float *)*weights)[i] * (1ULL << global::scale));
+                mod(W[i], global::bw);
+            }
             *weights += (p.size_B * sizeof(float));
             if (useBias)
             {
-                for (int i = 0; i < p.N; i++)
+                for (int i = 0; i < p.N; i++){
                     Y[i] = T(((float *)*weights)[i] * (1ULL << (2 * global::scale)));
+                    mod(Y[i], global::bw);
+                }
                 *weights += (p.N * sizeof(float));
             }
         }

@@ -275,6 +275,12 @@ inline double asFloat(u64 x, int bw, int scale)
     return ((i64)cpuArs(x << (64 - bw), 64, 64 - bw)) / (double)(   1ULL << scale);
 }
 
+inline void cpuMod(u64 a, int bw)
+{
+    if (bw != 64)
+        a = a & ((uint64_t(1) << bw) - 1); 
+}
+
 void dropOSPageCache()
 {
     printf("Dropping the OS page cache\n");
