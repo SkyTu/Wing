@@ -153,11 +153,11 @@ namespace wing
     {
         int shiftdW = scaleVw + wing::mom_scale - scaledW;
         int shiftW = wing::lr_scale[epoch] + scaleVw - scaleW;
-        printf("shiftdW %d shiftW %d\n", shiftdW, shiftW);
+        printf("shiftdW %d shiftW %d scaleW %d scaleVw %d scaledW %d\n", shiftdW, shiftW, scaleW, scaleVw, scaledW);
         for (int i = 0; i < N; i++)
         {
             auto vw = h_masked_Vw[i] - h_mask_Vw[i];
-            auto vw_ct = cpuArs((h_dW[i] << shiftdW) + T(wing::mom_fp << extra_shift) * h_Vw[i], bin, wing::mom_scale + extra_shift);
+            auto vw_ct = cpuArs((h_dW[i] << shiftdW) + T(wing::mom_fp) * h_Vw[i], bin, wing::mom_scale);
             cpuMod(vw_ct, bout);
             // if(i < 10) printf("%lu %lu\n", u64(vw), u64(vw_ct));
             // assert(vw - vw_ct <= 1);

@@ -131,7 +131,7 @@ int main(int argc, char *argv[])
     
     printf("Checking sgd for W, momentum=%d\n", useMomentum);
     checkOptimizer<T>(bin, bout, fc_layer.p.size_B, h_W, h_Vw, h_dW_ct, fc_layer.W, h_masked_Vw_Rec,
-                      h_mask_new_W, h_mask_new_Vw, global::scale, 2 * global::scale, 2 * global::scale, useMomentum, epoch, extra_shift);
+                      h_mask_new_W, h_mask_new_Vw, global::scale, 2 * global::scale, 2 * global::scale + extra_shift, useMomentum, epoch, extra_shift);
 
     auto h_dY_ct = getBiasGradWrapper<T>(M, N, bout, h_grad);
     printf("Checking sgd for Y, momentum=%d\n", useMomentum);
