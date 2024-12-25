@@ -29,7 +29,6 @@
 
 namespace wing
 {
-
     template <typename T>
     __global__ void leftShiftAndAddKernel(T *A, T *B, T *C, int shift, T alpha, int N)
     {
@@ -60,7 +59,7 @@ namespace wing
         auto d_Vw = (T *)moveToGPU((u8 *)h_Vw, memSizeW, NULL);
         int shift = wing::mom_scale + scaleVw - scaledW;
         std::cout << "shift = " << shift << " " << scaleVw << " " << scaledW << std::endl;
-        gpuLeftShiftAndAdd(N, d_dW, d_Vw, d_Vw, shift, T(wing::mom_fp));
+        gpuLeftShiftAndAdd(N, d_dW, d_Vw, d_Vw, shift, T(wing::mom_fp * (1 << wing::global::extra_shift)));
         bool update_bias = (wing::lr_scale[epoch] + scaleVw - scaleW == 0);
         if(update_bias){
             d_Vw = genGPUTruncateKey(key_as_bytes, party, wing::TruncateType::RevealedStochasticTruncate, bin, bout, wing::mom_scale + extra_shift, N, d_Vw, gaes);
@@ -110,14 +109,14 @@ namespace wing
     {
         size_t memSizeW = N * sizeof(T);
         auto d_Vw = (T *)moveToGPU((u8 *)h_Vw, memSizeW, s);
-        int shift = wing::mom_scale + scaleVw - scaledW + extra_shift;
+        int shift = wing::mom_scale + scaleVw - scaledW;
         bool update_bias = (wing::lr_scale[epoch] + scaleVw - scaleW == 0);
+        
+        gpuLeftShiftAndAdd(N, d_dW, d_Vw, d_Vw, shift, T(wing::mom_fp * (1 << wing::global::extra_shift)));
         if (update_bias){
-            gpuLeftShiftAndAdd(N, d_dW, d_Vw, d_Vw, shift, T(wing::mom_fp));
             wing::gpuTruncate(bin, bout, wing::TruncateType::RevealedStochasticTruncate, truncateKeyVw, wing::mom_scale + extra_shift, peer, party, N, d_Vw, gaes, s);
         }
         else{
-            gpuLeftShiftAndAdd(N, d_dW, d_Vw, d_Vw, shift, T(wing::mom_fp));
             wing::gpuTruncate(bin, bout, wing::TruncateType::StochasticTruncate, truncateKeyVw, wing::mom_scale + extra_shift, peer, party, N, d_Vw, gaes, s, false);
         }
         moveIntoCPUMem((u8 *)h_Vw, (u8 *)d_Vw /*d_dW*/, memSizeW, s);
