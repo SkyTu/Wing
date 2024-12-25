@@ -163,7 +163,8 @@ namespace wing
             // this is the new masked f
             auto w = h_masked_W[i] - h_mask_W[i];
             // need to test this when the starting vf is non-zero
-            auto diff = abs(static_cast<int64_t>(u64(w) - u64(w_ct)));
+            auto diff = u64(w) - u64(w_ct);
+            cpuMod(diff, bout);
             if (i < 10)
                 printf("w %lu wct %lu h_mask_Vw %lu %ld\n", u64(w), u64(w_ct), u64(h_mask_Vw[i]), diff);
             // the two is important

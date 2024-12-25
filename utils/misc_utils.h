@@ -49,7 +49,7 @@ template <typename T>
 __device__ inline void gpuMod(T &x, int bw)
 {
     if (bw < sizeof(T) * 8)
-        x &= ((T(1) << bw) - 1);
+        x = (x << (64 - bw)) >> (64 - bw);
 }
 
 template <typename T>
@@ -247,8 +247,16 @@ template <typename T>
 inline void cpuMod(T &x, int bw)
 {
     if (bw < sizeof(T) * 8)
-        x &= ((T(1) << bw) - 1);
+        x = (x << (64 - bw)) >> (64 - bw);
 }
+
+
+// inline void cpuMod(u64 a, int bw)
+// {
+//     // if (bw != 64)
+//     //     a = a & ((uint64_t(1) << bw) - 1); 
+//     a = (a << (64 - bw)) >> bw;
+// }
 
 template <typename T>
 T cpuArs(T x, int bin, int shift)
@@ -275,11 +283,6 @@ inline double asFloat(u64 x, int bw, int scale)
     return ((i64)cpuArs(x << (64 - bw), 64, 64 - bw)) / (double)(   1ULL << scale);
 }
 
-inline void cpuMod(u64 a, int bw)
-{
-    if (bw != 64)
-        a = a & ((uint64_t(1) << bw) - 1); 
-}
 
 void dropOSPageCache()
 {
