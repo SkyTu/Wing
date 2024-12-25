@@ -5100,39 +5100,6 @@ void PiranhaSoftmax(int32_t s1, int32_t s2, MASK_PAIR(GroupElement *inArr), MASK
     bitlength += sf;
     std::cerr << ">> bitlength" << " = " << bitlength << std::endl;
 
-    // step 2 - subtract max and get the select bit
-    if (party == DEALER)
-    {
-        for (int i = 0; i < s1; ++i)
-        {
-            for (int j = 0; j < s2; ++j)
-            {
-                Arr2DIdx(inArrTR_mask, s1, s2, i, j) = Arr2DIdx(inArrTR_mask, s1, s2, i, j) - max[i];
-                mod(Arr2DIdx(inArrTR_mask, s1, s2, i, j), bitlength-sf);
-            }
-        }
-    }
-    else
-    {
-        for (int i = 0; i < s1; ++i)
-        {
-            for (int j = 0; j < s2; ++j)
-            {
-                Arr2DIdx(inArrTR, s1, s2, i, j) = Arr2DIdx(inArrTR, s1, s2, i, j) - max[i] + (1 << (sf + 1));
-                mod(Arr2DIdx(inArrTR, s1, s2, i, j), bitlength-sf);
-            }
-        }
-    }
-    
-    GroupElement *drelu = new GroupElement[s1 * s2];
-    if (party == DEALER)
-    {
-        SlothDrelu(s1 * s2, bitlength - sf, inArrTR_mask, drelu, "Softmax::SlothDrelu");
-    }
-    else{
-        SlothDrelu(s1 * s2, bitlength - sf, inArrTR, drelu, "Softmax::SlothDrelu");
-    }
-
     // step 2 - extend max
     SignExtend2(s1, bitlength - sf, bitlength, max, max);
     if (party == DEALER)
@@ -5151,7 +5118,7 @@ void PiranhaSoftmax(int32_t s1, int32_t s2, MASK_PAIR(GroupElement *inArr), MASK
         {
             for (int j = 0; j < s2; ++j)
             {
-                Arr2DIdx(outArr, s1, s2, i, j) = Arr2DIdx(inArr, s1, s2, i, j) - max[i];
+                Arr2DIdx(outArr, s1, s2, i, j) = Arr2DIdx(inArr, s1, s2, i, j) - max[i] + (1 << (sf + 1));
             }
         }
     }
