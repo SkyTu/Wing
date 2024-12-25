@@ -28,8 +28,8 @@ namespace wing
 {
     static const uint64_t lr_fp = 1;
     static const int lr_scale[5] = {6,6,9,9,9};
-    static const uint64_t mom_fp = 29;
-    static const int mom_scale = 5;
+    static const uint64_t mom_fp = 116;
+    static const int mom_scale = 7;
 
 
     template <typename T>

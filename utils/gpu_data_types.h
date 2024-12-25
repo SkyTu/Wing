@@ -81,7 +81,7 @@ namespace wing
     namespace global
     {
         static const int bw = 64;
-        static const int scale = 24;
-        static const int extra_shift = 5;
+        static const int scale = 18;
+        static const int extra_shift = 7;
     }
 }
