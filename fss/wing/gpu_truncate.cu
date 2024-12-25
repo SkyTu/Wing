@@ -324,7 +324,7 @@ namespace wing
             auto output = h_masked_A[i] - h_mask_A[i];
             cpuMod(output, bout);
             if (i < 10)
-                printf("%lu %lu %lu\n", h_A_ct[i], u64(output), u64(truncated_A));
+                printf("%lu %lu %lu\n", h_A_ct[i], cpuMod(output, bout), cpuMod(truncated_A, bout));
             // if (output != truncated_A && output != truncated_A_plus1)
             //     printf("%lu %lu %lu %lu\n", h_A_ct[i], u64(output), u64(truncated_A), u64(truncated_A_plus1));
             // assert(output == truncated_A || output == truncated_A_plus1);
