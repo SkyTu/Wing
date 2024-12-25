@@ -58,7 +58,8 @@ namespace wing
     {
         size_t memSizeW = N * sizeof(T);
         auto d_Vw = (T *)moveToGPU((u8 *)h_Vw, memSizeW, NULL);
-        int shift = wing::mom_scale + scaleVw - scaledW + extra_shift;
+        int shift = wing::mom_scale + scaleVw - scaledW;
+        std::cout << "shift = " << shift << " " << scaleVw << " " << scaledW << std::endl;
         gpuLeftShiftAndAdd(N, d_dW, d_Vw, d_Vw, shift, T(wing::mom_fp));
         bool update_bias = (wing::lr_scale[epoch] + scaleVw - scaleW == 0);
         if(update_bias){
@@ -75,6 +76,7 @@ namespace wing
             dWWasNull = true;
         }
         shift = wing::lr_scale[epoch] + scaleVw - scaleW;
+        std::cout << "shift = " << shift << " " << scaleVw << " " << scaleW << std::endl;
         auto d_new_W = (T *)gpuMalloc(memSizeW);
         gpuLeftShiftAndAdd(N, d_W, d_Vw, d_new_W, shift, -T(wing::lr_fp));
         if (shift > 0){
@@ -294,6 +296,8 @@ namespace wing
     {
         if (useMomentum)
         {
+            std::cout << "genGpuSGDWithMomentumKey" << std::endl;
+            std::cout << "scaleW: " << scaleW << " scaleVw: " << scaleVw << " scaledW: " << scaledW << std::endl;
             genGpuSGDWithMomentumKey(key_as_bytes, party, bin, bout, N, h_W, d_W, h_Vw, d_dW, scaleW, scaleVw, scaledW, t, gaes, epoch, extra_shift);
         }
         else

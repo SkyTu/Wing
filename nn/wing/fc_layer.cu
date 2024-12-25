@@ -169,9 +169,11 @@ namespace wing
             else
                 d_mask_truncated_dX = genGPUTruncateKey(key_as_bytes, party, tb, p.bw, p.bw, global::scale, p.size_A, d_mask_dX, gaes);
         }
+        std::cout << "---------gen dw key---------" << std::endl;
         genOptimizerKey(key_as_bytes, party, p.bw, p.bw, p.size_B, mask_W, d_mask_W, mask_Vw, d_mask_dW, global::scale, 2 * global::scale, 2 * global::scale, tf, this->useMomentum, gaes, epoch, extra_shift);
         if (useBias)
         {
+            std::cout << "---------gen dy key---------" << std::endl;
             auto d_mask_dY = getBiasGrad(p.M, p.N, p.bw, d_mask_grad);
             genOptimizerKey(key_as_bytes, party, p.bw, p.bw, p.N, mask_Y, (T *)NULL, mask_Vy, d_mask_dY, 2 * global::scale, 2 * global::scale - lr_scale[epoch], global::scale, tf, this->useMomentum, gaes, epoch, extra_shift);
             gpuFree(d_mask_dY);
