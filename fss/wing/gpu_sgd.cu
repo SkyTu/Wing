@@ -37,7 +37,7 @@ namespace wing
         {
             assert(shift > 0 || alpha > 0);
             C[i] = (A[i] << shift) + alpha * B[i];
-            // gpuMod(C[i], wing::global::bw);          
+            gpuMod(C[i], wing::global::bw);          
         }
     }
 
@@ -162,11 +162,12 @@ namespace wing
             auto w_ct = cpuArs((h_W[i] << shiftW) - T(wing::lr_fp) * vw_ct, bin, shiftW);
             // this is the new masked f
             auto w = h_masked_W[i] - h_mask_W[i];
+            cpuMod(w, bout);
             // need to test this when the starting vf is non-zero
             auto diff = u64(w) - u64(w_ct);
             cpuMod(diff, bout);
             if (i < 10)
-                printf("w %lu wct %lu h_mask_Vw %lu %ld\n", u64(w), u64(w_ct), u64(h_mask_Vw[i]), diff);
+                printf("w %lu wct %lu diff %ld\n", u64(w), u64(w_ct), diff);
             // the two is important
             // assert(/*abs(static_cast<int64_t>(w - w_ct))*/ diff <= 2);
         }
