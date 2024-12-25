@@ -63,7 +63,7 @@ u64 *gpuSoftmax(int batchSz, int numClasses, int party, SigmaPeer *peer, u64 *d_
     }
     else
     {
-        pirhana_softmax(inp, softmaxOp, dcf::orca::global::scale);
+        pirhana_softmax(inp, softmaxOp, dcf::orca::global::scale, 0);
         // softmax<u64,dcf::orca::global::scale>(inp, softmaxOp);
     }
     for (int img = 0; img < batchSz; img++)

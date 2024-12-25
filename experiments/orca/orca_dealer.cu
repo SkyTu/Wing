@@ -54,7 +54,7 @@ u64 *gpuGenSoftmaxKey(int batchSz, int numClasses, u64 *d_mask_I, bool secfloat,
     }
     else
     {
-        pirhana_softmax(inpMask, softmaxOpMask, dcf::orca::global::scale);
+        pirhana_softmax(inpMask, softmaxOpMask, dcf::orca::global::scale, 0);
     }
     d_mask_I = (u64 *)moveToGPU((u8 *)softmaxOpMask.data, memSz, NULL);
     return d_mask_I;

@@ -52,7 +52,7 @@ struct replicated_secret_share64{
     u64 * share_0;
     u64 * share_1;
     static const int bw = 64;
-    static const int scale = 24;
+    static const int scale = 20;
 };
 
 namespace dcf
@@ -62,7 +62,7 @@ namespace dcf
         namespace global
         {
             static const int bw = 64;
-            static const int scale = 24;
+            static const int scale = 20;
         }
     }
 }
@@ -72,7 +72,7 @@ namespace orca_o
     namespace global
     {
         static const int bw = 64;
-        static const int scale = 24;
+        static const int scale = 20;
     }
 }
 
@@ -81,7 +81,7 @@ namespace wing
     namespace global
     {
         static const int bw = 64;
-        static const int scale = 24;
+        static const int scale = 20;
         static const int iteration_threshold = 100000;
         static const int extra_shift = 0;
     }

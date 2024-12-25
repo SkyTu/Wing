@@ -135,6 +135,9 @@ piranha: experiments/orca/piranha.cu
 share_data: experiments/orca/share_data.cpp experiments/datasets/mnist.cpp
 	$(CXX) $(FLAGS) $(INCLUDES) $^ $(UTIL_FILES) $(LIBS) -o experiments/orca/share_data
 
+wing_share_data: experiments/orca/share_data.cpp experiments/datasets/mnist.cpp
+	$(CXX) $(FLAGS) $(INCLUDES) $^ $(UTIL_FILES) $(LIBS) -o experiments/wing/share_data
+
 model_accuracy: experiments/orca/model_accuracy.cu experiments/datasets/mnist.cpp
 	$(CXX) $(FLAGS) $(INCLUDES) $^ $(UTIL_FILES) $(LIBS) -o experiments/orca/model_accuracy
 
