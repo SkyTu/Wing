@@ -302,6 +302,7 @@ namespace wing
         if (useBias)
         {
             auto d_dY = getBiasGrad(p.M, p.N, p.bw, d_incomingGrad);
+            std::cout << "extra_shift: " << extra_shift << std::endl;
             optimize(p.bw, p.bw, p.N, Y, (T *)NULL, Vy, d_dY, 2 * global::scale, 2 * global::scale - lr_scale[epoch], global::scale + extra_shift, tf, truncateKeyVy, truncateKeyY,
                     party, peer, this->useMomentum, gaes, &(this->s), epoch, extra_shift);
             gpuFree(d_dY);

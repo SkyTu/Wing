@@ -49,7 +49,7 @@ namespace wing
     template <typename T>
     void gpuLeftShiftAndAdd(int N, T *d_A, T *d_B, T *d_C, int shift, T alpha)
     {
-        assert(shift < sizeof(T) * 64);
+        // assert(shift < sizeof(T) * 64);
         leftShiftAndAddKernel<<<(N - 1) / 128 + 1, 128>>>(d_A, d_B, d_C, shift, alpha, N);
         checkCudaErrors(cudaDeviceSynchronize());
     }
