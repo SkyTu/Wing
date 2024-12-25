@@ -151,15 +151,18 @@ namespace wing
                               T *h_mask_W, T *h_mask_Vw,
                               int scaleW, int scaleVw, int scaledW, int epoch, int extra_shift)
     {
-        int shiftdW = scaleVw + wing::mom_scale - scaledW + extra_shift;
+        int shiftdW = scaleVw + wing::mom_scale - scaledW;
         int shiftW = wing::lr_scale[epoch] + scaleVw - scaleW;
+        printf("shiftdW %d shiftW %d\n", shiftdW, shiftW);
         for (int i = 0; i < N; i++)
         {
             auto vw = h_masked_Vw[i] - h_mask_Vw[i];
-            auto vw_ct = cpuArs((h_dW[i] << shiftdW) + T(wing::mom_fp) * h_Vw[i], bin, wing::mom_scale + extra_shift);
+            auto vw_ct = cpuArs((h_dW[i] << shiftdW) + T(wing::mom_fp << extra_shift) * h_Vw[i], bin, wing::mom_scale + extra_shift);
+            cpuMod(vw_ct, bout);
             // if(i < 10) printf("%lu %lu\n", u64(vw), u64(vw_ct));
             // assert(vw - vw_ct <= 1);
             auto w_ct = cpuArs((h_W[i] << shiftW) - T(wing::lr_fp) * vw_ct, bin, shiftW);
+            cpuMod(w_ct, bout);
             // this is the new masked f
             auto w = h_masked_W[i] - h_mask_W[i];
             cpuMod(w, bout);
