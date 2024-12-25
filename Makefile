@@ -65,11 +65,18 @@ secfloat_softmax: tests/fss/secfloat_softmax.cu
 piranha_softmax: tests/fss/piranha_softmax.cu
 	$(CXX) $(FLAGS) $(INCLUDES) $^ $(UTIL_FILES) $(LIBS) -o tests/fss/piranha_softmax
 
+wing_softmax: tests/nn/wing/wing_softmax.cu
+	$(CXX) $(FLAGS) $(INCLUDES) $^ $(UTIL_FILES) $(LIBS) -o tests/nn/wing/wing_softmax
+
 orca_dealer: experiments/orca/orca_dealer.cu
 	$(CXX) $(FLAGS) $(INCLUDES) $^ $(UTIL_FILES) $(LIBS) $(SECFLOAT_LIBS) -o experiments/orca/orca_dealer
 
 orca_evaluator: experiments/orca/orca_evaluator.cu experiments/datasets/mnist.cpp
 	$(CXX) $(FLAGS) $(INCLUDES) $^ $(UTIL_FILES) $(LIBS) $(SECFLOAT_LIBS) -o experiments/orca/orca_evaluator
+
+wing_square: experiments/wing/wing_square.cu
+	$(CXX) $(FLAGS) $(INCLUDES) $^ $(UTIL_FILES) $(LIBS) $(SECFLOAT_LIBS) -o experiments/wing/wing_square
+
 
 wing_dealer: experiments/wing/wing_dealer.cu
 	$(CXX) $(FLAGS) $(INCLUDES) $^ $(UTIL_FILES) $(LIBS) $(SECFLOAT_LIBS) -o experiments/wing/wing_dealer
@@ -127,6 +134,9 @@ piranha: experiments/orca/piranha.cu
 
 share_data: experiments/orca/share_data.cpp experiments/datasets/mnist.cpp
 	$(CXX) $(FLAGS) $(INCLUDES) $^ $(UTIL_FILES) $(LIBS) -o experiments/orca/share_data
+
+wing_share_data: experiments/wing/share_data.cpp experiments/datasets/mnist.cpp
+	$(CXX) $(FLAGS) $(INCLUDES) $^ $(UTIL_FILES) $(LIBS) -o experiments/wing/share_data
 
 model_accuracy: experiments/orca/model_accuracy.cu experiments/datasets/mnist.cpp
 	$(CXX) $(FLAGS) $(INCLUDES) $^ $(UTIL_FILES) $(LIBS) -o experiments/orca/model_accuracy

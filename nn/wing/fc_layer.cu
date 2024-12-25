@@ -169,11 +169,13 @@ namespace wing
             else
                 d_mask_truncated_dX = genGPUTruncateKey(key_as_bytes, party, tb, p.bw, p.bw, global::scale, p.size_A, d_mask_dX, gaes);
         }
-        genOptimizerKey(key_as_bytes, party, p.bw, p.bw, p.size_B, mask_W, d_mask_W, mask_Vw, d_mask_dW, global::scale, 2 * global::scale, 2 * global::scale, tf, this->useMomentum, gaes, epoch);
+        std::cout << "---------gen dw key---------" << std::endl;
+        genOptimizerKey(key_as_bytes, party, p.bw, p.bw, p.size_B, mask_W, d_mask_W, mask_Vw, d_mask_dW, global::scale, 2 * global::scale, 2 * global::scale + global::extra_shift, tf, this->useMomentum, gaes, epoch);
         if (useBias)
         {
+            std::cout << "---------gen dy key---------" << std::endl;
             auto d_mask_dY = getBiasGrad(p.M, p.N, p.bw, d_mask_grad);
-            genOptimizerKey(key_as_bytes, party, p.bw, p.bw, p.N, mask_Y, (T *)NULL, mask_Vy, d_mask_dY, 2 * global::scale, 2 * global::scale - lr_scale[epoch], global::scale, tf, this->useMomentum, gaes, epoch);
+            genOptimizerKey(key_as_bytes, party, p.bw, p.bw, p.N, mask_Y, (T *)NULL, mask_Vy, d_mask_dY, 2 * global::scale, 2 * global::scale - lr_scale[epoch], global::scale + global::extra_shift, tf, this->useMomentum, gaes, epoch);
             gpuFree(d_mask_dY);
         }
         gpuFree(d_mask_W);
@@ -224,9 +226,9 @@ namespace wing
                 truncateKeydX = readGPUTruncateKey<T>(tb, key_as_bytes);
         }
 
-        readOptimizerKey(tf, &truncateKeyVw, &truncateKeyW, key_as_bytes, global::scale, 2 * global::scale, 2 * global::scale, this->useMomentum, epoch);
+        readOptimizerKey(tf, &truncateKeyVw, &truncateKeyW, key_as_bytes, global::scale, 2 * global::scale, 2 * global::scale + global::extra_shift, this->useMomentum, epoch);
         if (useBias)
-            readOptimizerKey(tf, &truncateKeyVy, &truncateKeyY, key_as_bytes, 2 * global::scale, 2 * global::scale - lr_scale[epoch], global::scale, this->useMomentum, epoch);
+            readOptimizerKey(tf, &truncateKeyVy, &truncateKeyY, key_as_bytes, 2 * global::scale, 2 * global::scale - lr_scale[epoch], global::scale + global::extra_shift, this->useMomentum, epoch);
     }
 
     template <typename T>
@@ -235,7 +237,7 @@ namespace wing
         auto d_mask_X = (T *)moveToGPU((u8 *)mmKey.A, mmKey.mem_size_A, &(this->s));
         if (inputIsShares)
         {
-            gpuLinearComb(p.bw, p.size_A, d_X, T(1), d_X, T(1), d_mask_X);
+            gpuLinearComb(p.bw, p.size_A, d_X, T(1), d_X, T(1), d_mask_X);   
             peer->reconstructInPlace(d_X, p.bw, p.size_A, &(this->s));
         }
         if (this->train)
@@ -291,16 +293,14 @@ namespace wing
         gpuFree(d_X);
         gpuFree(d_mask_X);
 
-        std::cout << "---------Before optimize weights---------" << std::endl;
-        optimize(p.bw, p.bw, p.size_B, W, d_W, Vw, d_dW, global::scale, 2 * global::scale, 2 * global::scale, tf, truncateKeyVw, truncateKeyW, party, peer, this->useMomentum, gaes, &(this->s), epoch);
-        std::cout << "---------After optimize weights---------" << std::endl;
+        optimize(p.bw, p.bw, p.size_B, W, d_W, Vw, d_dW, global::scale, 2 * global::scale, 2 * global::scale + global::extra_shift, tf, truncateKeyVw, truncateKeyW, party, peer, this->useMomentum, gaes, &(this->s), epoch);        
 
         gpuFree(d_W);
         gpuFree(d_dW);
         if (useBias)
         {
             auto d_dY = getBiasGrad(p.M, p.N, p.bw, d_incomingGrad);
-            optimize(p.bw, p.bw, p.N, Y, (T *)NULL, Vy, d_dY, 2 * global::scale, 2 * global::scale - lr_scale[epoch], global::scale, tf, truncateKeyVy, truncateKeyY,
+            optimize(p.bw, p.bw, p.N, Y, (T *)NULL, Vy, d_dY, 2 * global::scale, 2 * global::scale - lr_scale[epoch], global::scale + global::extra_shift, tf, truncateKeyVy, truncateKeyY,
                     party, peer, this->useMomentum, gaes, &(this->s), epoch);
             gpuFree(d_dY);
         }
@@ -315,13 +315,17 @@ namespace wing
     {
         if (floatWeights)
         {
-            for (int i = 0; i < p.size_B; i++)
+            for (int i = 0; i < p.size_B; i++){
                 W[i] = T(((float *)*weights)[i] * (1ULL << global::scale));
+                mod(W[i], global::bw);
+            }
             *weights += (p.size_B * sizeof(float));
             if (useBias)
             {
-                for (int i = 0; i < p.N; i++)
+                for (int i = 0; i < p.N; i++){
                     Y[i] = T(((float *)*weights)[i] * (1ULL << (2 * global::scale)));
+                    mod(Y[i], global::bw);
+                }
                 *weights += (p.N * sizeof(float));
             }
         }

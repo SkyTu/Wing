@@ -174,13 +174,13 @@ namespace wing
             // d_mask_truncated_dI = genGPUTruncateKey<T>(key_as_bytes, party, tf, p.bin, p.bout, global::scale, p.size_I, d_mask_dI, gaes);
         }
 
-        genOptimizerKey<T>(key_as_bytes, party, p.bin, p.bout, p.size_F, mask_F, d_mask_F, mask_Vf, d_mask_dF, global::scale, 2 * global::scale, 2 * global::scale, tf, this->useMomentum, gaes, epoch);
+        genOptimizerKey<T>(key_as_bytes, party, p.bin, p.bout, p.size_F, mask_F, d_mask_F, mask_Vf, d_mask_dF, global::scale, 2 * global::scale, 2 * global::scale + global::extra_shift, tf, this->useMomentum, gaes, epoch);
 
         if (useBias)
         {
             auto d_mask_db = getBiasGrad<T>(p.size_O / p.CO, p.CO, p.bin, d_mask_grad);
             // printf("Old Mask b=%ld, %ld, %ld\n", b[0], b[1], b[2]);
-            genOptimizerKey<T>(key_as_bytes, party, p.bin, p.bout, p.CO, mask_b, NULL, mask_Vb, d_mask_db, 2 * global::scale, 2 * global::scale - lr_scale[epoch], global::scale, tf, this->useMomentum, gaes, epoch);
+            genOptimizerKey<T>(key_as_bytes, party, p.bin, p.bout, p.CO, mask_b, NULL, mask_Vb, d_mask_db, 2 * global::scale, 2 * global::scale - lr_scale[epoch], global::scale + global::extra_shift, tf, this->useMomentum, gaes, epoch);
             // printf("New Mask b=%ld, %ld, %ld\n", b[0], b[1], b[2]);
             gpuFree(d_mask_db);
         }
@@ -233,9 +233,9 @@ namespace wing
                 truncateKeydI = readGPUTruncateKey<T>(tb, key_as_bytes);
         }
         // readGpuSGDWithMomentumKey(tb, &truncateKeyVf, &truncateKeyF, &truncateKeyVb, key_as_bytes, useBias);
-        readOptimizerKey(tf, &truncateKeyVf, &truncateKeyF, key_as_bytes, global::scale, 2 * global::scale, 2 * global::scale, this->useMomentum, epoch);
+        readOptimizerKey(tf, &truncateKeyVf, &truncateKeyF, key_as_bytes, global::scale, 2 * global::scale, 2 * global::scale + global::extra_shift, this->useMomentum, epoch);
         if (useBias)
-            readOptimizerKey(tf, &truncateKeyVb, &truncateKeyb, key_as_bytes, 2 * global::scale, 2 * global::scale - lr_scale[epoch], global::scale, this->useMomentum, epoch);
+            readOptimizerKey(tf, &truncateKeyVb, &truncateKeyb, key_as_bytes, 2 * global::scale, 2 * global::scale - lr_scale[epoch], global::scale + global::extra_shift, this->useMomentum, epoch);
     }
 
     template <typename T>
@@ -254,15 +254,15 @@ namespace wing
         d_F = (T *)moveToGPU((u8 *)F, convKey.mem_size_F, &(this->s));
         d_mask_F = (T *)moveToGPU((u8 *)convKey.F, convKey.mem_size_F, &(this->s));
         auto d_C = gpuConv2DBeaver(convKey, party, d_I, d_F, d_mask_I, d_mask_F, useBias && party == SERVER0 ? b : (T*) NULL, &(this->s), 0);
-
         // should not be freeing d_I who knows where else it is being used
         // gpuFree(d_I);
         gpuFree(d_F);
         gpuFree(d_mask_I);
         gpuFree(d_mask_F);
 
+        std::cout << "Before Truncate" << std::endl;
         wing::gpuTruncate(p.bin, p.bout, tf, truncateKeyC, global::scale, peer, party, p.size_O, d_C, gaes, &(this->s));
-
+        std::cout << "After Truncate" << std::endl;
         return d_C;
     }
 
@@ -291,12 +291,12 @@ namespace wing
         auto d_dF = gpuConv2DBeaver(convKeydF, party, d_incomingGrad, d_I, d_mask_incomingGrad, d_mask_I, (T *)NULL, &(this->s), 2);
         // peer->reconstructInPlace(d_dF, p.bin, p.size_F, &(this->s));
 
-        optimize(p.bin, p.bout, p.size_F, F, d_F, Vf, d_dF, global::scale, 2 * global::scale, 2 * global::scale, tf, truncateKeyVf, truncateKeyF, party, peer, this->useMomentum, gaes, &(this->s), epoch);
+        optimize(p.bin, p.bout, p.size_F, F, d_F, Vf, d_dF, global::scale, 2 * global::scale, 2 * global::scale + global::extra_shift, tf, truncateKeyVf, truncateKeyF, party, peer, this->useMomentum, gaes, &(this->s), epoch);
 
         if (useBias)
         {
             auto d_db = getBiasGrad<T>(p.size_O / p.CO, p.CO, p.bout, d_incomingGrad);
-            optimize(p.bin, p.bout, p.CO, b, (T *)NULL, Vb, d_db, 2 * global::scale, 2 * global::scale - lr_scale[epoch], global::scale, tf, truncateKeyVb, truncateKeyb,
+            optimize(p.bin, p.bout, p.CO, b, (T *)NULL, Vb, d_db, 2 * global::scale, 2 * global::scale - lr_scale[epoch], global::scale + global::extra_shift, tf, truncateKeyVb, truncateKeyb,
                         party, peer, this->useMomentum, gaes, &(this->s), epoch);
             gpuFree(d_db);
         }
@@ -316,14 +316,18 @@ namespace wing
     {
         if (floatWeights)
         {
-            for (int i = 0; i < p.size_F; i++)
+            for (int i = 0; i < p.size_F; i++){
                 F[i] = T(((float *)*weights)[i] * (1ULL << global::scale));
+                mod(F[i], global::bw);
+            }
             // printf("F[%d]=%lu\n", p.size_F - 1, F[p.size_F - 1]);
             *weights += (p.size_F * sizeof(float));
             if (useBias)
             {
-                for (int i = 0; i < p.CO; i++)
+                for (int i = 0; i < p.CO; i++){
                     b[i] = T(((float *)*weights)[i] * (1ULL << (2 * global::scale)));
+                    mod(b[i], global::bw);
+                }
                 *weights += (p.CO * sizeof(float));
             }
         }

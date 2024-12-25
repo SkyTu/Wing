@@ -21,6 +21,7 @@
 
 #pragma once
 
+#include <cmath>
 #include <cassert>
 #include "utils/gpu_mem.h"
 
@@ -28,16 +29,14 @@
 
 namespace wing
 {
-
     template <typename T>
     __global__ void leftShiftAndAddKernel(T *A, T *B, T *C, int shift, T alpha, int N)
     {
         int i = blockIdx.x * blockDim.x + threadIdx.x;
         if (i < N)
         {
-            assert(shift > 0 || alpha > 0);
             C[i] = (A[i] << shift) + alpha * B[i];
-            // gpuMod(C[i], wing::global::bw);          
+            gpuMod(C[i], wing::global::bw);          
         }
     }
 
@@ -45,7 +44,7 @@ namespace wing
     template <typename T>
     void gpuLeftShiftAndAdd(int N, T *d_A, T *d_B, T *d_C, int shift, T alpha)
     {
-        assert(shift < sizeof(T) * 64);
+        // assert(shift < sizeof(T) * 64);
         leftShiftAndAddKernel<<<(N - 1) / 128 + 1, 128>>>(d_A, d_B, d_C, shift, alpha, N);
         checkCudaErrors(cudaDeviceSynchronize());
     }
@@ -74,6 +73,7 @@ namespace wing
             dWWasNull = true;
         }
         shift = wing::lr_scale[epoch] + scaleVw - scaleW;
+        std::cout << "shift = " << shift << " " << scaleVw << " " << scaleW << std::endl;
         auto d_new_W = (T *)gpuMalloc(memSizeW);
         gpuLeftShiftAndAdd(N, d_W, d_Vw, d_new_W, shift, -T(wing::lr_fp));
         if (shift > 0){
@@ -110,12 +110,11 @@ namespace wing
         int shift = wing::mom_scale + scaleVw - scaledW;
         bool update_bias = (wing::lr_scale[epoch] + scaleVw - scaleW == 0);
         
+        gpuLeftShiftAndAdd(N, d_dW, d_Vw, d_Vw, shift, T(wing::mom_fp));
         if (update_bias){
-            gpuLeftShiftAndAdd(N, d_dW, d_Vw, d_Vw, shift, T(wing::mom_fp));
             wing::gpuTruncate(bin, bout, wing::TruncateType::RevealedStochasticTruncate, truncateKeyVw, wing::mom_scale, peer, party, N, d_Vw, gaes, s);
         }
         else{
-            gpuLeftShiftAndAdd(N, d_dW, d_Vw, d_Vw, shift, T(wing::mom_fp));
             wing::gpuTruncate(bin, bout, wing::TruncateType::StochasticTruncate, truncateKeyVw, wing::mom_scale, peer, party, N, d_Vw, gaes, s, false);
         }
         moveIntoCPUMem((u8 *)h_Vw, (u8 *)d_Vw /*d_dW*/, memSizeW, s);
@@ -152,19 +151,24 @@ namespace wing
     {
         int shiftdW = scaleVw + wing::mom_scale - scaledW;
         int shiftW = wing::lr_scale[epoch] + scaleVw - scaleW;
+        printf("shiftdW %d shiftW %d scaleW %d scaleVw %d scaledW %d\n", shiftdW, shiftW, scaleW, scaleVw, scaledW);
         for (int i = 0; i < N; i++)
         {
             auto vw = h_masked_Vw[i] - h_mask_Vw[i];
             auto vw_ct = cpuArs((h_dW[i] << shiftdW) + T(wing::mom_fp) * h_Vw[i], bin, wing::mom_scale);
+            cpuMod(vw_ct, bout);
             // if(i < 10) printf("%lu %lu\n", u64(vw), u64(vw_ct));
             // assert(vw - vw_ct <= 1);
             auto w_ct = cpuArs((h_W[i] << shiftW) - T(wing::lr_fp) * vw_ct, bin, shiftW);
+            cpuMod(w_ct, bout);
             // this is the new masked f
             auto w = h_masked_W[i] - h_mask_W[i];
+            cpuMod(w, bout);
             // need to test this when the starting vf is non-zero
-            auto diff = abs(static_cast<int64_t>(u64(w) - u64(w_ct)));
+            auto diff = u64(w) - u64(w_ct);
+            cpuMod(diff, bout);
             if (i < 10)
-                printf("w %lu wct %lu h_mask_Vw %lu %ld\n", u64(w), u64(w_ct), u64(h_mask_Vw[i]), diff);
+                printf("w %lu wct %lu diff %ld\n", u64(w), u64(w_ct), diff);
             // the two is important
             // assert(/*abs(static_cast<int64_t>(w - w_ct))*/ diff <= 2);
         }
@@ -294,6 +298,8 @@ namespace wing
     {
         if (useMomentum)
         {
+            std::cout << "genGpuSGDWithMomentumKey" << std::endl;
+            std::cout << "scaleW: " << scaleW << " scaleVw: " << scaleVw << " scaledW: " << scaledW << std::endl;
             genGpuSGDWithMomentumKey(key_as_bytes, party, bin, bout, N, h_W, d_W, h_Vw, d_dW, scaleW, scaleVw, scaledW, t, gaes, epoch);
         }
         else
