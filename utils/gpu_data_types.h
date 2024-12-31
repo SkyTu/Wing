@@ -48,12 +48,24 @@ typedef unsigned __int128 AESBlock;
 
 using orcaTemplateClass = u64;
 
+namespace dcf
+{
+    namespace orca
+    {
+        namespace global
+        {
+            static const int bw = 64;
+            static const int scale = 24;
+        }
+    }
+}
+
 namespace wing
 {
     namespace global
     {
         static const int bw = 64;
         static const int scale = 24;
-        static const int extra_shift = 7;
+        static const int extra_shift = 0;
     }
 }

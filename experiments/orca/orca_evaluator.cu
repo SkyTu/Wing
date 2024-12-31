@@ -98,13 +98,11 @@ void trainModel(dcf::orca::GPUModel<u64> *m, u8 **keyBuf, int party, SigmaPeer *
     // printf("Forward pass ");
     checkCudaErrors(cudaDeviceSynchronize());
     d_I = gpuSoftmax(m->batchSz, m->classes, party, peer, d_I, labels, secfloat, llama);
-    printf("Softmax pass ");
+    // printf("Softmax pass ");
     for (int i = m->layers.size() - 1; i >= 0; i--)
     {
         m->layers[i]->readBackwardKey(keyBuf, epoch);
-        printf("readBackwardKey %d\n", i);
         d_I = m->layers[i]->backward(peer, party, d_I, g, epoch);
-        printf("backward %d\n", i);
     }
 }
 
@@ -189,9 +187,7 @@ void evaluatorE2E(std::string modelName, std::string dataset, int party, std::st
     {
         for (int k = 0; k < blocks; k++)
         {
-            // Open the key file for reading
             printf("Iteration=%u\n", l * blocks * blockSz + k * blockSz);
-            // uncomment for end to end run
             peer->sync();
             auto startComm = peer->bytesSent() + peer->bytesReceived();
             auto start = std::chrono::high_resolution_clock::now();
@@ -202,8 +198,6 @@ void evaluatorE2E(std::string modelName, std::string dataset, int party, std::st
                 auto computeStart = std::chrono::high_resolution_clock::now();
                 auto labelsIdx = (k * blockSz + j) * batchSz * d.classes;
                 int dataIdx = (k * blockSz + j) * d.H * d.W * d.C * batchSz;
-                // printf("Training model %d, %d\n", j, l);
-                // printf("Data index=%d, Labels index=%d\n", dataIdx, labelsIdx);
                 trainModel(m, &curKeyBuf, party, peer, &(d.data[dataIdx]), &(d.labels[labelsIdx]), &g, secfloat, llama, l);
                 auto computeEnd = std::chrono::high_resolution_clock::now();
                 auto elapsed = std::chrono::duration_cast<std::chrono::milliseconds>(computeEnd - computeStart);
@@ -226,7 +220,7 @@ void evaluatorE2E(std::string modelName, std::string dataset, int party, std::st
             else
             {
                 printf("Getting loss for CIFAR10\n");
-                res = getLossCIFAR10<i64>(modelName, (u64)dcf::orca::global::scale, weightsDir, party, l, k);
+                res = getLossCIFAR10<i64>(modelName, (u64)dcf::orca::global::scale, weightsDir, party, l, k, blockSz-1, true);
             }
             auto accuracy = res.first;
             auto loss = res.second;
@@ -234,7 +228,6 @@ void evaluatorE2E(std::string modelName, std::string dataset, int party, std::st
             lossFile << loss << std::endl;
             accFile << accuracy << std::endl;   
         }
-        m->dumpWeights(weightsDir + "masked_weights_reinit_" + std::to_string(party) + "_" + std::to_string(l+1) + "_" + std::to_string(blocks - 1) + "_" + std::to_string(blockSz - 1) + ".dat");
     }
     close(fd);
 
@@ -269,11 +262,11 @@ int main(int argc, char *argv[])
     auto keyDir = std::string(argv[1]);
     using T = u64;
     // Neha: need to fix this later 
-    int epochs = 1;
-    int blocks = 5;   // 46
+    int epochs = 2;
+    int blocks = 46;
     int blockSz = 10; // 600
     int batchSz = 128;
-    evaluatorE2E("CNN2", "mnist", party, ip, "weights/CNN2.dat", false, epochs, blocks, blockSz, batchSz, 28, 28, 1, false, true, keyDir);
-    // evaluatorE2E("P-SecureML", "mnist", party, ip, "weights/PSecureMlNoRelu.dat", false, epochs, blocks, blockSz, batchSz, 28, 28, 1, false, true, keyDir);
+    evaluatorE2E("CNN2", "mnist", party, ip, "weights/CNN2.dat", true, epochs, blocks, blockSz, batchSz, 32, 32, 3, false, true, keyDir);
+    // evaluatorE2E("P-SecureML", "mnist", party, ip, "weights/PSecureMlNoRelu.dat", false, epochs, blocks, blockSz, batchSz, 28, 28, 1, true, true, keyDir);
     return 0;
 }
