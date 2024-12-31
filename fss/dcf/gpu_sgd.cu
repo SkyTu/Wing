@@ -36,6 +36,7 @@ namespace dcf
         if (i < N)
         {
             C[i] = (A[i] << shift) + alpha * B[i];
+            // if(i == 1) printf("%u %u %u %u %d\n", A[i], B[i], alpha, C[i], shift);
         }
     }
 
@@ -100,6 +101,7 @@ namespace dcf
         size_t memSizeW = N * sizeof(T);
         auto d_Vw = (T *)moveToGPU((u8 *)h_Vw, memSizeW, s);
         int shift = orca::mom_scale + scaleVw - scaledW;
+        // printf("h_Vw=%ld\n", h_Vw[0]);
         // the d_dW mask got moved to the left by shift
         gpuLeftShiftAndAdd(N, d_dW, d_Vw, d_Vw, shift, T(orca::mom_fp));
         dcf::gpuTruncate(bin, bout, t, truncateKeyVw, orca::mom_scale, peer, party, N, d_Vw, gaes, s);
@@ -142,6 +144,8 @@ namespace dcf
             auto w = h_masked_W[i] - h_mask_W[i];
             // need to test this when the starting vf is non-zero
             auto diff = abs(static_cast<int64_t>(u64(w) - u64(w_ct)));
+            if (i < 10)
+                printf("%lu %lu %ld\n", u64(w), u64(w_ct), diff);
             // the two is important
             assert(/*abs(static_cast<int64_t>(w - w_ct))*/ diff <= 2);
         }

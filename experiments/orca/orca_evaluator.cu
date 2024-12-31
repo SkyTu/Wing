@@ -262,11 +262,11 @@ int main(int argc, char *argv[])
     auto keyDir = std::string(argv[1]);
     using T = u64;
     // Neha: need to fix this later 
-    int epochs = 2;
+    int epochs = 1;
     int blocks = 46;
     int blockSz = 10; // 600
     int batchSz = 128;
-    evaluatorE2E("CNN2", "mnist", party, ip, "weights/CNN2.dat", true, epochs, blocks, blockSz, batchSz, 32, 32, 3, false, true, keyDir);
+    evaluatorE2E("CNN2", "mnist", party, ip, "weights/CNN2.dat", true, epochs, blocks, blockSz, batchSz, 28, 28, 1, true, true, keyDir);
     // evaluatorE2E("P-SecureML", "mnist", party, ip, "weights/PSecureMlNoRelu.dat", false, epochs, blocks, blockSz, batchSz, 28, 28, 1, true, true, keyDir);
     return 0;
 }

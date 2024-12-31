@@ -65,7 +65,7 @@ def read_accuracy(file_path):
         for line in file:
             accuracies.append(float(line.strip()))  # 假设每行是一个浮动数
             cnt += 1
-            if(cnt > 46):
+            if(cnt >= 46):
                 break
     return accuracies
 

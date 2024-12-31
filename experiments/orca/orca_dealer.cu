@@ -180,7 +180,7 @@ int main(int argc, char *argv[])
     int blockSz = 10;
     int batchSz = 128;
     // dealerE2E("CNN3", party, epochs, blocks, blockSz, batchSz, 32, 32, 3, true, true, keyDir, 5);
-    dealerE2E("CNN2", party, epochs, blocks, blockSz, batchSz, 28, 28, 1, false, true, keyDir, 300, "", true);
+    dealerE2E("CNN2", party, epochs, blocks, blockSz, batchSz, 28, 28, 1, true, true, keyDir, 300, "", true);
     // dealerE2E("P-SecureML", party, epochs, blocks, blockSz, batchSz, 28, 28, 1, true, true, keyDir, 300, "", true);
     return 0;
 }
