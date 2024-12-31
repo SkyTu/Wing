@@ -102,7 +102,7 @@ namespace dcf
             this->checkIfTrain();
             size_t oneHotSize = p.N * p.H * p.W * p.C * p.FH * p.FW;
             auto d_oneHotMask = (u8 *)moveToGPU((u8 *)oneHotOutputMask, oneHotSize, NULL);
-            auto d_outgoingGradMask = keyGenMaxpoolBackProp(key_as_bytes, party, p, d_oneHotMask, d_incomingGradMask);
+            auto d_outgoingGradMask = keyGenMaxpoolBackPropOrca(key_as_bytes, party, p, d_oneHotMask, d_incomingGradMask);
             gpuFree(d_oneHotMask);
             gpuFree(d_incomingGradMask);
             return d_outgoingGradMask;
@@ -168,7 +168,7 @@ namespace dcf
             int numInts = (oneHotSize - 1) / PACKING_SIZE + 1;
 
             auto d_oneHot = (u32 *)moveToGPU((uint8_t *)oneHot, numInts * sizeof(u32), &(this->s));
-            auto d_outgoingGradExpanded = gpuSelectForMaxpoolBackprop(p, backpropSelectKey, d_oneHot, d_incomingGrad,
+            auto d_outgoingGradExpanded = gpuSelectForMaxpoolBackpropOrca(p, backpropSelectKey, d_oneHot, d_incomingGrad,
                                                                       party, &(this->s));
             gpuFree(d_incomingGrad);
             auto d_outgoingGrad = gpuCollectGradients(p, d_outgoingGradExpanded, &(this->s));

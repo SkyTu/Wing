@@ -587,7 +587,7 @@ __global__ void gpuCollectGradientsKernel(MaxpoolParams p, T *outgoingGradExpand
 }
 
 template <typename T>
-T *gpuSelectForMaxpoolBackprop(MaxpoolParams p, GPUSelectKey<T> k,
+T *gpuSelectForMaxpoolBackpropOrca(MaxpoolParams p, GPUSelectKey<T> k,
                                uint32_t *d_oneHot,
                                T *d_incomingGrad,
                                int party, Stats *stats)
