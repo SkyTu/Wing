@@ -343,15 +343,39 @@ namespace wing
     }
 
     template <typename T>
-    void FCLayer<T>::dumpWeights(std::ofstream &f, bool fakeOffline)
+    void FCLayer<T>::dumpWeights(std::ofstream &f)
     {
         f.write((char *)W, p.size_B * sizeof(T));
         if (useBias)
             f.write((char *)Y, p.N * sizeof(T));
-        if (fakeOffline){
-            memset(Vw, 0, p.size_B * sizeof(T));
-            if (useBias)
-                memset(Vy, 0, p.N * sizeof(T));
+    }
+
+    template <typename T>
+    void FCLayer<T>::dumpOptimizer(std::ofstream &f)
+    {
+        f.write((char *)Vw, p.size_B * sizeof(T));
+        if (useBias)
+            f.write((char *)Vy,  p.N * sizeof(T));
+    }
+
+    template <typename T>
+    void FCLayer<T>::dumpOptimizerMask(std::ofstream &f)
+    {
+        f.write((char *)mask_Vw, p.size_B * sizeof(T));
+        if (useBias)
+            f.write((char *)mask_Vy, p.N * sizeof(T));
+    }
+
+    template <typename T>
+    void FCLayer<T>::initOptimizer(u8 **weights)
+    {
+        size_t memSzW = p.size_B * sizeof(T);
+        memcpy(Vw, *weights, memSzW);
+        *weights += memSzW;
+        if (useBias)
+        {
+            memcpy(Vy, *weights, p.N * sizeof(T));
+            *weights += (p.N * sizeof(T));
         }
     }
 

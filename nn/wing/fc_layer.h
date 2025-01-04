@@ -70,7 +70,10 @@ namespace wing
         T *forward(SigmaPeer *peer, int party, T *d_I, AESGlobalContext *gaes);
         T *backward(SigmaPeer *peer, int party, T *d_incomingGrad, AESGlobalContext *gaes, int epoch);
         void initWeights(uint8_t **weights, bool floatWeights);
-        void dumpWeights(std::ofstream &f, bool fakeOffline=false);
+        void dumpWeights(std::ofstream &f);
+        void dumpOptimizer(std::ofstream &f);
+        void dumpOptimizerMask(std::ofstream &f);
+        void initOptimizer(uint8_t **weights);
         void printWeights();
     };
 }

@@ -344,17 +344,39 @@ namespace wing
     }
 
     template <typename T>
-    void Conv2DLayer<T>::dumpWeights(std::ofstream &f, bool fakeOffline)
+    void Conv2DLayer<T>::dumpWeights(std::ofstream &f)
     {
         f.write((char *)F, p.size_F * sizeof(T));
         // printf("Dumping weights=%lu, %lu, %lu\n", F[0], F[1], F[2]);
         if (useBias)
             f.write((char *)b, p.CO * sizeof(T));
-        if (fakeOffline)
+    }
+
+    template <typename T>
+    void Conv2DLayer<T>::dumpOptimizer(std::ofstream &f)
+    {
+        f.write((char *)Vf, p.size_F * sizeof(T));
+        if (useBias)
+            f.write((char *)Vb, p.CO * sizeof(T));
+    }
+
+    template <typename T>
+    void Conv2DLayer<T>::dumpOptimizerMask(std::ofstream &f)
+    {
+        f.write((char *)mask_F, p.size_F * sizeof(T));
+        if (useBias)
+            f.write((char *)mask_b, p.CO * sizeof(T));
+    }
+
+    template <typename T>
+    void Conv2DLayer<T>::initOptimizer(u8 **weights)
+    {
+        memcpy(Vf, *weights, p.size_F * sizeof(T));
+        *weights += (p.size_F * sizeof(T));
+        if (useBias)
         {
-            memset(Vf, 0, p.size_F * sizeof(T));
-            if (useBias)
-                memset(Vb, 0, p.CO * sizeof(T));
+            memcpy(Vb, *weights, p.CO * sizeof(T));
+            *weights += (p.CO * sizeof(T));
         }
     }
 }

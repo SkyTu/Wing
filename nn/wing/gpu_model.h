@@ -56,7 +56,7 @@ namespace wing
                 layers[i]->setTrain(useMomentum);
         }
 
-        void dumpWeights(std::string filename, bool fakeOffline = false)
+        void dumpWeights(std::string filename)
         {
             std::ofstream f(filename);
             if (!f)
@@ -66,7 +66,39 @@ namespace wing
             }
             for (int i = 0; i < layers.size(); i++)
             {
-                layers[i]->dumpWeights(f, fakeOffline);
+                layers[i]->dumpWeights(f);
+            }
+            f.flush();
+            f.close();
+        }
+
+        void dumpOptimizer(std::string filename)
+        {
+            std::ofstream f(filename);
+            if (!f)
+            {
+                std::cerr << "can't open output file=" << filename << std::endl;
+                assert(0);
+            }
+            for (int i = 0; i < layers.size(); i++)
+            {
+                layers[i]->dumpOptimizer(f);
+            }
+            f.flush();
+            f.close();
+        }
+
+        void dumpOptimizerMask(std::string filename)
+        {
+            std::ofstream f(filename);
+            if (!f)
+            {
+                std::cerr << "can't open output file=" << filename << std::endl;
+                assert(0);
+            }
+            for (int i = 0; i < layers.size(); i++)
+            {
+                layers[i]->dumpOptimizerMask(f);
             }
             f.flush();
             f.close();
