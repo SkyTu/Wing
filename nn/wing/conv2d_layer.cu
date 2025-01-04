@@ -353,9 +353,11 @@ namespace wing
     }
 
     template <typename T>
-    void Conv2DLayer<T>::dumpOptimizer(std::ofstream &f)
+    void Conv2DLayer<T>::dumpOptimizer(std::ofstream &f, int party)
     {
-        f.write((char *)Vf, p.size_F * sizeof(T));
+        if (party == 1){
+            f.write((char *)Vf, p.size_F * sizeof(T));
+        }
         if (useBias)
             f.write((char *)Vb, p.CO * sizeof(T));
     }

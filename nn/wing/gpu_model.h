@@ -72,7 +72,7 @@ namespace wing
             f.close();
         }
 
-        void dumpOptimizer(std::string filename)
+        void dumpOptimizer(std::string filename, int party)
         {
             std::ofstream f(filename);
             if (!f)
@@ -82,7 +82,7 @@ namespace wing
             }
             for (int i = 0; i < layers.size(); i++)
             {
-                layers[i]->dumpOptimizer(f);
+                layers[i]->dumpOptimizer(f, party);
             }
             f.flush();
             f.close();

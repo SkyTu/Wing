@@ -349,9 +349,11 @@ namespace wing
     }
 
     template <typename T>
-    void FCLayer<T>::dumpOptimizer(std::ofstream &f)
+    void FCLayer<T>::dumpOptimizer(std::ofstream &f, int party)
     {
-        f.write((char *)Vw, p.size_B * sizeof(T));
+        if (party == 1){
+            f.write((char *)Vw, p.size_B * sizeof(T));
+        }
         if (useBias)
             f.write((char *)Vy,  p.N * sizeof(T));
     }
