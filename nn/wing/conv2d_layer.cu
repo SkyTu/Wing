@@ -363,17 +363,20 @@ namespace wing
     template <typename T>
     void Conv2DLayer<T>::dumpOptimizerMask(std::ofstream &f, int party)
     {
-        f.write((char *)mask_F, p.size_F * sizeof(T));
-        if (useBias && party == 1)
+        if (party == 1)
+            f.write((char *)mask_F, p.size_F * sizeof(T));
+        if (useBias)
             f.write((char *)mask_b, p.CO * sizeof(T));
     }
 
     template <typename T>
     void Conv2DLayer<T>::initOptimizer(u8 **weights, int party)
     {
-        memcpy(Vf, *weights, p.size_F * sizeof(T));
-        *weights += (p.size_F * sizeof(T));
-        if (useBias && party == 1)
+        if (party == 1){
+            memcpy(Vf, *weights, p.size_F * sizeof(T));
+            *weights += (p.size_F * sizeof(T));
+        }
+        if (useBias)
         {
             memcpy(Vb, *weights, p.CO * sizeof(T));
             *weights += (p.CO * sizeof(T));
