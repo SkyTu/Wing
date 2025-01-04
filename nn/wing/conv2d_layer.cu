@@ -355,29 +355,33 @@ namespace wing
     template <typename T>
     void Conv2DLayer<T>::dumpOptimizer(std::ofstream &f, int party)
     {
-        if (party == 1){
-            f.write((char *)Vf, p.size_F * sizeof(T));
-        }
+        f.write((char *)Vf, p.size_F * sizeof(T));
         if (useBias)
-            f.write((char *)Vb, p.CO * sizeof(T));
+            f.write((char *)Vb,  p.CO * sizeof(T));
     }
 
     template <typename T>
     void Conv2DLayer<T>::dumpOptimizerMask(std::ofstream &f, int party)
     {
-        if (party == 1)
-            f.write((char *)mask_F, p.size_F * sizeof(T));
-        if (useBias)
-            f.write((char *)mask_b, p.CO * sizeof(T));
+        if (party == 1){
+            f.write((char *)mask_Vf, p.size_F * sizeof(T));
+        }
+        else{
+            memset(mask_Vf, 0, p.size_F * sizeof(T));
+            f.write((char *)mask_Vf, p.size_F * sizeof(T));
+        }
+        if (useBias){
+            f.write((char *)mask_Vb, p.CO * sizeof(T));
+        }
     }
 
+    // Vy是revealed的， Vw不是，所以这里要区分开来
     template <typename T>
     void Conv2DLayer<T>::initOptimizer(u8 **weights, int party)
     {
-        if (party == 1){
-            memcpy(Vf, *weights, p.size_F * sizeof(T));
-            *weights += (p.size_F * sizeof(T));
-        }
+        size_t memSzW = p.size_F * sizeof(T);
+        memcpy(Vf, *weights, memSzW);
+        *weights += memSzW;
         if (useBias)
         {
             memcpy(Vb, *weights, p.CO * sizeof(T));

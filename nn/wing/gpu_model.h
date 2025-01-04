@@ -39,11 +39,13 @@ namespace wing
             std::cout << weightsFile << std::endl;
             if (weightsFile.compare("") != 0)
             {
+                std::cout << "Reading weights from file=" << weightsFile << std::endl;
                 size_t wSize;
                 auto weights = readFile(weightsFile, &wSize, false);
                 auto tmpWeights = weights;
                 for (int i = 0; i < layers.size(); i++)
                 {
+                    std::cout << "Reading weights for layer=" << layers[i]->name << std::endl;
                     layers[i]->initWeights(&tmpWeights, floatWeights);
                 }
                 free(weights);

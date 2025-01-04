@@ -351,9 +351,7 @@ namespace wing
     template <typename T>
     void FCLayer<T>::dumpOptimizer(std::ofstream &f, int party)
     {
-        if (party == 1){
-            f.write((char *)Vw, p.size_B * sizeof(T));
-        }
+        f.write((char *)Vw, p.size_B * sizeof(T));
         if (useBias)
             f.write((char *)Vy,  p.N * sizeof(T));
     }
@@ -362,6 +360,10 @@ namespace wing
     void FCLayer<T>::dumpOptimizerMask(std::ofstream &f, int party)
     {
         if (party == 1){
+            f.write((char *)mask_Vw, p.size_B * sizeof(T));
+        }
+        else{
+            memset(mask_Vw, 0, p.size_B * sizeof(T));
             f.write((char *)mask_Vw, p.size_B * sizeof(T));
         }
         if (useBias){
@@ -373,11 +375,9 @@ namespace wing
     template <typename T>
     void FCLayer<T>::initOptimizer(u8 **weights, int party)
     {
-        if (party == 1){
-            size_t memSzW = p.size_B * sizeof(T);
-            memcpy(Vw, *weights, memSzW);
-            *weights += memSzW;
-        }
+        size_t memSzW = p.size_B * sizeof(T);
+        memcpy(Vw, *weights, memSzW);
+        *weights += memSzW;
         if (useBias)
         {
             memcpy(Vy, *weights, p.N * sizeof(T));
