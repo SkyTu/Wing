@@ -254,6 +254,95 @@ void evaluatorE2E(std::string modelName, std::string dataset, int party, std::st
     destroyGPURandomness();
 }
 
+void evaluatorPerf(std::string modelName, std::string dataset, int party, std::string ip, int iterations, int batchSz, int H, int W, int C, bool secfloat, bool momentum, std::string keyDir)
+{
+    AESGlobalContext g;
+    initAESContext(&g);
+    initGPUMemPool();
+    initGPURandomness();
+    initCPURandomness();
+
+    dcf::orca::GPUModel<u64> *m = getGPUModel<u64>(modelName, Tensor<u64>(nullptr, {(u64)batchSz, (u64)H, (u64)W, (u64)C}));
+    m->setTrain(momentum);
+    size_t inpMemSz = m->inpSz * sizeof(u64);
+    auto inp = (u64 *)cpuMalloc(inpMemSz);
+    memset(inp, 0, inpMemSz);
+    size_t opMemSz = m->batchSz * m->classes * sizeof(u64);
+    auto labels = (u64 *)cpuMalloc(opMemSz);
+    memset(labels, 0, opMemSz);
+
+    u8 *keyBuf1, *keyBuf2, *curKeyBuf, *nextKeyBuf;
+    auto trainingDir = "output/P" + std::to_string(party) + "/training/";
+    auto keySzDir = trainingDir + "keysize/";
+    u64 keySz = getKeySz(keySzDir, modelName);
+    getAlignedBuf(&keyBuf1, keySz);
+    getAlignedBuf(&keyBuf2, keySz);
+    int curBuf = 0;
+    curKeyBuf = keyBuf1;
+    nextKeyBuf = keyBuf2;
+
+    SigmaPeer *peer = new GpuPeer(false);
+    LlamaBase<u64> *llama = nullptr;
+
+    LlamaConfig::party = party + 2;
+    llama = new LlamaBase<u64>();
+    if (LlamaConfig::party == SERVER)
+        llama->initServer(ip, (char **)&curKeyBuf);
+    else
+        llama->initClient(ip, (char **)&curKeyBuf);
+    peer->peer = LlamaConfig::peer;
+
+    if (secfloat)
+        secfloat_init(party + 1, ip);
+
+    std::string keyFile = keyDir + modelName + "_training_key" + std::to_string(party) + ".dat";
+    // dropOSPageCache();
+    std::chrono::duration<int64_t, std::milli> onlineTime = std::chrono::duration<int64_t, std::milli>::zero();
+    std::chrono::duration<int64_t, std::milli> computeTime = std::chrono::duration<int64_t, std::milli>::zero();
+    uint64_t keyReadTime = 0;
+    size_t commBytes = 0;
+    int fd = openForReading(keyFile);
+    auto startComm = peer->bytesSent() + peer->bytesReceived();
+    auto start = std::chrono::high_resolution_clock::now();
+    for (int j = 0; j < iterations; j++)
+    {
+        readKey(fd, keySz, curKeyBuf, &keyReadTime);    
+        auto computeStart = std::chrono::high_resolution_clock::now();
+        trainModel(m, &curKeyBuf, party, peer, inp, labels, &g, secfloat, llama, 0);
+        auto computeEnd = std::chrono::high_resolution_clock::now();
+        auto elapsed = std::chrono::duration_cast<std::chrono::milliseconds>(computeEnd - computeStart);
+        computeTime += elapsed;
+        if (j == iterations - 2)
+        {
+            auto end = std::chrono::high_resolution_clock::now();
+            onlineTime = std::chrono::duration_cast<std::chrono::milliseconds>(end - start);
+            printf("Online time (ms): %lu\n", onlineTime.count());
+        }
+        curKeyBuf = &keyBuf1[0];
+    }
+    auto endComm = peer->bytesSent() + peer->bytesReceived();
+    commBytes += (endComm - startComm);
+    close(fd);
+    commBytes += secFloatComm;
+    LlamaConfig::peer->close();
+    std::ofstream stats(trainingDir + modelName + ".txt");
+    auto statsString = "\n" + modelName + "\n";
+    statsString += "Total time taken (ms): " + std::to_string(onlineTime.count()) + "\nTotal bytes communicated: " + std::to_string(commBytes) + "\nSecfloat softmax bytes: " + std::to_string(secFloatComm);
+    statsString += "\nIterations: " + std::to_string(iterations) + "\n";
+    auto totTimeByIt = (double)onlineTime.count() / (double)(iterations - 1);
+    auto avgKeyReadTime = (double)keyReadTime / (double)iterations;
+    auto avgComputeTIme = (double)computeTime.count() / (double)iterations;
+
+    double commPerIt = (double)commBytes / (double)iterations;
+    statsString += "\nTotal time / iterations (ms): " + std::to_string(totTimeByIt) + "\nAvg key read time (ms): " + std::to_string(avgKeyReadTime) + "\nAvg compute time (ms): " + std::to_string(avgComputeTIme);
+    statsString += "\nComm per iteration (B): " + std::to_string(commPerIt) + "\n";
+    stats << statsString;
+    stats.close();
+    std::cout << statsString << std::endl;
+    destroyCPURandomness();
+    destroyGPURandomness();
+}
+
 
 int main(int argc, char *argv[])
 {
@@ -261,13 +350,54 @@ int main(int argc, char *argv[])
     int party = 0;
     auto ip = "10.176.34.171";
     auto keyDir = std::string(argv[1]);
+    auto experiment = std::string(argv[2]);
     using T = u64;
     // Neha: need to fix this later 
-    int epochs = 1;
-    int blocks = 46;
-    int blockSz = 10; // 600
-    int batchSz = 128;
-    evaluatorE2E("CNN2", "mnist", party, ip, "weights/CNN2.dat", true, epochs, blocks, blockSz, batchSz, 28, 28, 1, true, true, keyDir);
-    // evaluatorE2E("P-SecureML", "mnist", party, ip, "weights/PSecureMlNoRelu.dat", false, epochs, blocks, blockSz, batchSz, 28, 28, 1, true, true, keyDir);
+
+    if (experiment.compare("CNN2") == 0)
+    {
+        int epochs = 1;
+        int blocks = 46;
+        int blockSz = 10; // 600
+        int batchSz = 128;
+        evaluatorE2E("CNN2", "mnist", party, ip, "weights/CNN2.dat", true, epochs, blocks, blockSz, batchSz, 28, 28, 1, true,  true, keyDir);
+    }
+    else if (experiment.compare("CNN3") == 0){
+        int epochs = 2;
+        int blocks = 39;
+        int blockSz = 10;
+        int batchSz = 128;
+        evaluatorE2E("CNN3", "cifar10", party, ip, "weights/CNN3.dat", true, epochs, blocks, blockSz, batchSz, 32, 32, 1, true,  true, keyDir);
+    }
+    else if (experiment.compare("P-VGG16") == 0)
+    {
+        int iterations = 11;
+        int batchSz = 1;
+        evaluatorPerf("P-VGG16", "cifar10", party, ip, iterations, batchSz, 32, 32, 3, true,  true, keyDir);
+    }
+    else if (experiment.compare("P-AlexNet") == 0)
+    {
+        int iterations = 11;
+        int batchSz = 128;
+        evaluatorPerf("P-AlexNet", "cifar10", party, ip, iterations, batchSz, 32, 32, 3, true,  true, keyDir);
+    }
+    else if (experiment.compare("P-LeNet") == 0)
+    {
+        int iterations = 11;
+        int batchSz = 128;
+        evaluatorPerf("P-LeNet", "mnist", party, ip, iterations, batchSz, 28, 28, 1, true,  true, keyDir);
+    }
+    else if (experiment.compare("P-SecureML") == 0)
+    {
+        int iterations = 11;
+        int batchSz = 128;
+        evaluatorPerf("P-SecureML", "mnist", party, ip, iterations, batchSz, 28, 28, 1, true,  true, keyDir);
+    }
+    else if (experiment.compare("AlexNet") == 0)
+    {
+        int iterations = 11;
+        int batchSz = 128;
+        evaluatorPerf("AlexNet", "cifar10", party, ip, iterations, batchSz, 32, 32, 3, true,  true, keyDir);
+    }
     return 0;
 }

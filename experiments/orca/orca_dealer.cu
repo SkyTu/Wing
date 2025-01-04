@@ -168,19 +168,114 @@ void dealerE2E(std::string modelName, int party, int epochs, int blocks, int blo
     destroyGPURandomness();
 }
 
+void dealerPerf(std::string modelName, int party, int iterations, int batchSz, int H, int W, int C, bool secfloat, bool momentum, std::string keyDir, int sleepInt)
+{
+    AESGlobalContext g;
+    initAESContext(&g);
+    initGPURandomness();
+    initGPUMemPool();
+    sytorch_init();
+
+    auto trainingDir = "output/P" + std::to_string(party) + "/training/";
+    auto keySzDir = trainingDir + "keysize/";
+    makeDir(keySzDir);
+
+    dcf::orca::GPUModel<u64> *m = getGPUModel<u64>(modelName, Tensor<u64>(nullptr, {(u64)batchSz, (u64)H, (u64)W, (u64)C}));
+    m->setTrain(momentum);
+
+    char *zeros;
+    // Neha: remember to change this later
+    size_t padding, bufSize = 9 * OneGB;
+    u8 *startPtr, *curPtr, *tmpPtr1, *tmpPtr2;
+    getAlignedBuf(&startPtr, bufSize);
+
+    // initialize llama
+    LlamaConfig::party = DEALER;
+    auto llama = new LlamaBase<u64>();
+    tmpPtr1 = (u8 *)malloc(OneGB);
+    bool isServer = party + 2 == SERVER;
+    llama->initDealer((char **)(isServer ? &curPtr : &tmpPtr2), (char **)(isServer ? &tmpPtr2 : &curPtr));
+
+    std::string keyFile = keyDir + modelName + "_training_key" + std::to_string(party) + ".dat";
+
+    std::cout << keyFile << std::endl;
+    int fd = openForWriting(keyFile);
+
+    for (int j = 0; j < iterations; j++)
+    {
+        curPtr = startPtr;
+        tmpPtr2 = tmpPtr1;
+        genModelKey(m, &curPtr, party, &g, secfloat, (LlamaBase<u64> *)llama, 0);
+        if (j == 0)
+        {
+            size_t keySz = curPtr - startPtr;
+            padding = 4096 - (keySz % 4096);
+            zeros = new char[padding];
+            memset(zeros, 0, padding);
+            keySz += padding;
+            writeKeySz(keySzDir, modelName, keySz);
+        }
+        memcpy(curPtr, zeros, padding);
+        curPtr += padding;
+        writeKeyBuf(fd, curPtr - startPtr, startPtr);
+    }
+    assert(0 == fsync(fd) && "sync error!");
+    close(fd);
+    printf("Sleeping for %d seconds.\n", sleepInt);
+    delete[] zeros;
+    destroyGPURandomness();
+}
 
 int main(int argc, char *argv[])
 {
     int party = atoi(argv[1]);
     auto keyDir = std::string(argv[2]);
+    auto experiment = std::string(argv[3]);
 
     omp_set_num_threads(32);
-    int epochs = 1;
-    int blocks = 46;
-    int blockSz = 10;
-    int batchSz = 128;
-    // dealerE2E("CNN3", party, epochs, blocks, blockSz, batchSz, 32, 32, 3, true, true, keyDir, 5);
-    dealerE2E("CNN2", party, epochs, blocks, blockSz, batchSz, 28, 28, 1, true, true, keyDir, 300, "", true);
-    // dealerE2E("P-SecureML", party, epochs, blocks, blockSz, batchSz, 28, 28, 1, true, true, keyDir, 300, "", true);
+    if (experiment.compare("CNN2") == 0){
+        int epochs = 1;
+        int blocks = 46;
+        int blockSz = 10;
+        int batchSz = 128;
+        dealerE2E("CNN2", party, epochs, blocks, blockSz, batchSz, 28, 28, 1, true, true, keyDir, 300, "", true);
+    }
+    else if (experiment.compare("CNN3") == 0){
+        int epochs = 2;
+        int blocks = 39;
+        int blockSz = 10;
+        int batchSz = 128;
+        dealerE2E("CNN3", party, epochs, blocks, blockSz, batchSz, 28, 28, 1, true, true, keyDir, 300, "", true);
+    }
+    else if (experiment.compare("P-VGG16") == 0)
+    {
+        int iterations = 11;
+        int batchSz = 4;
+        dealerPerf("P-VGG16", party, iterations, batchSz, 32, 32, 3, true, true, keyDir, 300);
+    }
+    else if (experiment.compare("P-AlexNet") == 0)
+    {
+        int iterations = 11;
+        int batchSz = 128;
+        dealerPerf("P-AlexNet", party, iterations, batchSz, 32, 32, 3, true, true, keyDir, 300);
+    }
+    else if (experiment.compare("P-LeNet") == 0)
+    {
+        int iterations = 11;
+        int batchSz = 128;
+        dealerPerf("P-LeNet", party, iterations, batchSz, 28, 28, 1, true, true, keyDir, 60);
+    }
+    else if (experiment.compare("P-SecureML") == 0)
+    {
+        int iterations = 11;
+        int batchSz = 128;
+        dealerPerf("P-SecureML", party, iterations, batchSz, 28, 28, 1, true, true, keyDir, 60);
+    }
+    else if (experiment.compare("AlexNet") == 0)
+    {
+        int iterations = 11;
+        int batchSz = 128;
+        dealerPerf("AlexNet", party, iterations, batchSz, 32, 32, 3, true, true, keyDir, 300);
+    }
     return 0;
 }

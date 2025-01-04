@@ -26,9 +26,9 @@
 
 #include "orca_base.h"
 
-#include "fss/orca_o/gpu_relu.h"
-#include "fss/orca_o/gpu_truncate.h"
-#include "fss/orca_o/gpu_maxpool.h"
+#include "fss/wing/gpu_relu.h"
+#include "fss/wing/gpu_truncate.h"
+#include "fss/wing/gpu_maxpool.h"
 // pin all the weights and activations in cpu memory
 
 template <typename T>
@@ -46,8 +46,8 @@ public:
         if (mode == 2)
         {
             auto start = std::chrono::high_resolution_clock::now();
-            auto k = orca_o::readGPUReluZeroExtKey<T>(&(this->keyBuf));
-            auto d_temp = orca_o::gpuReluZeroExt(this->peer, this->party, k, in.d_data, &(this->g), &(this->s));
+            auto k = wing::readGPUReluZeroExtKey<T>(&(this->keyBuf));
+            auto d_temp = wing::gpuReluZeroExt(this->peer, this->party, k, in.d_data, &(this->g), &(this->s));
             auto d_drelu = d_temp.first;
             gpuFree(d_drelu);
             out.d_data = d_temp.second;
@@ -63,8 +63,8 @@ public:
         {
             auto start = std::chrono::high_resolution_clock::now();
 
-            auto k = orca_o::readTwoRoundReluKey<T>(&(this->keyBuf));
-            auto d_temp = orca_o::gpuTwoRoundRelu(this->peer, this->party, k, in.d_data, &(this->g), &(this->s));
+            auto k = wing::readTwoRoundReluKey<T>(&(this->keyBuf));
+            auto d_temp = wing::gpuTwoRoundRelu(this->peer, this->party, k, in.d_data, &(this->g), &(this->s));
             auto d_drelu = d_temp.first;
             gpuFree(d_drelu);
             out.d_data = d_temp.second;
@@ -80,13 +80,13 @@ public:
         auto start = std::chrono::high_resolution_clock::now();
         if (mode == 0)
         {
-            auto k = orca_o::readGPUTrStochasticKey<T>(&(this->keyBuf));
-            orca_o::gpuStTR(k, this->party, this->peer, in.d_data, &(this->g), &(this->s));
+            auto k = wing::readGPUTrStochasticKey<T>(&(this->keyBuf));
+            wing::gpuStTR(k, this->party, this->peer, in.d_data, &(this->g), &(this->s));
         }
         else if (mode == 1)
         {
-            auto k = orca_o::readGPUStTRKey<T>(&(this->keyBuf));
-            orca_o::gpuTRe(k, this->party, this->peer, in.d_data, &(this->g), &(this->s));
+            auto k = wing::readGPUStTRKey<T>(&(this->keyBuf));
+            wing::gpuTRe(k, this->party, this->peer, in.d_data, &(this->g), &(this->s));
         }
         else
         {
@@ -104,8 +104,8 @@ public:
     {
         // printf("Sign ext=%lu\n", x.size());
         auto start = std::chrono::high_resolution_clock::now();
-        auto k = orca_o::readGPUZeroExtKey<T>(&(this->keyBuf));
-        orca_o::gpuZeroExt(k, this->party, this->peer, x.d_data, &(this->g), &(this->s));
+        auto k = wing::readGPUZeroExtKey<T>(&(this->keyBuf));
+        wing::gpuZeroExt(k, this->party, this->peer, x.d_data, &(this->g), &(this->s));
 
         auto end = std::chrono::high_resolution_clock::now();
         auto elapsed = end - start;
@@ -131,8 +131,8 @@ public:
             (int)padding, (int)padding,
             0, 0, false};
         initPoolParams(p);
-        auto k = orca_o::readGPUMaxpoolKey<T>(p, &(this->keyBuf));
-        out.d_data = orca_o::gpuMaxPool(this->peer, this->party, p, k, in.d_data, (u32 *)NULL, &(this->g), &(this->s));
+        auto k = wing::readGPUMaxpoolKey<T>(p, &(this->keyBuf));
+        out.d_data = wing::gpuMaxPool(this->peer, this->party, p, k, in.d_data, (u32 *)NULL, &(this->g), &(this->s));
 
         auto end = std::chrono::high_resolution_clock::now();
         auto elapsed = end - start;
@@ -158,7 +158,7 @@ public:
             // auto h_inp = (T*) moveToCPU((u8*) in.d_data, in.size() * sizeof(T), NULL);
             // printf("Relu inp mask=%ld, %ld\n", h_inp[0], h_inp[1]);
             // printf("Addr=%lx\n", in.d_data);
-            auto d_tempMask = orca_o::gpuKeygenReluExtend<T>(&(this->keyBuf), this->party, this->bw - scale, this->bw, in.size(), in.d_data, &(this->g));
+            auto d_tempMask = wing::gpuKeygenReluExtend<T>(&(this->keyBuf), this->party, this->bw - scale, this->bw, in.size(), in.d_data, &(this->g));
             auto d_dreluMask = d_tempMask.first;
             gpuFree(d_dreluMask);
             auto d_reluMask = d_tempMask.second;
@@ -171,7 +171,7 @@ public:
             int tmpBw = this->bw;
             if (mode == 3)
                 tmpBw -= scale;
-            auto d_tempMask = orca_o::gpuGenTwoRoundReluKey(&(this->keyBuf), this->party, tmpBw, tmpBw, in.size(), in.d_data, &(this->g));
+            auto d_tempMask = wing::gpuGenTwoRoundReluKey(&(this->keyBuf), this->party, tmpBw, tmpBw, in.size(), in.d_data, &(this->g));
             auto d_dreluMask = d_tempMask.first;
             gpuFree(d_dreluMask);
             auto d_reluMask = d_tempMask.second;
@@ -184,11 +184,11 @@ public:
     {
         if (mode == 0)
         {
-            in.d_data = orca_o::genGPUStTRKey(&(this->keyBuf), this->party, this->bw, this->bw, shift, in.size(), in.d_data, &(this->g));
+            in.d_data = wing::genGPUStTRKey(&(this->keyBuf), this->party, this->bw, this->bw, shift, in.size(), in.d_data, &(this->g));
         }
         else if (mode == 1)
         {
-            in.d_data = orca_o::genGPUTReKey(&(this->keyBuf), this->party, this->bw, this->bw - shift, shift, in.size(), in.d_data, &(this->g));
+            in.d_data = wing::genGPUTReKey(&(this->keyBuf), this->party, this->bw, this->bw - shift, shift, in.size(), in.d_data, &(this->g));
         }
         else
         {
@@ -203,7 +203,7 @@ public:
 
         int bin = this->bw - scale;
         int bout = this->bw;
-        x.d_data = orca_o::genGPUZeroExtKey(&(this->keyBuf), this->party, bin, bout, x.size(), x.d_data, &(this->g));
+        x.d_data = wing::genGPUZeroExtKey(&(this->keyBuf), this->party, bin, bout, x.size(), x.d_data, &(this->g));
 
         // auto h_mask = (T*) moveToCPU((u8*) x.d_data, x.size() * sizeof(T), NULL);
         // printf("Signext out mask %lx=%ld, %ld\n", x.d_data, h_mask[0], h_mask[1]);
@@ -224,7 +224,7 @@ public:
             (int)padding, (int)padding,
             0, 0, false};
         initPoolParams(p);
-        out.d_data = orca_o::gpuKeygenMaxpool(&(this->keyBuf), this->party, p, in.d_data, (u8 *)NULL, &(this->g));
+        out.d_data = wing::gpuKeygenMaxpool(&(this->keyBuf), this->party, p, in.d_data, (u8 *)NULL, &(this->g));
         // printf("done with keygen maxpool=%lx\n", out.d_data);
     }
 };

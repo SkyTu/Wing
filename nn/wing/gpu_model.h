@@ -56,7 +56,7 @@ namespace wing
                 layers[i]->setTrain(useMomentum);
         }
 
-        void dumpWeights(std::string filename)
+        void dumpWeights(std::string filename, bool fakeOffline = false)
         {
             std::ofstream f(filename);
             if (!f)
@@ -66,7 +66,7 @@ namespace wing
             }
             for (int i = 0; i < layers.size(); i++)
             {
-                layers[i]->dumpWeights(f);
+                layers[i]->dumpWeights(f, fakeOffline);
             }
             f.flush();
             f.close();

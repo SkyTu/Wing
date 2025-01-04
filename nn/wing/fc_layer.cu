@@ -343,11 +343,16 @@ namespace wing
     }
 
     template <typename T>
-    void FCLayer<T>::dumpWeights(std::ofstream &f)
+    void FCLayer<T>::dumpWeights(std::ofstream &f, bool fakeOffline)
     {
         f.write((char *)W, p.size_B * sizeof(T));
         if (useBias)
             f.write((char *)Y, p.N * sizeof(T));
+        if (fakeOffline){
+            memset(Vw, 0, p.size_B * sizeof(T));
+            if (useBias)
+                memset(Vy, 0, p.N * sizeof(T));
+        }
     }
 
     template <typename T>

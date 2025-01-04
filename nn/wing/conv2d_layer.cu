@@ -344,12 +344,18 @@ namespace wing
     }
 
     template <typename T>
-    void Conv2DLayer<T>::dumpWeights(std::ofstream &f)
+    void Conv2DLayer<T>::dumpWeights(std::ofstream &f, bool fakeOffline)
     {
         f.write((char *)F, p.size_F * sizeof(T));
         // printf("Dumping weights=%lu, %lu, %lu\n", F[0], F[1], F[2]);
         if (useBias)
             f.write((char *)b, p.CO * sizeof(T));
+        if (fakeOffline)
+        {
+            memset(Vf, 0, p.size_F * sizeof(T));
+            if (useBias)
+                memset(Vb, 0, p.CO * sizeof(T));
+        }
     }
 }
 

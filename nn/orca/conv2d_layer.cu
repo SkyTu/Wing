@@ -284,10 +284,6 @@ namespace dcf
             auto d_mask_I = (T *)moveToGPU((u8 *)convKey.I, convKey.mem_size_I, &(this->s));
             auto d_I = (T *)moveToGPU((u8 *)I, convKey.mem_size_I, &(this->s));
             auto d_F = (T *)moveToGPU((u8 *)F, convKey.mem_size_F, &(this->s));
-            auto tmp = (T *)moveToCPU((u8 *)d_incomingGrad, convKeydF.mem_size_I, &(this->s));
-            for (int i = 0; i < 5; i++){
-                printf("In backward propagation: incomingGrad[%d] = %lu, mask_incomingGrad[%d] = %lu ,F[%d]=%lu, mask_F[%d]=%lu\n", i, tmp[i], i, convKey.I[i], i, F[i], i, convKey.F[i]);
-            }
             T *d_dI = NULL;
             if (computedI)
             {
@@ -318,14 +314,6 @@ namespace dcf
             gpuFree(d_mask_I);
             gpuFree(d_dF);
 
-            if (computedI){
-                printf("Copying!\n");
-                auto tmp1 = moveToCPU((u8 *)d_dI, p.size_I, &(this->s));
-                printf("Copied\n");
-                for (int i = 0; i < 5; i++){
-                    printf("In backward propagation: OutGrad[%d] = %lu\n", i, tmp1[i]);
-                }
-            }
             return d_dI;
         }
 

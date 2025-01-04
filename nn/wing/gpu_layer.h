@@ -55,7 +55,7 @@ namespace wing
         virtual T *forward(SigmaPeer *peer, int party, T *d_I, AESGlobalContext *g) = 0;
         virtual T *backward(SigmaPeer *peer, int party, T *d_incomingGrad, AESGlobalContext *g, int epoch) = 0;
         virtual void initWeights(u8 **weights, bool floatWeights) {}
-        virtual void dumpWeights(std::ofstream &f) {}
+        virtual void dumpWeights(std::ofstream &f, bool fakeOffline) {}
         virtual void printWeights() {}
     };
 
