@@ -72,8 +72,8 @@ namespace wing
         void initWeights(uint8_t **weights, bool floatWeights);
         void dumpWeights(std::ofstream &f);
         void dumpOptimizer(std::ofstream &f);
-        void dumpOptimizerMask(std::ofstream &f);
-        void initOptimizer(uint8_t **weights);
+        void dumpOptimizerMask(std::ofstream &f, int party);
+        void initOptimizer(uint8_t **weights, int party);
         void printWeights();
     };
 }

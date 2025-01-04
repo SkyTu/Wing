@@ -169,11 +169,9 @@ namespace wing
             else
                 d_mask_truncated_dX = genGPUTruncateKey(key_as_bytes, party, tb, p.bw, p.bw, global::scale, p.size_A, d_mask_dX, gaes);
         }
-        std::cout << "---------gen dw key---------" << std::endl;
         genOptimizerKey(key_as_bytes, party, p.bw, p.bw, p.size_B, mask_W, d_mask_W, mask_Vw, d_mask_dW, global::scale, 2 * global::scale, 2 * global::scale + global::extra_shift, tf, this->useMomentum, gaes, epoch);
         if (useBias)
         {
-            std::cout << "---------gen dy key---------" << std::endl;
             auto d_mask_dY = getBiasGrad(p.M, p.N, p.bw, d_mask_grad);
             genOptimizerKey(key_as_bytes, party, p.bw, p.bw, p.N, mask_Y, (T *)NULL, mask_Vy, d_mask_dY, 2 * global::scale, 2 * global::scale - lr_scale[epoch], global::scale + global::extra_shift, tf, this->useMomentum, gaes, epoch);
             gpuFree(d_mask_dY);
@@ -359,20 +357,22 @@ namespace wing
     }
 
     template <typename T>
-    void FCLayer<T>::dumpOptimizerMask(std::ofstream &f)
+    void FCLayer<T>::dumpOptimizerMask(std::ofstream &f, int party)
     {
         f.write((char *)mask_Vw, p.size_B * sizeof(T));
-        if (useBias)
+        if (useBias && party == 1){
             f.write((char *)mask_Vy, p.N * sizeof(T));
+        }
     }
 
+    // Vy是revealed的， Vw不是，所以这里要区分开来
     template <typename T>
-    void FCLayer<T>::initOptimizer(u8 **weights)
+    void FCLayer<T>::initOptimizer(u8 **weights, int party)
     {
         size_t memSzW = p.size_B * sizeof(T);
         memcpy(Vw, *weights, memSzW);
         *weights += memSzW;
-        if (useBias)
+        if (useBias && party == 1)
         {
             memcpy(Vy, *weights, p.N * sizeof(T));
             *weights += (p.N * sizeof(T));
