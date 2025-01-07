@@ -43,7 +43,13 @@ extern "C" void initGPUMemPool()
     assert(isMemPoolSupported);
     /* implicitly assumes that the device is 0 */
 
-    checkCudaErrors(cudaDeviceGetDefaultMemPool(&mempool, device));
+    cudaMemPoolProps poolProps = {};
+    poolProps.allocType = cudaMemAllocationTypePinned;
+    poolProps.handleTypes = cudaMemHandleTypePosixFileDescriptor;
+    poolProps.location.type = cudaMemLocationTypeDevice;
+    poolProps.location.id = 0;
+    checkCudaErrors(cudaMemPoolCreate(&mempool, &poolProps)); 
+    // checkCudaErrors(cudaDeviceGetDefaultMemPool(&mempool, device));
     uint64_t threshold = UINT64_MAX;
     checkCudaErrors(cudaMemPoolSetAttribute(mempool, cudaMemPoolAttrReleaseThreshold, &threshold));
     uint64_t *d_dummy_ptr;
@@ -54,6 +60,12 @@ extern "C" void initGPUMemPool()
     checkCudaErrors(cudaMemPoolGetAttribute(mempool, cudaMemPoolAttrReservedMemCurrent, &reserved_read));
     checkCudaErrors(cudaMemPoolGetAttribute(mempool, cudaMemPoolAttrReleaseThreshold, &threshold_read));
     printf("reserved memory: %lu %lu\n", reserved_read, threshold_read);
+}
+
+extern "C" void destroyGPUMemPool()
+{
+    checkCudaErrors(cudaMemPoolDestroy(mempool));
+    initGPUMemPool();
 }
 
 extern "C" uint8_t *gpuMalloc(size_t size_in_bytes)

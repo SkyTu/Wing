@@ -36,3 +36,4 @@ extern "C" uint8_t *moveIntoGPUMem(uint8_t *d_a, uint8_t *h_a, size_t size_in_by
 extern "C" uint8_t *moveToCPU(uint8_t *d_a, size_t size_in_bytes, Stats *);
 extern "C" uint8_t *moveIntoCPUMem(uint8_t *h_a, uint8_t *d_a, size_t size_in_bytes, Stats *s);
 extern "C" void initGPUMemPool();
+extern "C" void destroyGPUMemPool();
