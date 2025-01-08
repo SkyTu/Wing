@@ -50,7 +50,7 @@ extern "C" void initGPUMemPool()
     // poolProps.location.id = 0;
     // checkCudaErrors(cudaMemPoolCreate(&mempool, &poolProps)); 
     checkCudaErrors(cudaDeviceGetDefaultMemPool(&mempool, device));
-    uint64_t threshold = UINT64_MAX;
+    uint64_t threshold = 9 * (1ULL << 30);
     checkCudaErrors(cudaMemPoolSetAttribute(mempool, cudaMemPoolAttrReleaseThreshold, &threshold));
     uint64_t *d_dummy_ptr;
     uint64_t bytes = 8 * (1ULL << 30);
@@ -66,6 +66,7 @@ extern "C" void initGPUMemPool()
 extern "C" void destroyGPUMemPool()
 {
     checkCudaErrors(cudaDeviceSynchronize());
+    checkCudaErrors(cudaMemPoolTrimTo(mempool, 0));
     checkCudaErrors(cudaDeviceReset());
     checkCudaErrors(cudaDeviceSynchronize());
 }
