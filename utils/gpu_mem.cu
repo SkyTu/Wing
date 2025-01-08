@@ -66,7 +66,6 @@ extern "C" void initGPUMemPool()
 extern "C" void destroyGPUMemPool()
 {
     checkCudaErrors(cudaDeviceSynchronize());
-    checkCudaErrors(cudaMemPoolDestroy(mempool));
     checkCudaErrors(cudaDeviceReset());
     checkCudaErrors(cudaDeviceSynchronize());
 }
