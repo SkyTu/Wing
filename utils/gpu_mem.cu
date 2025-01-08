@@ -56,6 +56,7 @@ extern "C" void initGPUMemPool()
     uint64_t bytes = 8 * (1ULL << 30);
     checkCudaErrors(cudaMallocAsync(&d_dummy_ptr, bytes, 0));
     checkCudaErrors(cudaFreeAsync(d_dummy_ptr, 0));
+    checkCudaErrors(cudaDeviceSynchronize());
     uint64_t reserved_read, threshold_read;
     checkCudaErrors(cudaMemPoolGetAttribute(mempool, cudaMemPoolAttrReservedMemCurrent, &reserved_read));
     checkCudaErrors(cudaMemPoolGetAttribute(mempool, cudaMemPoolAttrReleaseThreshold, &threshold_read));
@@ -64,14 +65,16 @@ extern "C" void initGPUMemPool()
 
 extern "C" void destroyGPUMemPool()
 {
+    checkCudaErrors(cudaDeviceSynchronize());
     checkCudaErrors(cudaMemPoolDestroy(mempool));
-    initGPUMemPool();
+    checkCudaErrors(cudaDeviceReset());
+    checkCudaErrors(cudaDeviceSynchronize());
 }
 
 extern "C" uint8_t *gpuMalloc(size_t size_in_bytes)
 {
     uint8_t *d_a;
-    checkCudaErrors(cudaMallocAsync(&d_a, size_in_bytes, 0));
+    checkCudaErrors(cudaMallocAsync(&d_a, size_in_bytes, mempool, 0));
     return d_a;
 }
 
