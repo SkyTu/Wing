@@ -43,14 +43,14 @@ extern "C" void initGPUMemPool()
     assert(isMemPoolSupported);
     /* implicitly assumes that the device is 0 */
 
-    // cudaMemPoolProps poolProps = {};
-    // poolProps.allocType = cudaMemAllocationTypePinned;
-    // poolProps.handleTypes = cudaMemHandleTypePosixFileDescriptor;
-    // poolProps.location.type = cudaMemLocationTypeDevice;
-    // poolProps.location.id = 0;
-    // checkCudaErrors(cudaMemPoolCreate(&mempool, &poolProps)); 
-    checkCudaErrors(cudaDeviceGetDefaultMemPool(&mempool, device));
-    uint64_t threshold = 9 * (1ULL << 30);
+    cudaMemPoolProps poolProps = {};
+    poolProps.allocType = cudaMemAllocationTypePinned;
+    poolProps.handleTypes = cudaMemHandleTypePosixFileDescriptor;
+    poolProps.location.type = cudaMemLocationTypeDevice;
+    poolProps.location.id = 0;
+    checkCudaErrors(cudaMemPoolCreate(&mempool, &poolProps)); 
+    // checkCudaErrors(cudaDeviceGetDefaultMemPool(&mempool, device));
+    uint64_t threshold = UINT64_MAX;
     checkCudaErrors(cudaMemPoolSetAttribute(mempool, cudaMemPoolAttrReleaseThreshold, &threshold));
     uint64_t *d_dummy_ptr;
     uint64_t bytes = 8 * (1ULL << 30);
@@ -74,7 +74,7 @@ extern "C" void destroyGPUMemPool()
 extern "C" uint8_t *gpuMalloc(size_t size_in_bytes)
 {
     uint8_t *d_a;
-    checkCudaErrors(cudaMallocAsync(&d_a, size_in_bytes, 0));
+    checkCudaErrors(cudaMallocFromPoolAsync(&d_a, size_in_bytes, mempool ,0));
     return d_a;
 }
 
